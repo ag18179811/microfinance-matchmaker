@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ag18179811.github.io/microfinance-matchmaker/sitemap.xml

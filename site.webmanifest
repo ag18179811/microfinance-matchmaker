@@ -1,0 +1,9 @@
+{
+  "name": "Microfinance Matchmaker",
+  "short_name": "Matchmaker",
+  "description": "Funding readiness and resource matching for small business owners.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#1f7a5a"
+}
