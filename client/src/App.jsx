@@ -2,9 +2,10 @@ import { useState } from 'react';
 import DescribeBusiness from './pages/DescribeBusiness.jsx';
 import FollowUp from './pages/FollowUp.jsx';
 import Results from './pages/Results.jsx';
+import { apiUrl } from './api.js';
 
 async function submitApplication(fields) {
-  const createRes = await fetch('/api/applications', {
+  const createRes = await fetch(apiUrl('/api/applications'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(fields),
@@ -12,7 +13,7 @@ async function submitApplication(fields) {
   const application = await createRes.json();
   if (!createRes.ok) throw new Error(application.error || 'Failed to save application');
 
-  const matchRes = await fetch(`/api/match/${application.id}`, { method: 'POST' });
+  const matchRes = await fetch(apiUrl(`/api/match/${application.id}`), { method: 'POST' });
   const matchData = await matchRes.json();
   if (!matchRes.ok) throw new Error(matchData.error || 'Failed to compute matches');
   return matchData;

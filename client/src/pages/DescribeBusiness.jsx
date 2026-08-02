@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiUrl } from '../api.js';
 
 const PLACEHOLDER =
   "e.g. I run a coffee shop in Austin, TX. We've been open about 3 years, do roughly " +
@@ -17,7 +18,7 @@ export default function DescribeBusiness({ onExtracted }) {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch('/api/intake/extract', {
+      const res = await fetch(apiUrl('/api/intake/extract'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description }),

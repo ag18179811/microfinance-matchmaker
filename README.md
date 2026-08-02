@@ -113,3 +113,24 @@ npm test
 - The seeded lender data in `server/db/seed-lenders.js` is **placeholder data** — replace it with real curated entries from the [CDFI Fund Awards Database](https://www.cdfifund.gov/programs-training/programs/cdfi-fund-awards) before launch.
 - No auth, payments, or live external API integrations beyond Groq are implemented in this MVP pass.
 - SQLite is the MVP datastore; swap for Postgres when moving beyond a single-instance deployment.
+
+### Deploying for a public demo (Render + Vercel)
+
+GitHub Pages can only serve static files — it can't run the Express/SQLite backend, so it isn't part of this path. The backend goes on Render, the frontend on Vercel, exactly as the original brief specified.
+
+**1. Backend → Render**
+
+1. In the [Render dashboard](https://dashboard.render.com), click **New +** → **Blueprint**.
+2. Connect this GitHub repo and pick the `claude/microfinance-matchmaker-mvp-7w6yzg` branch (or whichever branch you're deploying). Render reads `render.yaml` at the repo root automatically and configures the service.
+3. When prompted for the `GROQ_API_KEY` environment variable, paste in a Groq API key. It's stored only in Render's dashboard, never in the repo.
+4. Deploy. Once live, copy the service URL Render gives you (something like `https://microfinance-matchmaker-api.onrender.com`) — you'll need it for the frontend step.
+5. Sanity-check it: `curl https://<your-render-url>/api/health` should return `{"ok":true}`.
+
+Note: the free Render plan uses an ephemeral filesystem, so the SQLite database resets on redeploys/restarts. The 18 seed lenders repopulate automatically on startup; submitted applications won't persist across restarts. Fine for a demo, not for production — move to a managed Postgres (or a Render persistent disk) before real use.
+
+**2. Frontend → Vercel**
+
+1. In the [Vercel dashboard](https://vercel.com/new), import this same GitHub repo.
+2. Set **Root Directory** to `client` (Vercel auto-detects the Vite framework preset from there — no other config needed).
+3. Add an environment variable: `VITE_API_BASE_URL` = the Render URL from step 1 (no trailing slash).
+4. Deploy. Vercel gives you a public `https://*.vercel.app` URL — that's your shareable demo link.
