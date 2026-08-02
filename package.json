@@ -4,7 +4,7 @@
   "private": true,
   "description": "Funding readiness layer that matches small businesses with CDFIs and city microloan programs.",
   "scripts": {
-    "install:all": "npm install --prefix server && npm install --prefix client",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
     "server:dev": "npm run dev --prefix server",
     "client:dev": "npm run dev --prefix client",
     "dev": "concurrently \"npm:server:dev\" \"npm:client:dev\"",
