@@ -46,3 +46,61 @@ https://ag18179811.github.io/microfinance-matchmaker/
 ## Production Notes
 
 The resource data in this prototype is illustrative. Production use should connect to verified program feeds, CDFI partner records, city program calendars, and maintained eligibility rules. Microfinance Matchmaker is not a lender and does not guarantee approval.
+
+---
+
+## Full-Stack MVP App (`/server` + `/client`)
+
+Alongside the static GitHub Pages site above, this repo also contains a working full-stack MVP:
+
+- **`/server`** — Node/Express API backed by SQLite. Deterministic, rules-based lender matching and readiness scoring (`services/matching-engine.js`, no LLM involved), plus an optional Groq-powered coaching layer (`services/groq-coach.js`) that only ever generates explanatory text — never eligibility decisions.
+- **`/client`** — Minimal Vite + React app with an intake form and a results page.
+
+### Setup
+
+```bash
+npm run install:all          # installs server + client dependencies
+cp .env.example .env         # then fill in GROQ_API_KEY (optional — app works without it)
+```
+
+`.env` lives at the repo root and is read by the server. `GROQ_API_KEY` is optional: without it, the readiness score and lender matches still work exactly the same, just with a placeholder coaching message instead of Groq-generated text.
+
+### Run
+
+```bash
+npm run dev                  # runs server (port 3001) and client (port 5173) together
+```
+
+Or run them separately:
+
+```bash
+npm run server:dev           # http://localhost:3001
+npm run client:dev           # http://localhost:5173 (proxies /api to the server)
+```
+
+The SQLite database (`server/db/database.sqlite`) is created and auto-seeded with 18 placeholder CDFI/city-program lenders on first server start. To re-seed manually:
+
+```bash
+npm run seed
+```
+
+### Test the matching engine
+
+The rules-based matching engine is fully unit-tested and requires no API key:
+
+```bash
+npm test
+```
+
+### API
+
+- `POST /api/applications` — create a borrower application
+- `GET /api/applications/:id` — fetch a stored application
+- `POST /api/match/:applicationId` — run the matching engine + readiness scoring + Groq coaching, persist results, return the ranked match list
+- `GET /api/match/:applicationId` — fetch previously computed match results
+
+### Notes for production
+
+- The seeded lender data in `server/db/seed-lenders.js` is **placeholder data** — replace it with real curated entries from the [CDFI Fund Awards Database](https://www.cdfifund.gov/programs-training/programs/cdfi-fund-awards) before launch.
+- No auth, payments, or live external API integrations beyond Groq are implemented in this MVP pass.
+- SQLite is the MVP datastore; swap for Postgres when moving beyond a single-instance deployment.

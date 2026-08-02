@@ -1,1 +1,8 @@
 .DS_Store
+node_modules/
+.env
+server/db/database.sqlite
+server/db/database.sqlite-journal
+server/db/database.sqlite-wal
+server/db/database.sqlite-shm
+client/dist/
