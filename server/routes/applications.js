@@ -1,30 +1,26 @@
 import { Router } from 'express';
 import db from '../db/connection.js';
+import { REQUIRED_APPLICATION_FIELDS, normalizeState } from '../constants.js';
 
 const router = Router();
 
-const REQUIRED_FIELDS = [
-  'business_name',
-  'industry',
-  'city',
-  'state',
-  'time_in_business_months',
-  'annual_revenue',
-  'requested_amount',
-];
-
 router.post('/', (req, res) => {
   const body = req.body || {};
-  const missing = REQUIRED_FIELDS.filter((field) => body[field] === undefined || body[field] === null || body[field] === '');
+  const missing = REQUIRED_APPLICATION_FIELDS.filter((field) => body[field] === undefined || body[field] === null || body[field] === '');
   if (missing.length > 0) {
     return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
+  }
+
+  const state = normalizeState(body.state);
+  if (!state) {
+    return res.status(400).json({ error: `Unrecognized state: ${body.state}` });
   }
 
   const application = {
     business_name: String(body.business_name),
     industry: String(body.industry),
     city: String(body.city),
-    state: String(body.state),
+    state,
     time_in_business_months: Number(body.time_in_business_months),
     annual_revenue: Number(body.annual_revenue),
     requested_amount: Number(body.requested_amount),

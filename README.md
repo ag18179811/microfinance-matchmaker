@@ -53,8 +53,16 @@ The resource data in this prototype is illustrative. Production use should conne
 
 Alongside the static GitHub Pages site above, this repo also contains a working full-stack MVP:
 
-- **`/server`** — Node/Express API backed by SQLite. Deterministic, rules-based lender matching and readiness scoring (`services/matching-engine.js`, no LLM involved), plus an optional Groq-powered coaching layer (`services/groq-coach.js`) that only ever generates explanatory text — never eligibility decisions.
-- **`/client`** — Minimal Vite + React app with an intake form and a results page.
+- **`/server`** — Node/Express API backed by SQLite. Deterministic, rules-based lender matching and readiness scoring (`services/matching-engine.js`, no LLM involved), a Groq-powered free-text extraction step (`services/groq-extract.js`) that turns a plain-English business description into structured fields, and a Groq-powered coaching layer (`services/groq-coach.js`) that only ever generates explanatory text — never eligibility decisions.
+- **`/client`** — Minimal Vite + React app: a single "describe your business" box, a short dynamic follow-up form for whatever the description didn't cover, and a results page.
+
+### How intake works
+
+1. The user describes their business in one free-text box (`POST /api/intake/extract`).
+2. Groq (JSON mode, temperature 0) extracts only what's explicitly or unambiguously stated — business name, industry (matched against a fixed list), city/state, time in business, revenue, requested amount, purpose. It's instructed to never guess a number, location, or industry it isn't confident about, and every field is re-validated server-side (industry must match the fixed enum, state is normalized against a real US-states table, dollar/month figures are coerced to numbers or dropped) so a bad or missing value always becomes `null` rather than a hallucinated guess.
+3. The server deterministically diffs the extracted fields against the required set — the LLM never decides what's required — and returns only the genuinely missing fields.
+4. The client renders a short form for just those fields (typically 0–3 questions if the description was reasonably complete), the user fills them in, and the combined data is submitted to the existing `POST /api/applications` → `POST /api/match/:id` pipeline unchanged.
+5. If `GROQ_API_KEY` isn't set, extraction returns everything as `null` (no heuristic guessing) and the user is simply asked every question — the app degrades gracefully rather than fabricating data.
 
 ### Setup
 
@@ -84,9 +92,9 @@ The SQLite database (`server/db/database.sqlite`) is created and auto-seeded wit
 npm run seed
 ```
 
-### Test the matching engine
+### Test the matching engine and extraction logic
 
-The rules-based matching engine is fully unit-tested and requires no API key:
+The rules-based matching engine and the extraction coercion/validation logic are both unit-tested without needing a live API key (the Groq call is mocked in tests):
 
 ```bash
 npm test
@@ -94,6 +102,7 @@ npm test
 
 ### API
 
+- `POST /api/intake/extract` — `{ description, known? }` → extracts structured fields from free text, merges in any already-confirmed `known` answers, returns `{ fields, missingFields }`
 - `POST /api/applications` — create a borrower application
 - `GET /api/applications/:id` — fetch a stored application
 - `POST /api/match/:applicationId` — run the matching engine + readiness scoring + Groq coaching, persist results, return the ranked match list

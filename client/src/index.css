@@ -36,6 +36,12 @@ button {
   margin-top: 1rem;
 }
 
+.hint {
+  color: #555;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
 .lender-card {
   border: 1px solid #ddd;
   border-radius: 6px;
