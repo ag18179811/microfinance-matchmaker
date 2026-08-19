@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Header from './components/Header.jsx';
 import DescribeBusiness from './pages/DescribeBusiness.jsx';
 import FollowUp from './pages/FollowUp.jsx';
 import Results from './pages/Results.jsx';
@@ -17,6 +18,16 @@ async function submitApplication(fields) {
   const matchData = await matchRes.json();
   if (!matchRes.ok) throw new Error(matchData.error || 'Failed to compute matches');
   return matchData;
+}
+
+function LoadingScreen() {
+  return (
+    <div className="loading-screen">
+      <div className="spinner" />
+      <div className="loading-title">Finding your matches…</div>
+      <p className="loading-subtitle">Scoring your readiness and checking you against our lender database.</p>
+    </div>
+  );
 }
 
 export default function App() {
@@ -69,16 +80,26 @@ export default function App() {
   }
 
   return (
-    <div>
-      <h1>Microfinance Matchmaker</h1>
-      {stage === 'describe' && <p className="hint">Tell us about your business in your own words, and we'll take it from there.</p>}
-      {error && <p className="error">{error}</p>}
-
-      {stage === 'describe' && <DescribeBusiness onExtracted={handleExtracted} />}
-      {stage === 'followup' && (
-        <FollowUp fields={partialFields} missingFields={missingFields} onComplete={handleFollowUpComplete} busy={busy} />
-      )}
-      {stage === 'results' && results && <Results results={results} onStartOver={startOver} />}
-    </div>
+    <>
+      <Header onLogoClick={stage !== 'describe' ? startOver : undefined} />
+      <main className="main">
+        {busy ? (
+          <LoadingScreen />
+        ) : (
+          <>
+            {error && (
+              <div className="page" style={{ paddingBottom: 0 }}>
+                <div className="alert alert-danger">{error}</div>
+              </div>
+            )}
+            {stage === 'describe' && <DescribeBusiness onExtracted={handleExtracted} />}
+            {stage === 'followup' && (
+              <FollowUp fields={partialFields} missingFields={missingFields} onComplete={handleFollowUpComplete} busy={busy} />
+            )}
+            {stage === 'results' && results && <Results results={results} onStartOver={startOver} />}
+          </>
+        )}
+      </main>
+    </>
   );
 }

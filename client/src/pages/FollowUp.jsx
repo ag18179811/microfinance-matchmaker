@@ -28,50 +28,54 @@ export default function FollowUp({ fields, missingFields, onComplete, busy }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>A few more details</h2>
-      <p className="hint">
-        We picked up the rest from your description — just need these {missingFields.length} to find
-        your best matches.
-      </p>
+    <div className="page">
+      <form className="card" onSubmit={handleSubmit}>
+        <div className="card-eyebrow">Almost there</div>
+        <h2 className="card-title">A few more details</h2>
+        <p className="card-subtitle">
+          We picked up the rest from your description — just need these {missingFields.length}{' '}
+          {missingFields.length === 1 ? 'answer' : 'answers'} to find your best matches.
+        </p>
 
-      {missingFields.map((key) => {
-        const meta = FIELD_META[key];
-        if (!meta) return null;
+        {missingFields.map((key) => {
+          const meta = FIELD_META[key];
+          if (!meta) return null;
 
-        if (meta.type === 'select') {
+          if (meta.type === 'select') {
+            return (
+              <div className="field" key={key}>
+                <label htmlFor={key}>{meta.label}</label>
+                <select id={key} value={answers[key]} onChange={(e) => handleChange(key, e.target.value)}>
+                  {meta.options.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+
           return (
-            <div key={key}>
+            <div className="field" key={key}>
               <label htmlFor={key}>{meta.label}</label>
-              <select id={key} value={answers[key]} onChange={(e) => handleChange(key, e.target.value)}>
-                {meta.options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+              <input
+                id={key}
+                type={meta.type}
+                min={meta.type === 'number' ? '0' : undefined}
+                value={answers[key]}
+                onChange={(e) => handleChange(key, e.target.value)}
+              />
             </div>
           );
-        }
+        })}
 
-        return (
-          <div key={key}>
-            <label htmlFor={key}>{meta.label}</label>
-            <input
-              id={key}
-              type={meta.type}
-              min={meta.type === 'number' ? '0' : undefined}
-              value={answers[key]}
-              onChange={(e) => handleChange(key, e.target.value)}
-            />
-          </div>
-        );
-      })}
+        {error && <div className="alert alert-danger">{error}</div>}
 
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={busy}>
-        {busy ? 'Finding your matches…' : 'Get my funding matches'}
-      </button>
-    </form>
+        <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
+          {busy ? 'Finding your matches…' : 'Get my funding matches'}
+        </button>
+      </form>
+    </div>
   );
 }
