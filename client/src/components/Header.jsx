@@ -1,4 +1,10 @@
-export default function Header({ onLogoClick }) {
+function scrollToId(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+export default function Header({ stage, onLogoClick }) {
+  const isLanding = stage === 'describe';
+
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -14,7 +20,31 @@ export default function Header({ onLogoClick }) {
             </svg>
           </span>
           <span className="brand-name">Microfinance Matchmaker</span>
+          <span className="brand-badge">Beta</span>
         </button>
+
+        {isLanding ? (
+          <nav className="nav-links">
+            <button type="button" className="nav-link" onClick={() => scrollToId('how-it-works')}>
+              How it works
+            </button>
+            <button type="button" className="nav-link" onClick={() => scrollToId('trust')}>
+              Security &amp; trust
+            </button>
+            <a
+              className="nav-link nav-link-external"
+              href="https://www.cdfifund.gov/programs-training/programs/cdfi-fund-awards"
+              target="_blank"
+              rel="noreferrer"
+            >
+              CDFI Fund
+            </a>
+          </nav>
+        ) : (
+          <button type="button" className="btn btn-secondary btn-sm" onClick={onLogoClick}>
+            New application
+          </button>
+        )}
       </div>
     </header>
   );

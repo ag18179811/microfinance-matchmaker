@@ -77,7 +77,7 @@ export default function Results({ results, onStartOver }) {
               .filter(Boolean);
 
             return (
-              <div className="lender-card" key={m.id}>
+              <div className="lender-card" key={m.id} style={{ animationDelay: `${Math.min(i, 8) * 0.06}s` }}>
                 <div className="lender-card-top">
                   <div className="lender-name">
                     <span className="lender-rank">#{i + 1}</span>
