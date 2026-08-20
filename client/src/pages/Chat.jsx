@@ -20,6 +20,34 @@ function questionFor(key) {
   return `${meta.label}${QUESTION_HINTS[key] || ''}`;
 }
 
+const RECAP_LABELS = {
+  business_name: 'Business',
+  industry: 'Industry',
+  time_in_business_months: 'Time in business',
+  annual_revenue: 'Annual revenue',
+  requested_amount: 'Funding requested',
+};
+
+function formatRecapValue(key, value) {
+  if (key === 'time_in_business_months') return `${value} month${Number(value) === 1 ? '' : 's'}`;
+  if (key === 'annual_revenue' || key === 'requested_amount') return `$${Number(value).toLocaleString()}`;
+  return String(value);
+}
+
+// Builds a plain-language recap of exactly what was pulled from the user's
+// free-text description, so the chat can honestly say what it found instead
+// of a canned "got most of it" line regardless of how much was extracted.
+function buildRecapLines(fields) {
+  const lines = [];
+  if (fields.business_name) lines.push(`${RECAP_LABELS.business_name}: ${fields.business_name}`);
+  if (fields.industry) lines.push(`${RECAP_LABELS.industry}: ${fields.industry}`);
+  if (fields.city || fields.state) lines.push(`Location: ${[fields.city, fields.state].filter(Boolean).join(', ')}`);
+  for (const key of ['time_in_business_months', 'annual_revenue', 'requested_amount']) {
+    if (fields[key] !== null && fields[key] !== undefined) lines.push(`${RECAP_LABELS[key]}: ${formatRecapValue(key, fields[key])}`);
+  }
+  return lines;
+}
+
 // Accepts loose input ("180k", "$50,000", "3 years", "2 yrs") for the numeric
 // fields so the chat doesn't force a rigid format on the user.
 function parseLooseNumber(raw, key) {
@@ -64,7 +92,12 @@ function nextId() {
   return idCounter;
 }
 
-function TypingBubble() {
+// Shows either a generic "typing" (three dots) indicator, or — whenever we
+// have something concrete to say about what the engine is actually doing
+// right now — a labeled status line, so the process reads as a real pipeline
+// (reading your description, preparing the next question, scoring against
+// the lender database) rather than an opaque "thinking..." spinner.
+function TypingBubble({ label }) {
   return (
     <div className="chat-row chat-row-ai">
       <span className="chat-avatar" aria-hidden="true">
@@ -72,10 +105,19 @@ function TypingBubble() {
           <path d="M2 10.5l3-4 2.5 2.5L13 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
-      <div className="chat-msg chat-msg-ai typing-indicator" aria-label="Assistant is typing">
-        <span className="dot" />
-        <span className="dot" />
-        <span className="dot" />
+      <div className={`chat-msg chat-msg-ai typing-indicator ${label ? 'has-label' : ''}`} aria-label={label || 'Assistant is typing'}>
+        {label ? (
+          <>
+            <span className="status-spinner" />
+            <span className="status-label">{label}</span>
+          </>
+        ) : (
+          <>
+            <span className="dot" />
+            <span className="dot" />
+            <span className="dot" />
+          </>
+        )}
       </div>
     </div>
   );
@@ -86,6 +128,7 @@ export default function Chat({ initialDescription, onComplete }) {
   const [queue, setQueue] = useState([]);
   const [fields, setFields] = useState({});
   const [typing, setTyping] = useState(false);
+  const [statusLabel, setStatusLabel] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [inputDisabled, setInputDisabled] = useState(true);
   const [retry, setRetry] = useState(null);
@@ -95,6 +138,16 @@ export default function Chat({ initialDescription, onComplete }) {
 
   function addMessage(role, text, extra = {}) {
     setMessages((prev) => [...prev, { id: nextId(), role, text, ...extra }]);
+  }
+
+  function showStatus(label) {
+    setStatusLabel(label);
+    setTyping(true);
+  }
+
+  function hideStatus() {
+    setTyping(false);
+    setStatusLabel(null);
   }
 
   useEffect(() => {
@@ -114,7 +167,7 @@ export default function Chat({ initialDescription, onComplete }) {
 
   async function beginConversation() {
     addMessage('user', initialDescription);
-    setTyping(true);
+    showStatus('Reading your description…');
     try {
       const res = await fetch(apiUrl('/api/intake/extract'), {
         method: 'POST',
@@ -123,10 +176,10 @@ export default function Chat({ initialDescription, onComplete }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to analyze your description');
-      setTyping(false);
+      hideStatus();
       await handleExtracted(data.fields, data.missingFields);
     } catch (err) {
-      setTyping(false);
+      hideStatus();
       showError("I had trouble reading that description.", err.message, () => beginConversation());
     }
   }
@@ -134,21 +187,32 @@ export default function Chat({ initialDescription, onComplete }) {
   async function handleExtracted(extractedFields, missingFields) {
     setFields(extractedFields);
     const ordered = REQUIRED_ORDER.filter((k) => missingFields.includes(k));
+    const recapLines = buildRecapLines(extractedFields);
+
+    await sleep(400);
+    if (recapLines.length > 0) {
+      addMessage('ai', `Here's what I found in your description:\n${recapLines.map((l) => `•  ${l}`).join('\n')}`);
+      await sleep(550);
+    }
 
     if (ordered.length === 0) {
-      await sleep(450);
-      addMessage('ai', "Perfect, that's everything I need. Give me a moment to find your best-fit lenders...");
+      addMessage('ai', "That covers everything I need.");
       finalizeAndMatch(extractedFields);
       return;
     }
 
-    await sleep(450);
-    addMessage(
-      'ai',
-      `Thanks! I picked up most of that. I just need ${ordered.length} more ${ordered.length === 1 ? 'thing' : 'things'} to find your best matches.`
-    );
+    if (recapLines.length > 0) {
+      addMessage('ai', `I still need ${ordered.length} more ${ordered.length === 1 ? 'thing' : 'things'} before I can run your matches.`);
+    } else {
+      addMessage(
+        'ai',
+        `I couldn't confidently pull any details from that yet, so let's fill them in together — ${ordered.length} quick question${ordered.length === 1 ? '' : 's'}.`
+      );
+    }
     setQueue(ordered);
-    await sleep(600);
+    showStatus('Preparing the next question…');
+    await sleep(550);
+    hideStatus();
     askQuestion(ordered[0]);
   }
 
@@ -164,7 +228,9 @@ export default function Chat({ initialDescription, onComplete }) {
     if (!ok) {
       addMessage('user', raw);
       const meta = FIELD_META[key];
+      setTyping(true);
       await sleep(350);
+      setTyping(false);
       if (meta.type === 'select') {
         addMessage('ai', `Hmm, I didn't recognize that. ${questionFor(key)}`, key === 'industry' ? { chips: meta.options } : {});
       } else {
@@ -181,24 +247,28 @@ export default function Chat({ initialDescription, onComplete }) {
     setInputDisabled(true);
 
     if (newQueue.length === 0) {
-      await sleep(500);
-      addMessage('ai', "That's everything — give me a moment to find your best-fit lenders...");
+      await sleep(400);
+      addMessage('ai', "That's everything I need.");
       finalizeAndMatch(newFields);
     } else {
-      setTyping(true);
+      showStatus('Preparing the next question…');
       await sleep(550);
-      setTyping(false);
+      hideStatus();
       askQuestion(newQueue[0]);
     }
   }
 
   async function finalizeAndMatch(finalFields) {
-    setTyping(true);
     setInputDisabled(true);
+    showStatus('Saving your application…');
     try {
-      await onComplete(finalFields);
+      await onComplete(finalFields, (stage) => {
+        if (stage === 'matching') {
+          showStatus('Checking eligibility and scoring your readiness against our lender database…');
+        }
+      });
     } catch (err) {
-      setTyping(false);
+      hideStatus();
       showError('I ran into a problem finding your matches.', err.message, () => finalizeAndMatch(finalFields));
     }
   }
@@ -277,7 +347,7 @@ export default function Chat({ initialDescription, onComplete }) {
             </div>
           </div>
         ))}
-        {typing && <TypingBubble />}
+        {typing && <TypingBubble label={statusLabel} />}
         <div ref={bottomRef} />
       </div>
 

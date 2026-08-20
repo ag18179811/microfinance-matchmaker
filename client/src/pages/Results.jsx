@@ -1,5 +1,18 @@
 import ScoreGauge from '../components/ScoreGauge.jsx';
 
+const READINESS_FACTORS = [
+  { key: 'timeInBusiness', label: 'Time in business', blurb: 'Longer operating history lowers lender risk.' },
+  { key: 'revenueStability', label: 'Revenue stability', blurb: 'Consistent revenue signals ability to repay.' },
+  { key: 'requestToRevenueRatio', label: 'Loan-to-revenue ratio', blurb: 'How reasonable your ask is against what you bring in.' },
+  { key: 'completeness', label: 'Profile completeness', blurb: 'How much of your application we could confirm.' },
+];
+
+function factorColor(value) {
+  if (value >= 75) return 'var(--color-success)';
+  if (value >= 50) return 'var(--color-warning)';
+  return 'var(--color-danger)';
+}
+
 function formatType(type) {
   if (!type) return '';
   if (type.toUpperCase() === 'CDFI') return 'CDFI';
@@ -21,7 +34,7 @@ function formatCurrency(n) {
 }
 
 export default function Results({ results, onStartOver }) {
-  const { readinessScore, aiSummary, matches } = results;
+  const { readinessScore, aiSummary, matches, subScores } = results;
   const topMatch = matches[0]?.match_score ?? 0;
 
   return (
@@ -63,6 +76,36 @@ export default function Results({ results, onStartOver }) {
         </div>
         <div className="coaching-body">{aiSummary}</div>
       </div>
+
+      {subScores && (
+        <div className="breakdown-card">
+          <div className="breakdown-header">
+            <h2 className="section-title" style={{ marginBottom: 0 }}>
+              How your readiness score breaks down
+            </h2>
+            <p className="breakdown-subtitle">Four factors, weighted evenly — this is the actual math behind the {readinessScore}/100 above.</p>
+          </div>
+          <div className="breakdown-grid">
+            {READINESS_FACTORS.map((factor) => {
+              const value = subScores[factor.key] ?? 0;
+              return (
+                <div className="breakdown-row" key={factor.key}>
+                  <div className="breakdown-row-top">
+                    <span className="breakdown-label">{factor.label}</span>
+                    <span className="breakdown-value" style={{ color: factorColor(value) }}>
+                      {value}/100
+                    </span>
+                  </div>
+                  <div className="breakdown-bar-track">
+                    <div className="breakdown-bar-fill" style={{ width: `${value}%`, background: factorColor(value) }} />
+                  </div>
+                  <p className="breakdown-blurb">{factor.blurb}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <h2 className="section-title">Matched lenders</h2>
 
@@ -112,6 +155,35 @@ export default function Results({ results, onStartOver }) {
                     </dd>
                   </div>
                 </dl>
+
+                {(m.reasons?.length > 0 || m.cautions?.length > 0) && (
+                  <div className="lender-analysis">
+                    {m.reasons?.length > 0 && (
+                      <ul className="analysis-list analysis-list-good">
+                        {m.reasons.map((reason) => (
+                          <li key={reason}>
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                              <path d="M2.5 7.2l2.8 2.8L11.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {m.cautions?.length > 0 && (
+                      <ul className="analysis-list analysis-list-caution">
+                        {m.cautions.map((caution) => (
+                          <li key={caution}>
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                              <path d="M7 4.5v3.4M7 10.3v.1M1.5 12h11L7 2 1.5 12z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            {caution}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
 
                 {m.eligibility_notes && <div className="lender-notes">{m.eligibility_notes}</div>}
               </div>

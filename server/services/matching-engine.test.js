@@ -86,3 +86,42 @@ test('matchLenders is deterministic across repeated calls', () => {
     second.map((m) => [m.lender.name, m.matchScore])
   );
 });
+
+test('scoreLenderMatch hard-disqualifies when a required time-in-business threshold is unmet', () => {
+  const strictLender = {
+    geography: 'TX',
+    min_loan: 2000,
+    max_loan: 50000,
+    industries: 'Food Service',
+    min_months_in_business: 6,
+    min_months_in_business_type: 'required',
+  };
+  const newBusiness = { ...strongApplication, time_in_business_months: 2 };
+  assert.equal(scoreLenderMatch(strictLender, newBusiness), null);
+
+  const establishedBusiness = { ...strongApplication, time_in_business_months: 6 };
+  assert.ok(scoreLenderMatch(strictLender, establishedBusiness) !== null);
+});
+
+test('scoreLenderMatch keeps a preferred (soft) time-in-business threshold eligible but scores it down with a caution', () => {
+  const softLender = {
+    geography: 'TX',
+    min_loan: 2000,
+    max_loan: 50000,
+    industries: 'Food Service',
+    min_months_in_business: 12,
+    min_months_in_business_type: 'preferred',
+  };
+  const under = scoreLenderMatch(softLender, { ...strongApplication, time_in_business_months: 4 });
+  const over = scoreLenderMatch(softLender, { ...strongApplication, time_in_business_months: 24 });
+
+  assert.ok(under !== null, 'a preferred threshold must not disqualify');
+  assert.ok(under.matchScore < over.matchScore);
+  assert.ok(under.cautions.some((c) => c.toLowerCase().includes('prefers')));
+  assert.equal(over.cautions.length, 0);
+});
+
+test('scoreLenderMatch explains every eligible match with at least one reason', () => {
+  const result = scoreLenderMatch(lenders[0], strongApplication);
+  assert.ok(result.reasons.length > 0);
+});

@@ -734,6 +734,26 @@ select {
   animation-delay: 0.3s;
 }
 
+.typing-indicator.has-label {
+  gap: 0.55rem;
+  padding: 0.65rem 1.05rem;
+}
+
+.status-spinner {
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  animation: spin 0.7s linear infinite;
+}
+
+.status-label {
+  font-size: 0.87rem;
+  color: var(--color-text-secondary);
+}
+
 @keyframes typingBounce {
   0%,
   60%,
@@ -916,6 +936,122 @@ select {
   color: var(--color-text);
   font-size: 0.95rem;
   line-height: 1.6;
+}
+
+/* ---------- Readiness breakdown ---------- */
+
+.breakdown-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.75rem;
+  margin-bottom: 2.25rem;
+}
+
+.breakdown-header {
+  margin-bottom: 1.5rem;
+}
+
+.breakdown-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  margin-top: 0.35rem;
+}
+
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem 2rem;
+}
+
+@media (max-width: 640px) {
+  .breakdown-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.breakdown-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.4rem;
+}
+
+.breakdown-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.breakdown-value {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.breakdown-bar-track {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.breakdown-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.breakdown-blurb {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  margin-top: 0.4rem;
+}
+
+/* ---------- Per-lender analysis (reasons / cautions) ---------- */
+
+.lender-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.9rem 0;
+}
+
+.analysis-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.analysis-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.analysis-list li svg {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.analysis-list-good li {
+  color: var(--color-text);
+}
+
+.analysis-list-good li svg {
+  color: var(--color-success);
+}
+
+.analysis-list-caution li {
+  color: #92400e;
+}
+
+.analysis-list-caution li svg {
+  color: var(--color-warning);
 }
 
 .section-title {

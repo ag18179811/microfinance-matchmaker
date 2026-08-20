@@ -36,15 +36,59 @@ function loanSizeFit(lender, application) {
   const min = Number(lender.min_loan) || 0;
   const max = Number(lender.max_loan) || Infinity;
 
-  if (requested >= min && requested <= max) return { eligible: true, score: 100 };
+  if (requested >= min && requested <= max) {
+    // Flag amounts sitting right at the edge of the window as worth a second look,
+    // even though they technically clear the bar.
+    const nearMin = min > 0 && requested <= min * 1.1;
+    const nearMax = Number.isFinite(max) && requested >= max * 0.9;
+    return { eligible: true, score: 100, edge: nearMin || nearMax };
+  }
 
   // Too far outside the lender's range to be a realistic match.
-  if (requested < min * 0.5 || requested > max * 2) return { eligible: false, score: 0 };
+  if (requested < min * 0.5 || requested > max * 2) return { eligible: false, score: 0, edge: false };
 
   // Just outside the range: partial credit, decaying with distance.
   const distance = requested < min ? (min - requested) / min : (requested - max) / max;
   const score = Math.max(0, Math.round(100 - distance * 150));
-  return { eligible: true, score };
+  return { eligible: true, score, edge: true };
+}
+
+// Many lenders state a minimum time-in-business either as a hard cutoff
+// ("6+ months required") or a soft preference ("12+ months preferred"). This
+// was previously buried in free-text notes and never actually enforced,
+// which meant a 2-month-old business could be ranked as a strong match
+// against a lender that would reject it outright. Required thresholds now
+// disqualify; preferred thresholds stay eligible but score lower and surface
+// as a caution, so the ranking reflects real underwriting friction either way.
+function timeInBusinessGate(lender, application) {
+  const required = Number(lender.min_months_in_business) || 0;
+  if (required <= 0) return { eligible: true, score: 100, reason: null, caution: null };
+
+  const actual = Number(application.time_in_business_months) || 0;
+  const isHardRequirement = lender.min_months_in_business_type === 'required';
+  const years = required % 12 === 0 ? `${required / 12}+ year${required === 12 ? '' : 's'}` : `${required}+ months`;
+
+  if (actual >= required) {
+    return {
+      eligible: true,
+      score: 100,
+      reason: `Meets this lender's ${years} time-in-business ${isHardRequirement ? 'requirement' : 'preference'}`,
+      caution: null,
+    };
+  }
+
+  if (isHardRequirement) {
+    return { eligible: false, score: 0, reason: null, caution: null };
+  }
+
+  const shortfall = required - actual;
+  const score = Math.max(20, Math.round(100 - (shortfall / required) * 100));
+  return {
+    eligible: true,
+    score,
+    reason: null,
+    caution: `Prefers ${years} in business — you're at ${actual} month${actual === 1 ? '' : 's'}, so approval may take extra documentation`,
+  };
 }
 
 export function scoreLenderMatch(lender, application) {
@@ -54,13 +98,39 @@ export function scoreLenderMatch(lender, application) {
   const loanFit = loanSizeFit(lender, application);
   if (!loanFit.eligible) return null;
 
+  const tenureGate = timeInBusinessGate(lender, application);
+  if (!tenureGate.eligible) return null;
+
   const served = parseGeography(lender.geography);
-  const geoScore = served.includes('NATIONAL') || served.includes('NATIONWIDE') ? 90 : 100;
+  const isNational = served.includes('NATIONAL') || served.includes('NATIONWIDE');
+  const geoScore = isNational ? 90 : 100;
 
   const industriesServed = parseIndustries(lender.industries);
-  const industryScore = industriesServed.some((i) => i === 'all' || i === 'all industries') ? 70 : 100;
+  const isAllIndustries = industriesServed.some((i) => i === 'all' || i === 'all industries');
+  const industryScore = isAllIndustries ? 70 : 100;
 
-  const matchScore = Math.round(loanFit.score * 0.4 + industryScore * 0.3 + geoScore * 0.3);
+  const matchScore = Math.round(
+    loanFit.score * 0.35 + industryScore * 0.2 + geoScore * 0.2 + tenureGate.score * 0.25
+  );
+
+  const min = Number(lender.min_loan) || 0;
+  const max = Number(lender.max_loan);
+  const requested = Number(application.requested_amount) || 0;
+
+  const reasons = [];
+  const cautions = [];
+
+  if (loanFit.score === 100 && !loanFit.edge) {
+    reasons.push(`Your $${requested.toLocaleString()} request comfortably fits this lender's $${min.toLocaleString()}–$${Number.isFinite(max) ? max.toLocaleString() : 'no max'} range`);
+  } else if (loanFit.edge) {
+    cautions.push(`Your request sits near the ${requested <= min * 1.1 ? 'minimum' : 'maximum'} of this lender's loan range — approval may hinge on additional documentation`);
+  }
+
+  reasons.push(isNational ? 'National program — lends in every state' : `Directly serves ${application.state || 'your state'}`);
+  reasons.push(isAllIndustries ? 'Open to all industries' : `Actively lends to ${application.industry || 'your industry'} businesses`);
+
+  if (tenureGate.reason) reasons.push(tenureGate.reason);
+  if (tenureGate.caution) cautions.push(tenureGate.caution);
 
   return {
     matchScore,
@@ -68,7 +138,10 @@ export function scoreLenderMatch(lender, application) {
       geography: geoScore,
       industry: industryScore,
       loanFit: loanFit.score,
+      timeInBusiness: tenureGate.score,
     },
+    reasons,
+    cautions,
   };
 }
 
@@ -76,7 +149,15 @@ export function matchLenders(application, lenders) {
   return lenders
     .map((lender) => {
       const result = scoreLenderMatch(lender, application);
-      return result ? { lender, matchScore: result.matchScore, breakdown: result.breakdown } : null;
+      return result
+        ? {
+            lender,
+            matchScore: result.matchScore,
+            breakdown: result.breakdown,
+            reasons: result.reasons,
+            cautions: result.cautions,
+          }
+        : null;
     })
     .filter(Boolean)
     .sort((a, b) => b.matchScore - a.matchScore);

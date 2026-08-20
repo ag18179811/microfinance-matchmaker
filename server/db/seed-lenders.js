@@ -12,6 +12,8 @@ export const lenders = [
     industries: 'Retail,Food Service,Personal Services,Professional Services',
     eligibility_notes: 'Placeholder data. Prioritizes low-to-moderate income census tracts; 6+ months in business required.',
     source_url: '',
+    min_months_in_business: 6,
+    min_months_in_business_type: 'required',
   },
   {
     name: 'Bay Area Small Business Loan Fund',
@@ -82,6 +84,8 @@ export const lenders = [
     industries: 'Manufacturing,Retail,Food Service,Technology,Professional Services',
     eligibility_notes: 'Placeholder data. Emphasis on women- and minority-owned businesses; 12+ months in business preferred.',
     source_url: '',
+    min_months_in_business: 12,
+    min_months_in_business_type: 'preferred',
   },
   {
     name: 'Southwest Border Business Fund',
@@ -122,6 +126,8 @@ export const lenders = [
     industries: 'Retail,Food Service,Personal Services,Professional Services,Manufacturing',
     eligibility_notes: 'Placeholder data. Nationwide nonprofit lender; requires 2 years of business tax returns.',
     source_url: '',
+    min_months_in_business: 24,
+    min_months_in_business_type: 'required',
   },
   {
     name: 'Florida Coastal Enterprise Fund',
@@ -187,12 +193,18 @@ export const lenders = [
 
 export function seedLenders(db) {
   const insert = db.prepare(`
-    INSERT INTO lenders (name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url)
-    VALUES (@name, @type, @geography, @min_loan, @max_loan, @industries, @eligibility_notes, @source_url)
+    INSERT INTO lenders (name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type)
+    VALUES (@name, @type, @geography, @min_loan, @max_loan, @industries, @eligibility_notes, @source_url, @min_months_in_business, @min_months_in_business_type)
   `);
 
   const insertMany = db.transaction((rows) => {
-    for (const row of rows) insert.run(row);
+    for (const row of rows) {
+      insert.run({
+        min_months_in_business: null,
+        min_months_in_business_type: null,
+        ...row,
+      });
+    }
   });
 
   insertMany(lenders);

@@ -6,7 +6,8 @@ import Chat from './pages/Chat.jsx';
 import Results from './pages/Results.jsx';
 import { apiUrl } from './api.js';
 
-async function submitApplication(fields) {
+async function submitApplication(fields, onProgress) {
+  onProgress?.('saving');
   const createRes = await fetch(apiUrl('/api/applications'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -15,6 +16,7 @@ async function submitApplication(fields) {
   const application = await createRes.json();
   if (!createRes.ok) throw new Error(application.error || 'Failed to save application');
 
+  onProgress?.('matching');
   const matchRes = await fetch(apiUrl(`/api/match/${application.id}`), { method: 'POST' });
   const matchData = await matchRes.json();
   if (!matchRes.ok) throw new Error(matchData.error || 'Failed to compute matches');
@@ -31,8 +33,8 @@ export default function App() {
     setStage('chat');
   }
 
-  async function finalizeApplication(fields) {
-    const data = await submitApplication(fields);
+  async function finalizeApplication(fields, onProgress) {
+    const data = await submitApplication(fields, onProgress);
     setResults(data);
     setStage('results');
     return data;

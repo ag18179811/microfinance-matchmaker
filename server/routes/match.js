@@ -6,10 +6,10 @@ import { generateCoachingSummary } from '../services/groq-coach.js';
 const router = Router();
 
 function loadResults(applicationId) {
-  return db
+  const rows = db
     .prepare(
       `
-      SELECT mr.match_score, mr.readiness_score, mr.ai_summary, l.*
+      SELECT mr.match_score, mr.readiness_score, mr.ai_summary, mr.match_details, mr.readiness_breakdown, l.*
       FROM match_results mr
       JOIN lenders l ON l.id = mr.lender_id
       WHERE mr.application_id = ?
@@ -17,6 +17,19 @@ function loadResults(applicationId) {
     `
     )
     .all(applicationId);
+
+  return rows.map((row) => {
+    const { match_details, readiness_breakdown, ...rest } = row;
+    const details = match_details ? JSON.parse(match_details) : { breakdown: {}, reasons: [], cautions: [] };
+    return { ...rest, ...details };
+  });
+}
+
+function loadSubScores(applicationId) {
+  const row = db
+    .prepare('SELECT readiness_breakdown FROM match_results WHERE application_id = ? LIMIT 1')
+    .get(applicationId);
+  return row?.readiness_breakdown ? JSON.parse(row.readiness_breakdown) : null;
 }
 
 router.post('/:applicationId', async (req, res) => {
@@ -31,9 +44,11 @@ router.post('/:applicationId', async (req, res) => {
 
   const clearExisting = db.prepare('DELETE FROM match_results WHERE application_id = ?');
   const insertMatch = db.prepare(`
-    INSERT INTO match_results (application_id, lender_id, match_score, readiness_score, ai_summary)
-    VALUES (@application_id, @lender_id, @match_score, @readiness_score, @ai_summary)
+    INSERT INTO match_results (application_id, lender_id, match_score, readiness_score, ai_summary, match_details, readiness_breakdown)
+    VALUES (@application_id, @lender_id, @match_score, @readiness_score, @ai_summary, @match_details, @readiness_breakdown)
   `);
+
+  const readinessBreakdownJson = JSON.stringify(subScores);
 
   const persist = db.transaction(() => {
     clearExisting.run(application.id);
@@ -44,6 +59,8 @@ router.post('/:applicationId', async (req, res) => {
         match_score: match.matchScore,
         readiness_score: readinessScore,
         ai_summary: aiSummary,
+        match_details: JSON.stringify({ breakdown: match.breakdown, reasons: match.reasons, cautions: match.cautions }),
+        readiness_breakdown: readinessBreakdownJson,
       });
     }
   });
@@ -66,6 +83,7 @@ router.get('/:applicationId', (req, res) => {
   res.json({
     applicationId: Number(req.params.applicationId),
     readinessScore: results[0].readiness_score,
+    subScores: loadSubScores(req.params.applicationId),
     aiSummary: results[0].ai_summary,
     matches: results,
   });

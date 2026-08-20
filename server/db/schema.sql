@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS lenders (
   max_loan INTEGER,
   industries TEXT, -- comma-separated
   eligibility_notes TEXT,
-  source_url TEXT
+  source_url TEXT,
+  min_months_in_business INTEGER, -- null = no stated tenure threshold
+  min_months_in_business_type TEXT -- 'required' (hard gate) | 'preferred' (soft, scored down) | null
 );
 
 CREATE TABLE IF NOT EXISTS applications (
@@ -30,6 +32,8 @@ CREATE TABLE IF NOT EXISTS match_results (
   match_score INTEGER,
   readiness_score INTEGER,
   ai_summary TEXT,
+  match_details TEXT, -- JSON: { breakdown, reasons: [...], cautions: [...] } for this lender
+  readiness_breakdown TEXT, -- JSON: subScores, same value on every row for one application
   FOREIGN KEY (application_id) REFERENCES applications(id),
   FOREIGN KEY (lender_id) REFERENCES lenders(id)
 );
