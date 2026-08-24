@@ -1,5 +1,43 @@
+-- Run this once in Supabase's SQL editor (Project -> SQL Editor -> New query)
+-- after creating the project. Safe to re-run: every statement is idempotent.
+
+-- ---------- Profiles ----------
+-- Supabase creates and manages auth.users itself once Google auth is enabled.
+-- This app only ever stores app-specific fields in a linked profiles row.
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  display_name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Auto-create a profile row whenever a new user signs in for the first time.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, display_name, avatar_url)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'avatar_url'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ---------- App tables ----------
+
 CREATE TABLE IF NOT EXISTS lenders (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   type TEXT, -- 'CDFI' | 'city_program' | 'nonprofit'
   geography TEXT, -- state or metro served
@@ -13,7 +51,8 @@ CREATE TABLE IF NOT EXISTS lenders (
 );
 
 CREATE TABLE IF NOT EXISTS applications (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   business_name TEXT,
   industry TEXT,
   city TEXT,
@@ -22,7 +61,7 @@ CREATE TABLE IF NOT EXISTS applications (
   annual_revenue INTEGER,
   requested_amount INTEGER,
   purpose TEXT,
-  created_at TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
   -- Deeper profile gathered by the adaptive interview. All optional --
   -- none of these become a new hard requirement the way the fields above are.
   existing_monthly_debt_payment INTEGER,
@@ -33,51 +72,89 @@ CREATE TABLE IF NOT EXISTS applications (
   cash_flow_pattern TEXT, -- 'steady' | 'seasonal' | 'growing' | 'declining'
   prior_funding_history TEXT,
   use_of_funds_detail TEXT,
-  ownership_demographics TEXT -- self-reported, optional, never scored
+  ownership_demographics TEXT, -- self-reported, optional, never scored
+  additional_notes TEXT -- JSON array of {topic, detail} — open-ended, business-specific facts the interview gathered beyond the fixed fields above
 );
 
 CREATE TABLE IF NOT EXISTS conversations (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  application_id INTEGER REFERENCES applications(id) ON DELETE SET NULL, -- set once the interview completes
   status TEXT DEFAULT 'in_progress', -- 'in_progress' | 'complete'
   fields TEXT, -- JSON snapshot of everything gathered so far
+  notes TEXT, -- JSON array of {topic, detail} — mirrors applications.additional_notes, accumulated live during the interview
   turn_count INTEGER DEFAULT 0,
-  created_at TEXT
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS conversation_messages (
-  id INTEGER PRIMARY KEY,
-  conversation_id INTEGER,
+  id SERIAL PRIMARY KEY,
+  conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
   role TEXT, -- 'user' | 'assistant'
   content TEXT,
   reasoning TEXT, -- assistant-only: the model's stated rationale for this turn
   field_key TEXT, -- assistant-only: the field this question is chiefly about, if any
   field_key_source TEXT, -- 'fallback' (strict coercion, retry on bad input) | 'llm' (lenient safety-net only)
-  created_at TEXT,
-  FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- Files are parsed in memory and discarded — only the extracted text is kept,
--- not the raw bytes (nothing to gain storing them: same ephemeral-disk
--- caveat as the SQLite file itself on a free Render instance).
+-- not the raw bytes.
 CREATE TABLE IF NOT EXISTS conversation_attachments (
-  id INTEGER PRIMARY KEY,
-  conversation_id INTEGER,
+  id SERIAL PRIMARY KEY,
+  conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
   filename TEXT,
   mime_type TEXT,
   extracted_text TEXT,
-  created_at TEXT,
-  FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS match_results (
-  id INTEGER PRIMARY KEY,
-  application_id INTEGER,
-  lender_id INTEGER,
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE,
+  lender_id INTEGER REFERENCES lenders(id) ON DELETE CASCADE,
   match_score INTEGER,
   readiness_score INTEGER,
   ai_summary TEXT,
   match_details TEXT, -- JSON: { breakdown, reasons: [...], cautions: [...] } for this lender
-  readiness_breakdown TEXT, -- JSON: subScores, same value on every row for one application
-  FOREIGN KEY (application_id) REFERENCES applications(id),
-  FOREIGN KEY (lender_id) REFERENCES lenders(id)
+  readiness_breakdown TEXT -- JSON: subScores, same value on every row for one application
 );
+
+-- ---------- Row-level security ----------
+-- Defense in depth: the Express backend authorizes every request itself
+-- (using the service-role key, which bypasses RLS by design), but this
+-- ensures that even a leaked anon key or an app-layer bug can't expose one
+-- user's data to another if something ever queries Postgres directly.
+
+ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversation_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversation_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE match_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "own applications" ON applications;
+CREATE POLICY "own applications" ON applications FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own conversations" ON conversations;
+CREATE POLICY "own conversations" ON conversations FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own conversation messages" ON conversation_messages;
+CREATE POLICY "own conversation messages" ON conversation_messages FOR ALL USING (
+  EXISTS (SELECT 1 FROM conversations c WHERE c.id = conversation_id AND c.user_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "own conversation attachments" ON conversation_attachments;
+CREATE POLICY "own conversation attachments" ON conversation_attachments FOR ALL USING (
+  EXISTS (SELECT 1 FROM conversations c WHERE c.id = conversation_id AND c.user_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "own match results" ON match_results;
+CREATE POLICY "own match results" ON match_results FOR ALL USING (
+  EXISTS (SELECT 1 FROM applications a WHERE a.id = application_id AND a.user_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "own profile" ON profiles;
+CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);
+
+-- lenders has no RLS — it's shared reference data, readable by everyone.

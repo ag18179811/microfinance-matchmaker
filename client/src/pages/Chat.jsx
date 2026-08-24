@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { apiUrl } from '../api.js';
+import { authedFetch } from '../api.js';
 
 // All answer validation now happens server-side (services/groq-interview.js
 // and interview-fallback.js) — the client just renders whatever question
@@ -113,7 +113,7 @@ export default function Chat({ initialDescription, onComplete }) {
     if (payload.done) {
       setActiveMessageId(null);
       addMessage('ai', "That's everything I need.");
-      finalizeAndMatch(payload.fields);
+      finalizeAndMatch({ ...payload.fields, notes: payload.notes || [] });
       return;
     }
     const { message } = payload;
@@ -130,7 +130,7 @@ export default function Chat({ initialDescription, onComplete }) {
     addMessage('user', initialDescription);
     showStatus('Reading your description…');
     try {
-      const res = await fetch(apiUrl('/api/interview/start'), {
+      const res = await authedFetch('/api/interview/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: initialDescription }),
@@ -152,7 +152,7 @@ export default function Chat({ initialDescription, onComplete }) {
     setInputDisabled(true);
     showStatus('Thinking…');
     try {
-      const res = await fetch(apiUrl(`/api/interview/${conversationId}/reply`), {
+      const res = await authedFetch(`/api/interview/${conversationId}/reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -171,7 +171,7 @@ export default function Chat({ initialDescription, onComplete }) {
     setInputDisabled(true);
     showStatus('Saving your application…');
     try {
-      await onComplete(fields, (stage) => {
+      await onComplete(fields, conversationId, (stage) => {
         if (stage === 'matching') {
           showStatus('Checking eligibility and scoring your readiness against our lender database…');
         }
@@ -228,7 +228,7 @@ export default function Chat({ initialDescription, onComplete }) {
     try {
       const form = new FormData();
       form.append('file', file);
-      const res = await fetch(apiUrl(`/api/interview/${conversationId}/attachments`), { method: 'POST', body: form });
+      const res = await authedFetch(`/api/interview/${conversationId}/attachments`, { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to upload that file');
       hideStatus();

@@ -9,6 +9,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>Microfinance Matchmaker</title>
+    <script>
+      // Applies a saved theme choice before first paint, so switching pages
+      // or reloading never flashes the wrong theme for a frame.
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme-preference');
+          if (saved === 'light' || saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', saved);
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
