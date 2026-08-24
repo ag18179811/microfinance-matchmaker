@@ -4,6 +4,7 @@
 // the sole source of truth for eligibility.
 
 import { INDUSTRIES, normalizeState } from '../constants.js';
+import { coerceNumber, coerceIndustry, coerceString } from './field-coercion.js';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'openai/gpt-oss-120b';
@@ -33,26 +34,6 @@ function buildSystemPrompt() {
     'the list. Respond with ONLY a single valid JSON object matching exactly this schema, and nothing ' +
     `else — no markdown, no commentary, no explanation:\n${SCHEMA_DESCRIPTION}`
   );
-}
-
-function coerceNumber(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const cleaned = String(value).replace(/[^0-9.-]/g, '');
-  if (cleaned === '') return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
-}
-
-function coerceIndustry(value) {
-  if (!value) return null;
-  const match = INDUSTRIES.find((i) => i.toLowerCase() === String(value).trim().toLowerCase());
-  return match || null;
-}
-
-function coerceString(value) {
-  if (value === null || value === undefined) return null;
-  const trimmed = String(value).trim();
-  return trimmed.length > 0 ? trimmed : null;
 }
 
 export function emptyExtraction() {

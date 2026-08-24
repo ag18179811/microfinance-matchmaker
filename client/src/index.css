@@ -841,6 +841,79 @@ select {
   color: var(--color-text-muted);
 }
 
+/* ---------- Chain-of-thought reasoning toggle ---------- */
+
+.reasoning-toggle {
+  margin-top: 0.4rem;
+}
+
+.reasoning-toggle summary {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  user-select: none;
+}
+
+.reasoning-toggle summary::-webkit-details-marker {
+  display: none;
+}
+
+.reasoning-toggle summary::before {
+  content: '▸';
+  font-size: 0.7rem;
+  transition: transform 0.15s;
+}
+
+.reasoning-toggle[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.reasoning-toggle summary:hover {
+  color: var(--color-primary);
+}
+
+.reasoning-toggle p {
+  margin: 0.4rem 0 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-bg);
+  border-left: 2px solid var(--color-border-strong);
+  border-radius: 6px;
+  font-size: 0.83rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* ---------- Attachment affordance ---------- */
+
+.attach-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  color: var(--color-text);
+}
+
+.chat-system-note {
+  align-self: center;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 0.35rem 0.9rem;
+  margin: 0.1rem auto;
+}
+
 /* ---------- Results ---------- */
 
 .results-header {

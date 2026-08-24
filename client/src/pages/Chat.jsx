@@ -1,89 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiUrl } from '../api.js';
-import { FIELD_META, normalizeState } from '../constants.js';
 
-const REQUIRED_ORDER = ['business_name', 'industry', 'city', 'state', 'time_in_business_months', 'annual_revenue', 'requested_amount'];
+// All answer validation now happens server-side (services/groq-interview.js
+// and interview-fallback.js) — the client just renders whatever question
+// comes back and sends whatever the user typed or clicked.
 
-const QUESTION_HINTS = {
-  state: ' You can use the 2-letter code (like CA) or the full name.',
-  annual_revenue: ' Rough numbers are fine — you can just say something like "180k".',
-  requested_amount: ' A ballpark figure is fine.',
-  time_in_business_months: ' Feel free to answer in months or years — e.g. "3 years".',
+const OPTION_LABELS = {
+  sole_prop: 'Sole Proprietorship',
+  llc: 'LLC',
+  s_corp: 'S-Corp',
+  c_corp: 'C-Corp',
+  yes_2yr: 'Yes, last 2 years',
+  yes_1yr: 'Yes, last year only',
+  under_600: 'Under 600',
+  '600_680': '600–680',
+  '680_720': '680–720',
+  '720_plus': '720+',
+  not_sure: 'Not sure',
 };
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function questionFor(key) {
-  const meta = FIELD_META[key];
-  return `${meta.label}${QUESTION_HINTS[key] || ''}`;
-}
-
-const RECAP_LABELS = {
-  business_name: 'Business',
-  industry: 'Industry',
-  time_in_business_months: 'Time in business',
-  annual_revenue: 'Annual revenue',
-  requested_amount: 'Funding requested',
-};
-
-function formatRecapValue(key, value) {
-  if (key === 'time_in_business_months') return `${value} month${Number(value) === 1 ? '' : 's'}`;
-  if (key === 'annual_revenue' || key === 'requested_amount') return `$${Number(value).toLocaleString()}`;
-  return String(value);
-}
-
-// Builds a plain-language recap of exactly what was pulled from the user's
-// free-text description, so the chat can honestly say what it found instead
-// of a canned "got most of it" line regardless of how much was extracted.
-function buildRecapLines(fields) {
-  const lines = [];
-  if (fields.business_name) lines.push(`${RECAP_LABELS.business_name}: ${fields.business_name}`);
-  if (fields.industry) lines.push(`${RECAP_LABELS.industry}: ${fields.industry}`);
-  if (fields.city || fields.state) lines.push(`Location: ${[fields.city, fields.state].filter(Boolean).join(', ')}`);
-  for (const key of ['time_in_business_months', 'annual_revenue', 'requested_amount']) {
-    if (fields[key] !== null && fields[key] !== undefined) lines.push(`${RECAP_LABELS[key]}: ${formatRecapValue(key, fields[key])}`);
+function prettifyOption(raw) {
+  if (OPTION_LABELS[raw]) return OPTION_LABELS[raw];
+  if (/^[a-z0-9_]+$/.test(raw)) {
+    return raw.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
   }
-  return lines;
-}
-
-// Accepts loose input ("180k", "$50,000", "3 years", "2 yrs") for the numeric
-// fields so the chat doesn't force a rigid format on the user.
-function parseLooseNumber(raw, key) {
-  const text = raw.trim().toLowerCase();
-  const yearsMatch = key === 'time_in_business_months' && text.match(/([\d.]+)\s*(year|yr)/);
-  if (yearsMatch) return Math.round(parseFloat(yearsMatch[1]) * 12);
-
-  const kMatch = text.match(/\$?([\d,]*\.?\d+)\s*k\b/);
-  if (kMatch) return Math.round(parseFloat(kMatch[1].replace(/,/g, '')) * 1000);
-
-  const cleaned = text.replace(/[$,]/g, '').match(/[\d.]+/);
-  if (!cleaned) return null;
-  const num = Number(cleaned[0]);
-  return Number.isFinite(num) ? num : null;
-}
-
-function coerceAnswer(key, raw) {
-  const meta = FIELD_META[key];
-  const text = raw.trim();
-  if (!text) return { ok: false };
-
-  if (meta.type === 'select') {
-    if (key === 'state') {
-      const abbr = normalizeState(text);
-      return abbr ? { ok: true, value: abbr, display: abbr } : { ok: false };
-    }
-    const match = meta.options.find((o) => o.toLowerCase() === text.toLowerCase());
-    return match ? { ok: true, value: match, display: match } : { ok: false };
-  }
-
-  if (meta.type === 'number') {
-    const num = parseLooseNumber(text, key);
-    return num !== null && num >= 0 ? { ok: true, value: num, display: text } : { ok: false };
-  }
-
-  return { ok: true, value: text, display: text };
+  return raw;
 }
 
 let idCounter = 0;
@@ -95,8 +36,7 @@ function nextId() {
 // Shows either a generic "typing" (three dots) indicator, or — whenever we
 // have something concrete to say about what the engine is actually doing
 // right now — a labeled status line, so the process reads as a real pipeline
-// (reading your description, preparing the next question, scoring against
-// the lender database) rather than an opaque "thinking..." spinner.
+// rather than an opaque "thinking..." spinner.
 function TypingBubble({ label }) {
   return (
     <div className="chat-row chat-row-ai">
@@ -125,19 +65,23 @@ function TypingBubble({ label }) {
 
 export default function Chat({ initialDescription, onComplete }) {
   const [messages, setMessages] = useState([]);
-  const [queue, setQueue] = useState([]);
-  const [fields, setFields] = useState({});
+  const [conversationId, setConversationId] = useState(null);
+  const [activeMessageId, setActiveMessageId] = useState(null);
   const [typing, setTyping] = useState(false);
   const [statusLabel, setStatusLabel] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [inputDisabled, setInputDisabled] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [retry, setRetry] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const startedRef = useRef(false);
 
   function addMessage(role, text, extra = {}) {
-    setMessages((prev) => [...prev, { id: nextId(), role, text, ...extra }]);
+    const id = nextId();
+    setMessages((prev) => [...prev, { id, role, text, ...extra }]);
+    return id;
   }
 
   function showStatus(label) {
@@ -165,111 +109,76 @@ export default function Chat({ initialDescription, onComplete }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function applyTurn(payload) {
+    if (payload.done) {
+      setActiveMessageId(null);
+      addMessage('ai', "That's everything I need.");
+      finalizeAndMatch(payload.fields);
+      return;
+    }
+    const { message } = payload;
+    const id = addMessage('ai', message.text, {
+      reasoning: message.reasoning,
+      chips: message.questionType === 'select' ? message.options : null,
+      fileHint: message.fileHint,
+    });
+    setActiveMessageId(id);
+    setInputDisabled(false);
+  }
+
   async function beginConversation() {
     addMessage('user', initialDescription);
     showStatus('Reading your description…');
     try {
-      const res = await fetch(apiUrl('/api/intake/extract'), {
+      const res = await fetch(apiUrl('/api/interview/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: initialDescription }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to analyze your description');
+      if (!res.ok) throw new Error(data.error || 'Failed to start the interview');
       hideStatus();
-      await handleExtracted(data.fields, data.missingFields);
+      setConversationId(data.conversationId);
+      applyTurn(data);
     } catch (err) {
       hideStatus();
-      showError("I had trouble reading that description.", err.message, () => beginConversation());
+      showError('I had trouble reading that description.', err.message, () => beginConversation());
     }
   }
 
-  async function handleExtracted(extractedFields, missingFields) {
-    setFields(extractedFields);
-    const ordered = REQUIRED_ORDER.filter((k) => missingFields.includes(k));
-    const recapLines = buildRecapLines(extractedFields);
-
-    await sleep(400);
-    if (recapLines.length > 0) {
-      addMessage('ai', `Here's what I found in your description:\n${recapLines.map((l) => `•  ${l}`).join('\n')}`);
-      await sleep(550);
-    }
-
-    if (ordered.length === 0) {
-      addMessage('ai', "That covers everything I need.");
-      finalizeAndMatch(extractedFields);
-      return;
-    }
-
-    if (recapLines.length > 0) {
-      addMessage('ai', `I still need ${ordered.length} more ${ordered.length === 1 ? 'thing' : 'things'} before I can run your matches.`);
-    } else {
-      addMessage(
-        'ai',
-        `I couldn't confidently pull any details from that yet, so let's fill them in together — ${ordered.length} quick question${ordered.length === 1 ? '' : 's'}.`
-      );
-    }
-    setQueue(ordered);
-    showStatus('Preparing the next question…');
-    await sleep(550);
-    hideStatus();
-    askQuestion(ordered[0]);
-  }
-
-  function askQuestion(key) {
-    const meta = FIELD_META[key];
-    const chips = key === 'industry' ? meta.options : null;
-    addMessage('ai', questionFor(key), chips ? { chips } : {});
-    setInputDisabled(false);
-  }
-
-  async function submitAnswer(key, raw) {
-    const { ok, value, display } = coerceAnswer(key, raw);
-    if (!ok) {
-      addMessage('user', raw);
-      const meta = FIELD_META[key];
-      setTyping(true);
-      await sleep(350);
-      setTyping(false);
-      if (meta.type === 'select') {
-        addMessage('ai', `Hmm, I didn't recognize that. ${questionFor(key)}`, key === 'industry' ? { chips: meta.options } : {});
-      } else {
-        addMessage('ai', `Sorry, I need a number for that one. ${questionFor(key)}`);
-      }
-      return;
-    }
-
-    addMessage('user', display);
-    const newFields = { ...fields, [key]: value };
-    setFields(newFields);
-    const newQueue = queue.slice(1);
-    setQueue(newQueue);
+  async function submitReply(text, displayText = text) {
+    addMessage('user', displayText);
+    setActiveMessageId(null);
     setInputDisabled(true);
-
-    if (newQueue.length === 0) {
-      await sleep(400);
-      addMessage('ai', "That's everything I need.");
-      finalizeAndMatch(newFields);
-    } else {
-      showStatus('Preparing the next question…');
-      await sleep(550);
+    showStatus('Thinking…');
+    try {
+      const res = await fetch(apiUrl(`/api/interview/${conversationId}/reply`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to continue the interview');
       hideStatus();
-      askQuestion(newQueue[0]);
+      applyTurn(data);
+    } catch (err) {
+      hideStatus();
+      showError('I ran into a problem with that answer.', err.message, () => submitReply(text));
     }
   }
 
-  async function finalizeAndMatch(finalFields) {
+  async function finalizeAndMatch(fields) {
     setInputDisabled(true);
     showStatus('Saving your application…');
     try {
-      await onComplete(finalFields, (stage) => {
+      await onComplete(fields, (stage) => {
         if (stage === 'matching') {
           showStatus('Checking eligibility and scoring your readiness against our lender database…');
         }
       });
     } catch (err) {
       hideStatus();
-      showError('I ran into a problem finding your matches.', err.message, () => finalizeAndMatch(finalFields));
+      showError('I ran into a problem finding your matches.', err.message, () => finalizeAndMatch(fields));
     }
   }
 
@@ -285,18 +194,17 @@ export default function Chat({ initialDescription, onComplete }) {
     fn?.();
   }
 
-  function handleChip(key, value) {
+  function handleChip(raw) {
     if (inputDisabled) return;
-    submitAnswer(key, value);
+    submitReply(raw, prettifyOption(raw));
   }
 
   function handleSubmit(e) {
     e.preventDefault();
-    const key = queue[0];
-    if (!key || inputDisabled || !inputValue.trim()) return;
-    const raw = inputValue;
+    if (inputDisabled || !inputValue.trim()) return;
+    const text = inputValue;
     setInputValue('');
-    submitAnswer(key, raw);
+    submitReply(text);
   }
 
   function handleKeyDown(e) {
@@ -306,50 +214,116 @@ export default function Chat({ initialDescription, onComplete }) {
     }
   }
 
-  const currentKey = queue[0];
+  function triggerFilePicker() {
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !conversationId) return;
+
+    setUploading(true);
+    showStatus(`Reading ${file.name}…`);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch(apiUrl(`/api/interview/${conversationId}/attachments`), { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to upload that file');
+      hideStatus();
+      addMessage(
+        'system',
+        data.textExtracted
+          ? `📎 ${data.filename} attached — I can read its contents.`
+          : `📎 ${data.filename} attached, though I couldn't pull readable text from it.`
+      );
+    } catch (err) {
+      hideStatus();
+      addMessage('system', `Couldn't attach that file (${err.message}).`);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div className="chat-page">
       <div className="chat-messages">
-        {messages.map((m) => (
-          <div className={`chat-row ${m.role === 'ai' ? 'chat-row-ai' : 'chat-row-user'}`} key={m.id}>
-            {m.role === 'ai' && (
-              <span className="chat-avatar" aria-hidden="true">
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 10.5l3-4 2.5 2.5L13 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            )}
-            <div className="chat-msg-col">
-              <div className={`chat-msg ${m.role === 'ai' ? 'chat-msg-ai' : 'chat-msg-user'} ${m.isError ? 'chat-msg-error' : ''}`}>
+        {messages.map((m) => {
+          if (m.role === 'system') {
+            return (
+              <div className="chat-system-note" key={m.id}>
                 {m.text}
               </div>
-              {m.chips && (
-                <div className="reply-chips">
-                  {m.chips.map((opt) => (
+            );
+          }
+
+          const isActive = m.id === activeMessageId;
+          return (
+            <div className={`chat-row ${m.role === 'ai' ? 'chat-row-ai' : 'chat-row-user'}`} key={m.id}>
+              {m.role === 'ai' && (
+                <span className="chat-avatar" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 10.5l3-4 2.5 2.5L13 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              )}
+              <div className="chat-msg-col">
+                <div className={`chat-msg ${m.role === 'ai' ? 'chat-msg-ai' : 'chat-msg-user'} ${m.isError ? 'chat-msg-error' : ''}`}>
+                  {m.text}
+                </div>
+
+                {m.reasoning && (
+                  <details className="reasoning-toggle">
+                    <summary>Show reasoning</summary>
+                    <p>{m.reasoning}</p>
+                  </details>
+                )}
+
+                {m.chips && (
+                  <div className="reply-chips">
+                    {m.chips.map((opt) => (
+                      <button
+                        type="button"
+                        className="reply-chip"
+                        key={opt}
+                        disabled={inputDisabled || !isActive}
+                        onClick={() => handleChip(opt)}
+                      >
+                        {prettifyOption(opt)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {m.fileHint && (
+                  <div className="attach-hint">
+                    <span>{m.fileHint}</span>
                     <button
                       type="button"
-                      className="reply-chip"
-                      key={opt}
-                      disabled={inputDisabled || currentKey !== 'industry'}
-                      onClick={() => handleChip('industry', opt)}
+                      className="btn btn-secondary btn-sm"
+                      onClick={triggerFilePicker}
+                      disabled={uploading || inputDisabled || !isActive}
                     >
-                      {opt}
+                      📎 Attach a file
                     </button>
-                  ))}
-                </div>
-              )}
-              {m.isError && retry && (
-                <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: '0.5rem' }} onClick={handleRetryClick}>
-                  Try again
-                </button>
-              )}
+                  </div>
+                )}
+
+                {m.isError && retry && (
+                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: '0.5rem' }} onClick={handleRetryClick}>
+                    Try again
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {typing && <TypingBubble label={statusLabel} />}
         <div ref={bottomRef} />
       </div>
+
+      <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleFileSelected} />
 
       <form className="chat-input-bar" onSubmit={handleSubmit}>
         <div className="chat-input-inner">

@@ -2,6 +2,8 @@
 // No LLM calls in this file. Eligibility and scoring decisions must stay
 // auditable and reproducible.
 
+import { DEEP_PROFILE_FIELD_ORDER } from '../constants.js';
+
 function parseGeography(geography) {
   return (geography || '')
     .split(',')
@@ -194,6 +196,10 @@ function requestToRevenueScore(requestedAmount, annualRevenue) {
   return 15;
 }
 
+// How much of the full profile we actually have — the original 7 core
+// fields plus everything the adaptive interview gathered. Deliberately
+// excludes ownership_demographics: that field is opt-in and must never
+// affect readiness, so skipping it can't lower this score.
 function completenessScore(application) {
   const fields = [
     'business_name',
@@ -204,6 +210,7 @@ function completenessScore(application) {
     'annual_revenue',
     'requested_amount',
     'purpose',
+    ...DEEP_PROFILE_FIELD_ORDER.filter((f) => f !== 'ownership_demographics'),
   ];
   const filled = fields.filter((field) => {
     const value = application[field];
