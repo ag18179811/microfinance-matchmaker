@@ -200,6 +200,14 @@ function requestToRevenueScore(requestedAmount, annualRevenue) {
 // fields plus everything the adaptive interview gathered. Deliberately
 // excludes ownership_demographics: that field is opt-in and must never
 // affect readiness, so skipping it can't lower this score.
+// Blends two signals: how many of the fixed reference fields got filled
+// (still informative — knowing revenue or time-in-business genuinely
+// matters), and how much open-ended, business-specific detail the interview
+// gathered beyond them (additional_notes). Weighting notes at 40% matters
+// because the interview is explicitly told the fixed fields are reference
+// points, not a checklist — a genuinely thorough, tailored interview can
+// leave several fixed fields null while gathering plenty of real, specific
+// notes instead, and completeness should reward that, not penalize it.
 function completenessScore(application) {
   const fields = [
     'business_name',
@@ -216,7 +224,17 @@ function completenessScore(application) {
     const value = application[field];
     return value !== undefined && value !== null && String(value).trim() !== '';
   });
-  return Math.round((filled.length / fields.length) * 100);
+  const fieldScore = (filled.length / fields.length) * 100;
+
+  let notes = [];
+  try {
+    notes = typeof application.additional_notes === 'string' ? JSON.parse(application.additional_notes) : application.additional_notes || [];
+  } catch {
+    notes = [];
+  }
+  const notesScore = Math.min(100, (Array.isArray(notes) ? notes.length : 0) * 20); // 5+ specific notes = full credit
+
+  return Math.round(fieldScore * 0.6 + notesScore * 0.4);
 }
 
 export function computeReadiness(application) {

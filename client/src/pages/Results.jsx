@@ -1,4 +1,5 @@
 import ScoreGauge from '../components/ScoreGauge.jsx';
+import FollowUpChat from '../components/FollowUpChat.jsx';
 
 const READINESS_FACTORS = [
   { key: 'timeInBusiness', label: 'Time in business', blurb: 'Longer operating history lowers lender risk.' },
@@ -33,7 +34,7 @@ function formatCurrency(n) {
   return `$${Number(n).toLocaleString()}`;
 }
 
-export default function Results({ results, onStartOver }) {
+export default function Results({ results, conversationId }) {
   const { readinessScore, aiSummary, matches, subScores } = results;
   const topMatch = matches[0]?.match_score ?? 0;
 
@@ -44,9 +45,6 @@ export default function Results({ results, onStartOver }) {
           <h1>Your funding readiness</h1>
           <p>Based on what you told us, here's where you stand and who's likely to fund you.</p>
         </div>
-        <button className="btn btn-secondary" onClick={onStartOver}>
-          Start a new application
-        </button>
       </div>
 
       <div className="stat-row">
@@ -186,17 +184,24 @@ export default function Results({ results, onStartOver }) {
                 )}
 
                 {m.eligibility_notes && <div className="lender-notes">{m.eligibility_notes}</div>}
+
+                {m.source_url ? (
+                  <a className="btn btn-primary lender-apply-btn" href={m.source_url} target="_blank" rel="noreferrer">
+                    Visit official website &amp; apply
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                      <path d="M5 2h7v7M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </a>
+                ) : (
+                  <div className="lender-no-link">No verified official link on file for this program yet — search for it directly before applying.</div>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      <div className="results-footer">
-        <button className="btn btn-secondary" onClick={onStartOver}>
-          Start a new application
-        </button>
-      </div>
+      {conversationId && <FollowUpChat conversationId={conversationId} />}
     </div>
   );
 }

@@ -6,9 +6,12 @@ const MODEL = 'openai/gpt-oss-120b';
 
 const SYSTEM_PROMPT =
   'You are a funding readiness coach for small business owners applying to CDFI and city ' +
-  'microloan programs. Given the applicant\'s data and their computed sub-scores, write a 2-3 ' +
-  'sentence plain-English summary of their readiness and exactly 3 prioritized, concrete action ' +
-  'items. Do not invent eligibility rules — only comment on the data given.';
+  "microloan programs. Given the applicant's data, computed sub-scores, and the specific, " +
+  'business-particular facts gathered in additionalNotes, write a 2-3 sentence plain-English summary ' +
+  'of their readiness and exactly 3 prioritized, concrete action items. Ground this in what is actually ' +
+  'specific to THIS business — reference the concrete facts in additionalNotes rather than writing ' +
+  'generic advice that could apply to any small business. Do not invent eligibility rules — only comment ' +
+  'on the data given.';
 
 function fallbackSummary(readinessScore) {
   return (
@@ -24,8 +27,16 @@ export async function generateCoachingSummary(application, subScores, readinessS
     return fallbackSummary(readinessScore);
   }
 
+  let additionalNotes = [];
+  try {
+    additionalNotes = typeof application.additional_notes === 'string' ? JSON.parse(application.additional_notes) : application.additional_notes || [];
+  } catch {
+    additionalNotes = [];
+  }
+
   const userPayload = JSON.stringify({
-    applicant: application,
+    applicant: { ...application, additional_notes: undefined },
+    additionalNotes,
     subScores,
     readinessScore,
   });

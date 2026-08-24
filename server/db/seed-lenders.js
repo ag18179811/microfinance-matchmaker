@@ -1,220 +1,149 @@
-// Placeholder CDFI / city-program / nonprofit lender seed data.
-// Replace with real curated entries from the CDFI Fund Awards Database
-// (https://www.cdfifund.gov/programs-training/programs/cdfi-fund-awards) before launch.
+// Real, individually verified lenders — each entry was checked against the
+// organization's own website via live web search before being added here
+// (dates noted per entry). This replaced an earlier placeholder dataset of
+// invented lender names that were never real; if that's the version you're
+// reading history for, treat every entry before this comment as fictional
+// and do not rely on it.
+//
+// This list is intentionally small rather than broad: 8 real, checkable
+// programs beat 18 fabricated ones. Expanding it further should pull from
+// the CDFI Fund Awards Database (https://www.cdfifund.gov/awards/state-awards)
+// with the same per-entry verification discipline — never bulk-generate
+// entries from a model's own "knowledge," which is exactly how the fake
+// dataset happened in the first place.
 
 export const lenders = [
   {
-    name: 'Northeast Community Capital Fund',
+    name: 'Accion Opportunity Fund',
     type: 'CDFI',
-    geography: 'NY,NJ,CT',
+    geography:
+      'AL,AK,AZ,AR,CA,CO,CT,DE,FL,GA,HI,ID,IL,IN,IA,KS,KY,LA,ME,MD,MA,MI,MN,MS,MO,NE,NV,NH,NJ,NM,NY,NC,OH,OK,OR,PA,RI,SC,TX,UT,VA,WA,WV,WI,WY,DC',
     min_loan: 5000,
     max_loan: 250000,
-    industries: 'Retail,Food Service,Personal Services,Professional Services',
-    eligibility_notes: 'Placeholder data. Prioritizes low-to-moderate income census tracts; 6+ months in business required.',
-    source_url: '',
-    min_months_in_business: 6,
+    industries: '',
+    eligibility_notes:
+      'Verified via aofund.org (checked Aug 2026). Requires 1+ year in business and $50,000+ in annual revenue; owner must hold 20%+ ownership. Not available in MT, ND, SD, TN, or VT.',
+    source_url: 'https://aofund.org/business-loans/small-business-term-loan/',
+    min_months_in_business: 12,
     min_months_in_business_type: 'required',
   },
   {
-    name: 'Bay Area Small Business Loan Fund',
+    name: 'LiftFund',
     type: 'CDFI',
-    geography: 'CA',
-    min_loan: 10000,
-    max_loan: 500000,
-    industries: 'Retail,Manufacturing,Food Service,Construction,Professional Services',
-    eligibility_notes: 'Placeholder data. Serves businesses in San Francisco, Oakland, and San Jose metro areas.',
-    source_url: '',
-  },
-  {
-    name: 'Gulf Coast Microloan Program',
-    type: 'city_program',
     geography: 'TX',
-    min_loan: 2000,
-    max_loan: 50000,
-    industries: 'Retail,Food Service,Personal Services,Arts and Entertainment',
-    eligibility_notes: 'Placeholder data. City of Houston program; requires business license within city limits.',
-    source_url: '',
+    min_loan: 500,
+    max_loan: 250000,
+    industries: '',
+    eligibility_notes:
+      'Verified via liftfund.com (checked Aug 2026). Nonprofit CDFI lender open to startups in eligible industries; applicant must be 21+ with at least 6 months of positive credit history.',
+    source_url: 'https://www.liftfund.com/',
   },
   {
-    name: 'Great Lakes Development Loan Fund',
-    type: 'CDFI',
-    geography: 'MI,OH,IN,IL,WI',
-    min_loan: 15000,
-    max_loan: 350000,
-    industries: 'Manufacturing,Construction,Transportation,Wholesale',
-    eligibility_notes: 'Placeholder data. Focus on job creation and manufacturing revitalization.',
-    source_url: '',
-  },
-  {
-    name: 'Piedmont Nonprofit Business Fund',
+    name: 'Kiva U.S.',
     type: 'nonprofit',
-    geography: 'NC,SC,GA',
-    min_loan: 1000,
-    max_loan: 75000,
-    industries: 'Retail,Food Service,Personal Services,Health Care,Professional Services',
-    eligibility_notes: 'Placeholder data. Offers free technical assistance alongside loans; owner must complete 4-hour orientation.',
-    source_url: '',
+    geography: 'National',
+    min_loan: 0,
+    max_loan: 15000,
+    industries: '',
+    eligibility_notes:
+      'Verified via kiva.org/borrow (checked Aug 2026). 0% interest, crowdfunded by individual backers — no credit score, collateral, or minimum time in business required. Funding depends on backers actually funding your request, so it is not guaranteed.',
+    source_url: 'https://www.kiva.org/borrow',
   },
   {
-    name: 'Rocky Mountain Rural Enterprise Fund',
-    type: 'CDFI',
-    geography: 'CO,WY,MT,ID',
+    name: 'SBA Microloan Program',
+    type: 'nonprofit',
+    geography: 'National',
+    min_loan: 500,
+    max_loan: 50000,
+    industries: '',
+    eligibility_notes:
+      'Verified via sba.gov (checked Aug 2026). Delivered through SBA-approved nonprofit intermediary lenders, so exact terms and requirements vary by intermediary and location — use SBA\'s Lender Match tool to find the intermediary serving your area. Average microloan is around $13,000.',
+    source_url: 'https://www.sba.gov/funding-programs/loans/microloans',
+  },
+  {
+    name: 'Grameen America',
+    type: 'nonprofit',
+    geography: 'NY,NE,IN,NC,TX,AZ',
+    min_loan: 500,
+    max_loan: 2500,
+    industries: '',
+    eligibility_notes:
+      'Verified via grameenamerica.org (checked Aug 2026). Serves women business owners only, in select cities within these states — not statewide, so confirm your specific city is served before applying. Group-lending model: you join a 5-member loan group; first loan is $500-$2,500, with larger loans available after a repayment track record. No collateral or credit history required. Excludes adult entertainment businesses.',
+    source_url: 'https://www.grameenamerica.org/request-a-loan',
+  },
+  {
+    name: 'Community Reinvestment Fund, USA (CRF)',
+    type: 'nonprofit',
+    geography: 'National',
     min_loan: 5000,
-    max_loan: 150000,
-    industries: 'Agriculture,Retail,Tourism,Construction',
-    eligibility_notes: 'Placeholder data. Preference for rural (non-metro) businesses; agriculture-adjacent ventures welcomed.',
-    source_url: '',
+    max_loan: 500000,
+    industries: '',
+    eligibility_notes:
+      'Verified via crfusa.com (checked Aug 2026). CRF is a matching/referral network of 160+ partner lenders and support organizations, not a single direct lender — applying routes your request to lenders in their network. Applying does not affect your credit.',
+    source_url: 'https://smallbusiness.crfusa.com/apply/',
   },
   {
-    name: 'Twin Cities Micro Fund',
-    type: 'city_program',
-    geography: 'MN',
-    min_loan: 2500,
-    max_loan: 60000,
-    industries: 'Retail,Food Service,Personal Services,Child Care',
-    eligibility_notes: 'Placeholder data. City of Minneapolis/St. Paul program; owner-occupancy of storefront required.',
-    source_url: '',
-  },
-  {
-    name: 'Pacific Northwest Community Lenders',
+    name: 'Craft3',
     type: 'CDFI',
     geography: 'WA,OR',
-    min_loan: 10000,
-    max_loan: 400000,
-    industries: 'Manufacturing,Retail,Food Service,Technology,Professional Services',
-    eligibility_notes: 'Placeholder data. Emphasis on women- and minority-owned businesses; 12+ months in business preferred.',
-    source_url: '',
-    min_months_in_business: 12,
-    min_months_in_business_type: 'preferred',
+    min_loan: 5000,
+    max_loan: 15000000,
+    industries: '',
+    eligibility_notes:
+      'Verified via craft3.org (checked Aug 2026). Nonprofit CDFI serving Oregon and Washington from regional offices; particularly focused on minority-, women-, and immigrant-owned businesses and applicants who don\'t qualify for bank financing. Loan sizes span a very wide range, from small working-capital loans to large commercial financing.',
+    source_url: 'https://www.craft3.org/business-loans',
   },
   {
-    name: 'Southwest Border Business Fund',
+    name: 'Justine PETERSEN',
     type: 'CDFI',
-    geography: 'AZ,NM,TX',
-    min_loan: 5000,
-    max_loan: 200000,
-    industries: 'Retail,Agriculture,Construction,Transportation,Food Service',
-    eligibility_notes: 'Placeholder data. Bilingual application support available; serves colonias and border communities.',
-    source_url: '',
-  },
-  {
-    name: 'Appalachian Opportunity Loan Fund',
-    type: 'nonprofit',
-    geography: 'WV,KY,VA,TN',
-    min_loan: 1000,
-    max_loan: 100000,
-    industries: 'Retail,Manufacturing,Tourism,Agriculture,Arts and Entertainment',
-    eligibility_notes: 'Placeholder data. Targets economically distressed counties per CDFI Fund distress criteria.',
-    source_url: '',
-  },
-  {
-    name: 'Chicago Neighborhood Business Fund',
-    type: 'city_program',
-    geography: 'IL',
-    min_loan: 5000,
-    max_loan: 100000,
-    industries: 'Retail,Food Service,Personal Services,Professional Services',
-    eligibility_notes: 'Placeholder data. City of Chicago program; must operate in a designated neighborhood opportunity zone.',
-    source_url: '',
-  },
-  {
-    name: 'National Main Street Loan Program',
-    type: 'nonprofit',
-    geography: 'National',
-    min_loan: 10000,
-    max_loan: 250000,
-    industries: 'Retail,Food Service,Personal Services,Professional Services,Manufacturing',
-    eligibility_notes: 'Placeholder data. Nationwide nonprofit lender; requires 2 years of business tax returns.',
-    source_url: '',
-    min_months_in_business: 24,
-    min_months_in_business_type: 'required',
-  },
-  {
-    name: 'Florida Coastal Enterprise Fund',
-    type: 'CDFI',
-    geography: 'FL',
-    min_loan: 5000,
-    max_loan: 300000,
-    industries: 'Tourism,Retail,Food Service,Construction,Real Estate',
-    eligibility_notes: 'Placeholder data. Hurricane-recovery fast-track track available for disaster-affected businesses.',
-    source_url: '',
-  },
-  {
-    name: 'New England Women-Owned Business Fund',
-    type: 'nonprofit',
-    geography: 'MA,RI,NH,VT,ME',
-    min_loan: 2000,
+    geography: 'MO,IL,KS',
+    min_loan: 500,
     max_loan: 150000,
-    industries: 'Retail,Personal Services,Professional Services,Health Care,Arts and Entertainment',
-    eligibility_notes: 'Placeholder data. Priority for majority women-owned businesses; mentorship program included.',
-    source_url: '',
-  },
-  {
-    name: 'Detroit Small Business Recovery Fund',
-    type: 'city_program',
-    geography: 'MI',
-    min_loan: 3000,
-    max_loan: 80000,
-    industries: 'Retail,Food Service,Manufacturing,Personal Services',
-    eligibility_notes: 'Placeholder data. City of Detroit program; targets businesses in revitalization corridors.',
-    source_url: '',
-  },
-  {
-    name: 'Heartland Agricultural Business Fund',
-    type: 'CDFI',
-    geography: 'IA,NE,KS,MO,SD,ND',
-    min_loan: 10000,
-    max_loan: 300000,
-    industries: 'Agriculture,Wholesale,Transportation,Manufacturing',
-    eligibility_notes: 'Placeholder data. Serves agribusiness and rural supply-chain enterprises.',
-    source_url: '',
-  },
-  {
-    name: 'National Immigrant Entrepreneur Fund',
-    type: 'nonprofit',
-    geography: 'National',
-    min_loan: 1000,
-    max_loan: 50000,
-    industries: 'Retail,Food Service,Personal Services,Transportation,Professional Services',
-    eligibility_notes: 'Placeholder data. No SSN required if ITIN provided; multilingual loan officers available.',
-    source_url: '',
-  },
-  {
-    name: 'Southeast Metro Economic Development Fund',
-    type: 'city_program',
-    geography: 'GA',
-    min_loan: 5000,
-    max_loan: 120000,
-    industries: 'Retail,Food Service,Professional Services,Technology',
-    eligibility_notes: 'Placeholder data. City of Atlanta program; requires participation in a free 6-week business bootcamp.',
-    source_url: '',
+    industries: '',
+    eligibility_notes:
+      'Verified via justinepetersen.org (checked Aug 2026). Serves all of Missouri, plus 73 Illinois counties and 28 Kansas counties (not the entire states) — confirm your county is covered before applying. One of the SBA\'s largest microlenders by volume nationally.',
+    source_url: 'https://justinepetersen.org/what-we-do/small-business/',
   },
 ];
 
-export function seedLenders(db) {
-  const insert = db.prepare(`
-    INSERT INTO lenders (name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type)
-    VALUES (@name, @type, @geography, @min_loan, @max_loan, @industries, @eligibility_notes, @source_url, @min_months_in_business, @min_months_in_business_type)
-  `);
-
-  const insertMany = db.transaction((rows) => {
-    for (const row of rows) {
-      insert.run({
-        min_months_in_business: null,
-        min_months_in_business_type: null,
-        ...row,
-      });
+export async function seedLenders(pool) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const row of lenders) {
+      const full = { min_months_in_business: null, min_months_in_business_type: null, ...row };
+      await client.query(
+        `INSERT INTO lenders (name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          full.name,
+          full.type,
+          full.geography,
+          full.min_loan,
+          full.max_loan,
+          full.industries,
+          full.eligibility_notes,
+          full.source_url,
+          full.min_months_in_business,
+          full.min_months_in_business_type,
+        ]
+      );
     }
-  });
-
-  insertMany(lenders);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
   return lenders.length;
 }
 
 // Allow running directly: `node db/seed-lenders.js`
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const { default: db } = await import('./connection.js');
-  db.prepare('DELETE FROM lenders').run();
-  const count = seedLenders(db);
+  const { default: pool } = await import('./connection.js');
+  await pool.query('DELETE FROM lenders');
+  const count = await seedLenders(pool);
   console.log(`Seeded ${count} lenders.`);
+  await pool.end();
 }
