@@ -1,7 +1,8 @@
 // Coaching text generation only. Never used for eligibility decisions —
 // those come exclusively from matching-engine.js.
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+import { callGroqChat } from './groq-client.js';
+
 const MODEL = 'openai/gpt-oss-120b';
 
 const SYSTEM_PROMPT =
@@ -11,20 +12,23 @@ const SYSTEM_PROMPT =
   'of their readiness and exactly 3 prioritized, concrete action items. Ground this in what is actually ' +
   'specific to THIS business — reference the concrete facts in additionalNotes rather than writing ' +
   'generic advice that could apply to any small business. Do not invent eligibility rules — only comment ' +
-  'on the data given.';
+  'on the data given. If qualityConcerns is non-empty, the answers themselves were flagged as thin, ' +
+  'inconsistent, or not credible — say so plainly and directly in the summary instead of writing an ' +
+  'upbeat readiness summary that ignores it; a low answerQuality score means this report is not yet ' +
+  'trustworthy, and the applicant needs to hear that.';
 
-function fallbackSummary(readinessScore) {
+function fallbackSummary(readinessScore, reason, retryable) {
   return (
-    `Readiness score: ${readinessScore}/100. AI coaching summary is unavailable right now ` +
-    '(no GROQ_API_KEY configured, or the Groq API request failed). Set GROQ_API_KEY in your ' +
-    '.env file to enable personalized coaching text.'
+    `Readiness score: ${readinessScore}/100. AI coaching summary is unavailable right now (${reason}). ` +
+    'The score above is still computed by the deterministic rules engine and is accurate; only the ' +
+    `written explanation failed to generate.${retryable ? ' Try refreshing in a moment.' : ''}`
   );
 }
 
-export async function generateCoachingSummary(application, subScores, readinessScore) {
+export async function generateCoachingSummary(application, subScores, readinessScore, qualityConcerns = []) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return fallbackSummary(readinessScore);
+    return fallbackSummary(readinessScore, 'no GROQ_API_KEY configured', false);
   }
 
   let additionalNotes = [];
@@ -39,36 +43,24 @@ export async function generateCoachingSummary(application, subScores, readinessS
     additionalNotes,
     subScores,
     readinessScore,
+    qualityConcerns,
   });
 
-  try {
-    const response = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPayload },
-        ],
-        temperature: 0.4,
-      }),
-    });
+  const result = await callGroqChat({
+    apiKey,
+    model: MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPayload },
+    ],
+    temperature: 0.4,
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Groq API error (${response.status}): ${errorText}`);
-      return fallbackSummary(readinessScore);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content?.trim();
-    return content || fallbackSummary(readinessScore);
-  } catch (err) {
-    console.error('Groq API request failed:', err.message);
-    return fallbackSummary(readinessScore);
+  if (!result.ok) {
+    console.error(`Groq coaching call failed (${result.status ?? 'network error'}): ${result.error}`);
+    return fallbackSummary(readinessScore, result.status === 429 ? 'the AI service is rate-limited right now' : 'the Groq API request failed', true);
   }
+
+  const content = result.data.choices?.[0]?.message?.content?.trim();
+  return content || fallbackSummary(readinessScore, 'the Groq API request failed', true);
 }

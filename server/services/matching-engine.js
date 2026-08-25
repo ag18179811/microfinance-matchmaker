@@ -3,6 +3,7 @@
 // auditable and reproducible.
 
 import { DEEP_PROFILE_FIELD_ORDER } from '../constants.js';
+import { UNAVAILABLE_QUALITY_SCORE } from './groq-quality-check.js';
 
 function parseGeography(geography) {
   return (geography || '')
@@ -237,19 +238,29 @@ function completenessScore(application) {
   return Math.round(fieldScore * 0.6 + notesScore * 0.4);
 }
 
-export function computeReadiness(application) {
+// contentQuality: { qualityScore: 0-100 } from groq-quality-check.js,
+// judging whether the applicant's own text answers are credible and
+// internally consistent — not whether the business itself is strong (that's
+// already covered by the three scores above). Passed in as plain data
+// rather than computed here so this function stays synchronous and
+// deterministic; the LLM call happens once in routes/match.js before this
+// runs. Defaults to a neutral score if the caller has no signal (e.g. the
+// check failed), so a technical failure can't inflate OR deflate the result.
+export function computeReadiness(application, contentQuality) {
   const subScores = {
     timeInBusiness: timeInBusinessScore(application.time_in_business_months),
     revenueStability: revenueStabilityScore(application.annual_revenue),
     requestToRevenueRatio: requestToRevenueScore(application.requested_amount, application.annual_revenue),
     completeness: completenessScore(application),
+    answerQuality: Number.isFinite(contentQuality?.qualityScore) ? contentQuality.qualityScore : UNAVAILABLE_QUALITY_SCORE,
   };
 
   const readinessScore = Math.round(
-    subScores.timeInBusiness * 0.25 +
-      subScores.revenueStability * 0.25 +
-      subScores.requestToRevenueRatio * 0.25 +
-      subScores.completeness * 0.25
+    subScores.timeInBusiness * 0.2 +
+      subScores.revenueStability * 0.2 +
+      subScores.requestToRevenueRatio * 0.2 +
+      subScores.completeness * 0.2 +
+      subScores.answerQuality * 0.2
   );
 
   return { readinessScore, subScores };

@@ -5,7 +5,8 @@
 // gather fields. It never changes the readiness score or match results;
 // matching-engine.js remains the only thing that computes those.
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+import { callGroqChat } from './groq-client.js';
+
 const MODEL = 'openai/gpt-oss-120b';
 
 const SYSTEM_PROMPT_BASE =
@@ -55,23 +56,14 @@ export async function generateFollowUpReply({ application, subScores, readinessS
     ...history.map((m) => ({ role: m.role, content: m.content })),
   ];
 
-  try {
-    const response = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: MODEL, messages, temperature: 0.4 }),
-    });
+  const result = await callGroqChat({ apiKey, model: MODEL, messages, temperature: 0.4 });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Groq follow-up error (${response.status}): ${errorText}`);
-      return 'I ran into a problem answering that — mind trying again?';
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content?.trim() || "I couldn't quite come up with an answer to that — try rephrasing?";
-  } catch (err) {
-    console.error('Groq follow-up request failed:', err.message);
-    return 'I ran into a problem answering that — mind trying again?';
+  if (!result.ok) {
+    console.error(`Groq follow-up call failed (${result.status ?? 'network error'}): ${result.error}`);
+    return result.status === 429
+      ? "The AI service is rate-limited right now — give it a few seconds and try again."
+      : 'I ran into a problem answering that — mind trying again?';
   }
+
+  return result.data.choices?.[0]?.message?.content?.trim() || "I couldn't quite come up with an answer to that — try rephrasing?";
 }

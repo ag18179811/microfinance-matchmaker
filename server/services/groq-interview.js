@@ -10,8 +10,8 @@
 
 import { REQUIRED_APPLICATION_FIELDS, DEEP_PROFILE_FIELDS, DEEP_PROFILE_FIELD_ORDER, normalizeState } from '../constants.js';
 import { coerceNumber, coerceIndustry, coerceString, coerceSelect } from './field-coercion.js';
+import { callGroqChat } from './groq-client.js';
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'openai/gpt-oss-120b';
 
 export const HARD_TURN_CAP = 16;
@@ -175,29 +175,24 @@ export async function runInterviewTurn({ history, currentFields, currentNotes, a
     { role: 'user', content: buildUserContent(currentFields, currentNotes || [], attachmentTexts, stuckField) },
   ];
 
+  const result = await callGroqChat({
+    apiKey,
+    model: MODEL,
+    messages,
+    temperature: 0.3,
+    response_format: { type: 'json_object' },
+  });
+
+  if (!result.ok) {
+    console.error(`Groq interview call failed (${result.status ?? 'network error'}): ${result.error}`);
+    return { ok: false };
+  }
+
   try {
-    const response = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages,
-        temperature: 0.3,
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Groq interview error (${response.status}): ${errorText}`);
-      return { ok: false };
-    }
-
-    const data = await response.json();
-    const raw = JSON.parse(data.choices?.[0]?.message?.content ?? '{}');
+    const raw = JSON.parse(result.data.choices?.[0]?.message?.content ?? '{}');
     return { ok: true, ...coerceTurnResponse(raw, turnCount) };
   } catch (err) {
-    console.error('Groq interview request failed:', err.message);
+    console.error('Groq interview response was not valid JSON:', err.message);
     return { ok: false };
   }
 }

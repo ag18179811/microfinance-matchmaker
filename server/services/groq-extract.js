@@ -5,8 +5,8 @@
 
 import { INDUSTRIES, normalizeState } from '../constants.js';
 import { coerceNumber, coerceIndustry, coerceString } from './field-coercion.js';
+import { callGroqChat } from './groq-client.js';
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'openai/gpt-oss-120b';
 
 const SCHEMA_DESCRIPTION = `{
@@ -59,33 +59,24 @@ export async function extractApplicationFields(description) {
     return { ...emptyExtraction(), purpose: coerceString(description) };
   }
 
+  const result = await callGroqChat({
+    apiKey,
+    model: MODEL,
+    messages: [
+      { role: 'system', content: buildSystemPrompt() },
+      { role: 'user', content: description },
+    ],
+    temperature: 0,
+    response_format: { type: 'json_object' },
+  });
+
+  if (!result.ok) {
+    console.error(`Groq extraction call failed (${result.status ?? 'network error'}): ${result.error}`);
+    return { ...emptyExtraction(), purpose: coerceString(description) };
+  }
+
   try {
-    const response = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: buildSystemPrompt() },
-          { role: 'user', content: description },
-        ],
-        temperature: 0,
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Groq extraction error (${response.status}): ${errorText}`);
-      return { ...emptyExtraction(), purpose: coerceString(description) };
-    }
-
-    const data = await response.json();
-    const raw = JSON.parse(data.choices?.[0]?.message?.content ?? '{}');
-
+    const raw = JSON.parse(result.data.choices?.[0]?.message?.content ?? '{}');
     return {
       business_name: coerceString(raw.business_name),
       industry: coerceIndustry(raw.industry),
@@ -97,7 +88,7 @@ export async function extractApplicationFields(description) {
       purpose: coerceString(raw.purpose) ?? coerceString(description),
     };
   } catch (err) {
-    console.error('Groq extraction request failed:', err.message);
+    console.error('Groq extraction response was not valid JSON:', err.message);
     return { ...emptyExtraction(), purpose: coerceString(description) };
   }
 }

@@ -125,3 +125,19 @@ test('scoreLenderMatch explains every eligible match with at least one reason', 
   const result = scoreLenderMatch(lenders[0], strongApplication);
   assert.ok(result.reasons.length > 0);
 });
+
+test('a low answerQuality signal pulls the readiness score down even when every numeric field looks strong', () => {
+  const credible = computeReadiness(strongApplication, { qualityScore: 95 });
+  const notCredible = computeReadiness(strongApplication, { qualityScore: 5 });
+  assert.ok(
+    notCredible.readinessScore < credible.readinessScore,
+    'flagged, non-credible answers must not score as well as credible ones, even with identical numeric fields'
+  );
+  assert.equal(notCredible.subScores.answerQuality, 5);
+  assert.equal(credible.subScores.answerQuality, 95);
+});
+
+test('computeReadiness falls back to a neutral answerQuality when no quality signal is provided', () => {
+  const withoutSignal = computeReadiness(strongApplication);
+  assert.equal(withoutSignal.subScores.answerQuality, 60);
+});
