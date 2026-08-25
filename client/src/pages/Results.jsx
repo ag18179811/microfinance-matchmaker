@@ -6,7 +6,27 @@ const READINESS_FACTORS = [
   { key: 'revenueStability', label: 'Revenue stability', blurb: 'Consistent revenue signals ability to repay.' },
   { key: 'requestToRevenueRatio', label: 'Loan-to-revenue ratio', blurb: 'How reasonable your ask is against what you bring in.' },
   { key: 'completeness', label: 'Profile completeness', blurb: 'How much of your application we could confirm.' },
+  {
+    key: 'answerQuality',
+    label: 'Answer credibility',
+    blurb: 'Whether your answers are specific, consistent, and hold up — independent of how big or established your business is.',
+  },
 ];
+
+// Anything past ~6 entries reads better as a count with the full list
+// available on demand than as a wall of unbroken abbreviations.
+function formatGeography(geography) {
+  const states = (geography || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (states.length === 0) return { summary: '—', full: null };
+  if (states.length === 1 && /national|nationwide/i.test(states[0])) return { summary: 'All 50 states', full: null };
+  if (states.length <= 6) return { summary: states.join(', '), full: null };
+  const hasDC = states.includes('DC');
+  const count = hasDC ? states.length - 1 : states.length;
+  return { summary: hasDC ? `${count} states + DC` : `${count} states`, full: states.join(', ') };
+}
 
 function factorColor(value) {
   if (value >= 75) return 'var(--color-success)';
@@ -81,7 +101,7 @@ export default function Results({ results, conversationId }) {
             <h2 className="section-title" style={{ marginBottom: 0 }}>
               How your readiness score breaks down
             </h2>
-            <p className="breakdown-subtitle">Four factors, weighted evenly — this is the actual math behind the {readinessScore}/100 above.</p>
+            <p className="breakdown-subtitle">Five factors, weighted evenly — this is the actual math behind the {readinessScore}/100 above.</p>
           </div>
           <div className="breakdown-grid">
             {READINESS_FACTORS.map((factor) => {
@@ -102,6 +122,16 @@ export default function Results({ results, conversationId }) {
               );
             })}
           </div>
+          {subScores.answerQualityConcerns?.length > 0 && (
+            <div className="quality-concerns">
+              <p className="quality-concerns-title">Why your answer credibility score is lower:</p>
+              <ul>
+                {subScores.answerQualityConcerns.map((concern) => (
+                  <li key={concern}>{concern}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
@@ -116,13 +146,23 @@ export default function Results({ results, conversationId }) {
               .split(',')
               .map((s) => s.trim())
               .filter(Boolean);
+            const geo = formatGeography(m.geography);
+            // Static and live-discovered lenders come from separate tables
+            // with independent id sequences, so provenance must be part of
+            // the key to stay unique.
+            const cardKey = `${m.provenance || 'verified'}-${m.id}`;
 
             return (
-              <div className="lender-card" key={m.id} style={{ animationDelay: `${Math.min(i, 8) * 0.06}s` }}>
+              <div className="lender-card" key={cardKey} style={{ animationDelay: `${Math.min(i, 8) * 0.06}s` }}>
                 <div className="lender-card-top">
                   <div className="lender-name">
                     <span className="lender-rank">#{i + 1}</span>
                     {m.name}
+                    {m.provenance === 'discovered' && (
+                      <span className="tag tag-discovered" title="Found via live web search rather than our hand-verified list — confirm details on the official site before applying.">
+                        Auto-discovered
+                      </span>
+                    )}
                   </div>
                   <span className={matchBadgeClass(m.match_score)}>{m.match_score}% match</span>
                 </div>
@@ -144,7 +184,16 @@ export default function Results({ results, conversationId }) {
                 <dl className="lender-meta">
                   <div>
                     <dt>Geography served</dt>
-                    <dd>{m.geography}</dd>
+                    <dd>
+                      {geo.full ? (
+                        <details className="geo-detail">
+                          <summary>{geo.summary}</summary>
+                          <span className="geo-full">{geo.full}</span>
+                        </details>
+                      ) : (
+                        geo.summary
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>Loan range</dt>

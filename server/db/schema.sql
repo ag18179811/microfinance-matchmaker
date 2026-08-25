@@ -50,6 +50,31 @@ CREATE TABLE IF NOT EXISTS lenders (
   min_months_in_business_type TEXT -- 'required' (hard gate) | 'preferred' (soft, scored down) | null
 );
 
+-- Live-discovered lenders (server/services/openai-lender-search.js), cached
+-- by (search_state, search_industry) so the same combo isn't re-searched
+-- for every applicant. Same shape as `lenders` plus provenance/freshness
+-- columns. Kept as a separate table (not merged into `lenders`) so the
+-- hand-verified static set and auto-discovered results stay distinguishable
+-- everywhere they're used, including in the UI.
+CREATE TABLE IF NOT EXISTS discovered_lenders (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT,
+  geography TEXT,
+  min_loan INTEGER,
+  max_loan INTEGER,
+  industries TEXT,
+  eligibility_notes TEXT,
+  source_url TEXT NOT NULL,
+  min_months_in_business INTEGER,
+  min_months_in_business_type TEXT,
+  search_state TEXT NOT NULL,
+  search_industry TEXT,
+  discovered_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_discovered_lenders_cache ON discovered_lenders (search_state, search_industry);
+
 CREATE TABLE IF NOT EXISTS applications (
   id SERIAL PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -112,7 +137,11 @@ CREATE TABLE IF NOT EXISTS conversation_attachments (
 CREATE TABLE IF NOT EXISTS match_results (
   id SERIAL PRIMARY KEY,
   application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE,
-  lender_id INTEGER REFERENCES lenders(id) ON DELETE CASCADE,
+  -- Points into `lenders` or `discovered_lenders`, per lender_source — a
+  -- single FK can't target either table conditionally, so this is enforced
+  -- at the application layer (routes/match.js) instead of by the schema.
+  lender_id INTEGER NOT NULL,
+  lender_source TEXT NOT NULL DEFAULT 'static', -- 'static' (lenders) | 'discovered' (discovered_lenders)
   match_score INTEGER,
   readiness_score INTEGER,
   ai_summary TEXT,

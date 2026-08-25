@@ -1425,6 +1425,29 @@ select {
   margin-top: 0.4rem;
 }
 
+.quality-concerns {
+  margin-top: 1.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-light);
+  color: var(--color-warning-text);
+  font-size: 0.85rem;
+}
+
+.quality-concerns-title {
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+
+.quality-concerns ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.quality-concerns li {
+  margin-bottom: 0.2rem;
+}
+
 /* ---------- Per-lender analysis (reasons / cautions) ---------- */
 
 .lender-analysis {
@@ -1579,6 +1602,16 @@ select {
   font-weight: 600;
 }
 
+.tag-discovered {
+  margin-left: 0.6rem;
+  vertical-align: middle;
+  background: var(--color-warning-light);
+  color: var(--color-warning-text);
+  border-color: transparent;
+  font-weight: 600;
+  cursor: help;
+}
+
 .lender-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -1598,6 +1631,36 @@ select {
 .lender-meta dd {
   margin: 0;
   font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.geo-detail summary {
+  cursor: pointer;
+  color: inherit;
+  list-style: none;
+}
+
+.geo-detail summary::-webkit-details-marker {
+  display: none;
+}
+
+.geo-detail summary::after {
+  content: ' ▾';
+  font-size: 0.7em;
+  color: var(--color-text-muted);
+}
+
+.geo-detail[open] summary::after {
+  content: ' ▴';
+}
+
+.geo-full {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .lender-notes {
