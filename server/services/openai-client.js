@@ -41,3 +41,16 @@ export async function callOpenAIResponses({ apiKey, body, maxRetries = 2 }) {
     }
   }
 }
+
+// Shared Responses API output parsing — the `output` array can contain a
+// tool-call item (e.g. a web_search_call) followed by the actual message
+// item, so this finds the message rather than assuming a fixed index.
+export function findMessageText(output) {
+  const message = Array.isArray(output) ? output.find((item) => item.type === 'message') : null;
+  const content = message?.content?.find((c) => c.type === 'output_text' || c.type === 'text');
+  return { text: content?.text ?? null, annotations: content?.annotations ?? [] };
+}
+
+export function collectCitedUrls(annotations) {
+  return annotations.filter((a) => a?.type === 'url_citation' && a.url).map((a) => a.url);
+}

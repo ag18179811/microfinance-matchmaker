@@ -12,7 +12,7 @@
 // is called once from routes/match.js and its output is threaded in as
 // plain data, the same way the static lenders table is.
 
-import { callOpenAIResponses } from './openai-client.js';
+import { callOpenAIResponses, findMessageText, collectCitedUrls } from './openai-client.js';
 import { coerceString, coerceNumber } from './field-coercion.js';
 
 const MODEL = 'gpt-4.1-mini';
@@ -84,16 +84,6 @@ function extractionSchema() {
     required: ['lenders'],
     additionalProperties: false,
   };
-}
-
-function findMessageText(output) {
-  const message = Array.isArray(output) ? output.find((item) => item.type === 'message') : null;
-  const content = message?.content?.find((c) => c.type === 'output_text' || c.type === 'text');
-  return { text: content?.text ?? null, annotations: content?.annotations ?? [] };
-}
-
-function collectCitedUrls(annotations) {
-  return annotations.filter((a) => a?.type === 'url_citation' && a.url).map((a) => a.url);
 }
 
 // Defensive coercion — never trust the model's structured output blindly,

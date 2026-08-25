@@ -1,12 +1,21 @@
-// Adaptive interview turn engine. Gathering as much specific, relevant,
-// business-particular information as possible IS the job — not filling in a
-// fixed set of fields. The structured fields below exist so the deterministic
-// matching engine has something to filter on, but the model is explicitly
-// told they are reference points, never a checklist. Eligibility and match
-// scoring never happen here — matching-engine.js stays the sole,
-// deterministic source of truth for those. This file only decides what to
-// ask next and extracts structured answers, the same "extract, never
-// invent" discipline as groq-extract.js.
+// Step 2 of an interview turn: structures a turn into the fixed shape the
+// app needs (next question, updated fields, notes, reasoningSteps for the
+// UI). When openai-interview-reason.js (step 1) succeeded, this is fed its
+// free-form analysis and structures THAT — the actual reasoning, including
+// any web research, already happened there. When step 1 is unavailable
+// (no OPENAI_API_KEY, or the call failed), this falls back to doing the
+// reasoning itself from the raw conversation, same single-call behavior as
+// before that step existed — a research step is an enhancement, never a
+// hard dependency.
+//
+// Gathering as much specific, business-particular information as possible
+// IS the job — not filling in a fixed set of fields. The structured fields
+// below exist so the deterministic matching engine has something to filter
+// on, but the model is explicitly told they are reference points, never a
+// checklist. Eligibility and match scoring never happen here —
+// matching-engine.js stays the sole, deterministic source of truth for
+// those. This file only decides what to ask next and extracts structured
+// answers, the same "extract, never invent" discipline as groq-extract.js.
 
 import { REQUIRED_APPLICATION_FIELDS, DEEP_PROFILE_FIELDS, DEEP_PROFILE_FIELD_ORDER, normalizeState } from '../constants.js';
 import { coerceNumber, coerceIndustry, coerceString, coerceSelect } from './field-coercion.js';
@@ -33,7 +42,14 @@ function fieldSchemaDescription() {
   );
 }
 
-function buildSystemPrompt() {
+function buildSystemPrompt(hasAnalysis) {
+  const reasoningSource = hasAnalysis
+    ? 'You will be given a research analysis already written by a first-pass reasoning step (which may have ' +
+      'searched the web for a specific detail the user mentioned) — that IS the actual thinking; your job is to ' +
+      'structure it, not redo it. Ground reasoningSteps, directAnswer, nextQuestion, updatedFields, and newNotes ' +
+      'in what that analysis actually says.'
+    : 'No prior analysis was provided this turn — read the conversation yourself and do the reasoning directly.';
+
   return (
     'You are conducting a funding-readiness interview for a small business owner. GATHERING AS MUCH SPECIFIC, ' +
     'RELEVANT, USEFUL INFORMATION AS POSSIBLE ABOUT THIS PARTICULAR BUSINESS IS YOUR PRIMARY JOB — more ' +
@@ -53,11 +69,22 @@ function buildSystemPrompt() {
     'non-generic picture of this business — not merely once the structured fields happen to be filled in; a ' +
     'thorough interview usually takes a meaningful number of turns. You never decide eligibility or lender ' +
     'matches — only gather and record information. Never invent a value the user did not state or clearly ' +
-    'imply.\n\n' +
+    `imply. ${reasoningSource}\n\n` +
+    'CRITICAL: if the user asked you a direct question in their last message (especially one the research ' +
+    'analysis actually answered — a number, a rule, an explanation), you MUST put that answer in directAnswer, ' +
+    'as real plain-language sentences with the actual answer in them, not a placeholder. This is separate from ' +
+    'nextQuestion and gets shown to the user first, before the next question — never silently skip a question ' +
+    'they asked and just move on to your own next question; that reads as ignoring them, which this interview ' +
+    'must never do. If they did not ask a direct question this turn, directAnswer is null.\n\n' +
     `${fieldSchemaDescription()}\n\n` +
     'Respond with ONLY a single valid JSON object, no markdown, no commentary:\n' +
     '{\n' +
-    '  "reasoning": "one or two sentences on why this is the most valuable next question for THIS specific business, or why the profile is now sufficient",\n' +
+    '  "reasoningSteps": ["short, distinct step 1 of your actual thinking", "step 2", "..."] — 2 to 5 short, ' +
+    'concrete steps a reader could follow, e.g. what you just learned, what it implies, anything you looked up ' +
+    'and what it told you, why the next question follows from all that. Each step is one clear thought, not a ' +
+    'paragraph. Never generic filler like "analyzing the business" — every step must reference something ' +
+    'actually said or found this turn,\n' +
+    '  "directAnswer": "string with the actual answer to the user\'s direct question this turn, or null if they didn\'t ask one",\n' +
     '  "done": boolean,\n' +
     '  "nextQuestion": "string, or null if done",\n' +
     '  "questionType": "text" | "select",\n' +
@@ -117,6 +144,14 @@ function coerceNotes(raw) {
     .slice(0, MAX_NOTES_PER_TURN);
 }
 
+// Same bounded-array discipline as coerceNotes — a handful of short, real
+// steps, never an essay and never fabricated filler if the model omits them.
+const MAX_REASONING_STEPS = 6;
+function coerceReasoningSteps(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((s) => coerceString(s)?.slice(0, 300)).filter(Boolean).slice(0, MAX_REASONING_STEPS);
+}
+
 function coerceTurnResponse(raw, turnCount) {
   const forceDone = turnCount >= HARD_TURN_CAP;
   const done = forceDone || raw?.done === true;
@@ -127,9 +162,11 @@ function coerceTurnResponse(raw, turnCount) {
       : null;
 
   const targetField = ALL_FIELD_KEYS.includes(raw?.targetField) ? raw.targetField : null;
+  const reasoningSteps = coerceReasoningSteps(raw?.reasoningSteps);
 
   return {
-    reasoning: coerceString(raw?.reasoning)?.slice(0, 600) || (done ? "That's enough to grade this profile." : "Let's dig a bit deeper."),
+    reasoningSteps: reasoningSteps.length ? reasoningSteps : [done ? "That's enough to grade this profile." : "Let's dig a bit deeper."],
+    directAnswer: done ? null : coerceString(raw?.directAnswer),
     done,
     nextQuestion: done ? null : coerceString(raw?.nextQuestion) || 'Is there anything else about your business worth mentioning?',
     questionType,
@@ -141,11 +178,15 @@ function coerceTurnResponse(raw, turnCount) {
   };
 }
 
-function buildUserContent(currentFields, currentNotes, attachmentTexts, stuckField) {
+function buildUserContent(currentFields, currentNotes, attachmentTexts, stuckField, analysisText, citedUrls) {
   const parts = [
     `Current known profile (JSON): ${JSON.stringify(currentFields)}`,
     `Specific facts already gathered about this business (JSON): ${JSON.stringify(currentNotes)}`,
   ];
+  if (analysisText) {
+    parts.push(`Research analysis from the first-pass reasoning step:\n${analysisText}`);
+    if (citedUrls?.length) parts.push(`URLs that analysis actually looked up: ${JSON.stringify(citedUrls)}`);
+  }
   if (attachmentTexts?.length) {
     parts.push(
       ...attachmentTexts.map((t, i) => `Content extracted from an uploaded document #${i + 1}:\n${t.slice(0, 4000)}`)
@@ -162,17 +203,32 @@ function buildUserContent(currentFields, currentNotes, attachmentTexts, stuckFie
 }
 
 // history: [{ role: 'user'|'assistant', content: string }] in chronological order.
-// Returns { ok: true, ...turn } on success, or { ok: false } when there's no
-// key or the call failed — callers should fall back to the deterministic
-// fixed-question path rather than surface an error.
-export async function runInterviewTurn({ history, currentFields, currentNotes, attachmentTexts, turnCount, stuckField }) {
+// analysisText/citedUrls: optional output from openai-interview-reason.js
+// (step 1) — when present, this call structures that analysis instead of
+// reasoning from scratch. Returns { ok: true, ...turn } on success, or
+// { ok: false } when there's no key or the call failed — callers should
+// fall back to the deterministic fixed-question path rather than surface an
+// error.
+export async function runInterviewTurn({
+  history,
+  currentFields,
+  currentNotes,
+  attachmentTexts,
+  turnCount,
+  stuckField,
+  analysisText,
+  citedUrls,
+}) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return { ok: false };
 
   const messages = [
-    { role: 'system', content: buildSystemPrompt() },
+    { role: 'system', content: buildSystemPrompt(Boolean(analysisText)) },
     ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: buildUserContent(currentFields, currentNotes || [], attachmentTexts, stuckField) },
+    {
+      role: 'user',
+      content: buildUserContent(currentFields, currentNotes || [], attachmentTexts, stuckField, analysisText, citedUrls),
+    },
   ];
 
   const result = await callGroqChat({

@@ -26,7 +26,7 @@ const baseArgs = { history: [{ role: 'user', content: 'I run a bakery' }], curre
 
 test('a well-formed turn is coerced and passed through', async () => {
   mockGroqResponse({
-    reasoning: 'The description mentions revenue but not location.',
+    reasoningSteps: ['The description mentions revenue but not location.', 'Location is needed for lender matching.'],
     done: false,
     nextQuestion: 'What city and state is the bakery in?',
     questionType: 'text',
@@ -41,11 +41,12 @@ test('a well-formed turn is coerced and passed through', async () => {
   assert.equal(result.nextQuestion, 'What city and state is the bakery in?');
   assert.equal(result.updatedFields.annual_revenue, 85000);
   assert.equal(result.updatedFields.business_structure, 'llc');
+  assert.deepEqual(result.reasoningSteps, ['The description mentions revenue but not location.', 'Location is needed for lender matching.']);
 });
 
 test('unknown or invalid updatedFields keys are dropped, never trusted raw', async () => {
   mockGroqResponse({
-    reasoning: 'test',
+    reasoningSteps: ['test'],
     done: false,
     nextQuestion: 'test?',
     questionType: 'text',
@@ -66,7 +67,7 @@ test('unknown or invalid updatedFields keys are dropped, never trusted raw', asy
 
 test('a select question keeps a clean options list', async () => {
   mockGroqResponse({
-    reasoning: 'test',
+    reasoningSteps: ['test'],
     done: false,
     nextQuestion: 'How would you describe your revenue pattern?',
     questionType: 'select',
@@ -80,7 +81,7 @@ test('a select question keeps a clean options list', async () => {
 });
 
 test('done:true from the model is honored, with nextQuestion cleared', async () => {
-  mockGroqResponse({ reasoning: 'Profile is thorough enough.', done: true, nextQuestion: 'ignored', updatedFields: {} });
+  mockGroqResponse({ reasoningSteps: ['Profile is thorough enough.'], done: true, nextQuestion: 'ignored', updatedFields: {} });
 
   const result = await runInterviewTurn(baseArgs);
   assert.equal(result.done, true);
@@ -88,7 +89,7 @@ test('done:true from the model is honored, with nextQuestion cleared', async () 
 });
 
 test('the hard turn cap forces done:true regardless of what the model says', async () => {
-  mockGroqResponse({ reasoning: 'keep going', done: false, nextQuestion: 'one more thing?', updatedFields: {} });
+  mockGroqResponse({ reasoningSteps: ['keep going'], done: false, nextQuestion: 'one more thing?', updatedFields: {} });
 
   const result = await runInterviewTurn({ ...baseArgs, turnCount: HARD_TURN_CAP });
   assert.equal(result.done, true);
@@ -116,7 +117,7 @@ test('returns ok:false (signal to fall back) when the Groq call fails', async ()
 
 test('newNotes captures open-ended, business-specific facts beyond the fixed schema', async () => {
   mockGroqResponse({
-    reasoning: 'test',
+    reasoningSteps: ['test'],
     done: false,
     nextQuestion: 'Do you have a commissary kitchen agreement?',
     questionType: 'text',
@@ -134,7 +135,7 @@ test('newNotes captures open-ended, business-specific facts beyond the fixed sch
 
 test('newNotes drops malformed entries and caps the count per turn', async () => {
   mockGroqResponse({
-    reasoning: 'test',
+    reasoningSteps: ['test'],
     done: false,
     nextQuestion: 'test?',
     updatedFields: {},
@@ -155,10 +156,56 @@ test('newNotes drops malformed entries and caps the count per turn', async () =>
 });
 
 test('newNotes defaults to an empty array when the model omits it', async () => {
-  mockGroqResponse({ reasoning: 'test', done: false, nextQuestion: 'test?', updatedFields: {} });
+  mockGroqResponse({ reasoningSteps: ['test'], done: false, nextQuestion: 'test?', updatedFields: {} });
 
   const result = await runInterviewTurn(baseArgs);
   assert.deepEqual(result.newNotes, []);
+});
+
+test('reasoningSteps is capped and each step is bounded in length, never trusted raw', async () => {
+  mockGroqResponse({
+    reasoningSteps: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], // 8 given, cap is 6
+    done: false,
+    nextQuestion: 'test?',
+    updatedFields: {},
+  });
+
+  const result = await runInterviewTurn(baseArgs);
+  assert.equal(result.reasoningSteps.length, 6);
+});
+
+test('reasoningSteps falls back to a single default step when the model omits it', async () => {
+  mockGroqResponse({ done: false, nextQuestion: 'test?', updatedFields: {} });
+
+  const result = await runInterviewTurn(baseArgs);
+  assert.equal(result.reasoningSteps.length, 1);
+});
+
+test('directAnswer is coerced through when the model answers a direct question', async () => {
+  mockGroqResponse({
+    reasoningSteps: ['test'],
+    directAnswer: 'The current SBA 504 debenture limit is $5.5 million for small manufacturers.',
+    done: false,
+    nextQuestion: 'How many employees do you have?',
+    updatedFields: {},
+  });
+
+  const result = await runInterviewTurn(baseArgs);
+  assert.equal(result.directAnswer, 'The current SBA 504 debenture limit is $5.5 million for small manufacturers.');
+});
+
+test('directAnswer defaults to null when the model has nothing to answer', async () => {
+  mockGroqResponse({ reasoningSteps: ['test'], done: false, nextQuestion: 'test?', updatedFields: {} });
+
+  const result = await runInterviewTurn(baseArgs);
+  assert.equal(result.directAnswer, null);
+});
+
+test('directAnswer is always null when done:true', async () => {
+  mockGroqResponse({ reasoningSteps: ['test'], directAnswer: 'some answer', done: true, updatedFields: {} });
+
+  const result = await runInterviewTurn(baseArgs);
+  assert.equal(result.directAnswer, null);
 });
 
 // Found via live testing: without an explicit nudge, the model can ask a
@@ -169,11 +216,55 @@ test('a stuckField is surfaced to the model as an explicit instruction to move o
   let capturedBody;
   global.fetch = async (url, options) => {
     capturedBody = JSON.parse(options.body);
-    return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify({ reasoning: 'test', done: false, nextQuestion: 'Something else', updatedFields: {} }) } }] }) };
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: JSON.stringify({ reasoningSteps: ['test'], done: false, nextQuestion: 'Something else', updatedFields: {} }) } }] }),
+    };
   };
 
   await runInterviewTurn({ ...baseArgs, stuckField: 'existing_monthly_debt_payment' });
   const lastUserMessage = capturedBody.messages[capturedBody.messages.length - 1].content;
   assert.match(lastUserMessage, /existing_monthly_debt_payment/);
   assert.match(lastUserMessage, /move to a genuinely different topic/i);
+});
+
+// This is step 2 of the two-step turn (server/services/openai-interview-reason.js
+// is step 1) — when step 1 succeeded, its analysis must actually reach this
+// call and change the system prompt's framing, not be silently ignored.
+test('when analysisText is provided, it is included in the request and the prompt reflects it', async () => {
+  let capturedBody;
+  global.fetch = async (url, options) => {
+    capturedBody = JSON.parse(options.body);
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: JSON.stringify({ reasoningSteps: ['test'], done: false, nextQuestion: 'test?', updatedFields: {} }) } }] }),
+    };
+  };
+
+  await runInterviewTurn({
+    ...baseArgs,
+    analysisText: 'The business mentioned a county mobile food vendor permit; looked it up and it renews annually.',
+    citedUrls: ['https://example.gov/permits'],
+  });
+
+  const systemMessage = capturedBody.messages[0].content;
+  const userMessage = capturedBody.messages[capturedBody.messages.length - 1].content;
+  assert.match(systemMessage, /research analysis already written by a first-pass reasoning step/i);
+  assert.match(userMessage, /county mobile food vendor permit/);
+  assert.match(userMessage, /example\.gov\/permits/);
+});
+
+test('without analysisText, the prompt tells the model to reason from the conversation itself', async () => {
+  let capturedBody;
+  global.fetch = async (url, options) => {
+    capturedBody = JSON.parse(options.body);
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: JSON.stringify({ reasoningSteps: ['test'], done: false, nextQuestion: 'test?', updatedFields: {} }) } }] }),
+    };
+  };
+
+  await runInterviewTurn(baseArgs);
+  const systemMessage = capturedBody.messages[0].content;
+  assert.match(systemMessage, /no prior analysis was provided/i);
 });

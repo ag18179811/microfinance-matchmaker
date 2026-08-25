@@ -1,5 +1,14 @@
 -- Run this once in Supabase's SQL editor (Project -> SQL Editor -> New query)
 -- after creating the project. Safe to re-run: every statement is idempotent.
+--
+-- IMPORTANT: `CREATE TABLE IF NOT EXISTS` only creates a table the FIRST time
+-- it's run — if a table already exists from an earlier version of this file,
+-- re-running it does NOT retroactively add columns that were added later.
+-- Every column added after a table's original CREATE TABLE must ALSO get an
+-- explicit `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` below (see the
+-- "Migrations for pre-existing tables" section near the bottom), or an
+-- already-provisioned database silently drifts out of sync with the code
+-- that expects these columns to exist.
 
 -- ---------- Profiles ----------
 -- Supabase creates and manages auth.users itself once Google auth is enabled.
@@ -187,3 +196,18 @@ DROP POLICY IF EXISTS "own profile" ON profiles;
 CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);
 
 -- lenders has no RLS — it's shared reference data, readable by everyone.
+
+-- ---------- Migrations for pre-existing tables ----------
+-- Explicit, idempotent ALTERs for every column added after this file's
+-- tables were first created — see the note at the top of this file. Each of
+-- these is a no-op if already applied.
+
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS additional_notes TEXT;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE match_results ADD COLUMN IF NOT EXISTS lender_source TEXT NOT NULL DEFAULT 'static';
+
+-- lender_id used to be a hard FK into `lenders` only; it now also needs to
+-- point into `discovered_lenders` when lender_source = 'discovered', which
+-- a single FK constraint can't express (see the column comment above). Drop
+-- it if a pre-existing table still has the old constraint.
+ALTER TABLE match_results DROP CONSTRAINT IF EXISTS match_results_lender_id_fkey;

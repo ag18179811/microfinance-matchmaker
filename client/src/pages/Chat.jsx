@@ -33,11 +33,12 @@ function nextId() {
   return idCounter;
 }
 
-// Shows either a generic "typing" (three dots) indicator, or — whenever we
-// have something concrete to say about what the engine is actually doing
-// right now — a labeled status line, so the process reads as a real pipeline
-// rather than an opaque "thinking..." spinner.
-function TypingBubble({ label }) {
+// Shows what the engine is actually doing right now plus a live elapsed
+// timer, so waiting reads as genuine work happening (this app now runs a
+// real two-step reasoning-then-structuring pipeline per turn, which takes
+// longer than an instant canned response on purpose) rather than an opaque
+// spinner that could just as easily mean nothing is happening at all.
+function TypingBubble({ label, elapsedSeconds }) {
   return (
     <div className="chat-row chat-row-ai">
       <span className="chat-avatar" aria-hidden="true">
@@ -45,21 +46,36 @@ function TypingBubble({ label }) {
           <path d="M2 10.5l3-4 2.5 2.5L13 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
-      <div className={`chat-msg chat-msg-ai typing-indicator ${label ? 'has-label' : ''}`} aria-label={label || 'Assistant is typing'}>
-        {label ? (
-          <>
-            <span className="status-spinner" />
-            <span className="status-label">{label}</span>
-          </>
-        ) : (
-          <>
-            <span className="dot" />
-            <span className="dot" />
-            <span className="dot" />
-          </>
-        )}
+      <div className="chat-msg chat-msg-ai typing-indicator has-label" aria-label={label || 'Thinking'}>
+        <span className="status-spinner" />
+        <span className="status-label">
+          {label || 'Thinking'}
+          {elapsedSeconds > 0 ? ` (${elapsedSeconds}s)` : ''}
+        </span>
       </div>
     </div>
+  );
+}
+
+// The reasoning chain, collapsed by default but always showing how long it
+// took — click to expand the actual sequence of distinct reasoning steps.
+// Visually distinct when source is 'fallback': that's the deterministic,
+// no-AI safety net, and it must never look like it's the same thing as
+// genuine analysis.
+function ThinkingChain({ reasoningSteps, thinkingSeconds, source }) {
+  if (!reasoningSteps?.length) return null;
+  const isFallback = source === 'fallback';
+  return (
+    <details className={`thinking-chain ${isFallback ? 'thinking-chain-fallback' : ''}`}>
+      <summary>
+        {isFallback ? 'AI analysis unavailable — basic mode' : `Thought for ${thinkingSeconds ?? 'a few'}s`}
+      </summary>
+      <ol className="thinking-steps">
+        {reasoningSteps.map((step, i) => (
+          <li key={i}>{step}</li>
+        ))}
+      </ol>
+    </details>
   );
 }
 
@@ -69,6 +85,7 @@ export default function Chat({ initialDescription, onComplete }) {
   const [activeMessageId, setActiveMessageId] = useState(null);
   const [typing, setTyping] = useState(false);
   const [statusLabel, setStatusLabel] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [inputDisabled, setInputDisabled] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -77,6 +94,8 @@ export default function Chat({ initialDescription, onComplete }) {
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const startedRef = useRef(false);
+  const thinkingStartRef = useRef(null);
+  const thinkingIntervalRef = useRef(null);
 
   function addMessage(role, text, extra = {}) {
     const id = nextId();
@@ -84,14 +103,34 @@ export default function Chat({ initialDescription, onComplete }) {
     return id;
   }
 
+  // showStatus can be called more than once in a row for one logical wait
+  // (e.g. "Saving…" then "Checking eligibility…" during finalizeAndMatch) —
+  // the elapsed timer keeps running across those label changes rather than
+  // resetting, since it's timing the whole wait, not just the current label.
   function showStatus(label) {
     setStatusLabel(label);
     setTyping(true);
+    if (!thinkingStartRef.current) {
+      thinkingStartRef.current = Date.now();
+      setElapsedSeconds(0);
+      thinkingIntervalRef.current = setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - thinkingStartRef.current) / 1000));
+      }, 1000);
+    }
   }
 
+  // Returns the final elapsed seconds for this wait, so callers can attach
+  // it to the message that's about to be added.
   function hideStatus() {
     setTyping(false);
     setStatusLabel(null);
+    if (thinkingIntervalRef.current) {
+      clearInterval(thinkingIntervalRef.current);
+      thinkingIntervalRef.current = null;
+    }
+    const elapsed = thinkingStartRef.current ? Math.max(1, Math.round((Date.now() - thinkingStartRef.current) / 1000)) : null;
+    thinkingStartRef.current = null;
+    return elapsed;
   }
 
   useEffect(() => {
@@ -109,7 +148,13 @@ export default function Chat({ initialDescription, onComplete }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function applyTurn(payload) {
+  useEffect(() => {
+    return () => {
+      if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
+    };
+  }, []);
+
+  function applyTurn(payload, thinkingSeconds) {
     if (payload.done) {
       setActiveMessageId(null);
       addMessage('ai', "That's everything I need.");
@@ -118,7 +163,9 @@ export default function Chat({ initialDescription, onComplete }) {
     }
     const { message } = payload;
     const id = addMessage('ai', message.text, {
-      reasoning: message.reasoning,
+      reasoningSteps: message.reasoningSteps,
+      source: message.source,
+      thinkingSeconds,
       chips: message.questionType === 'select' ? message.options : null,
       fileHint: message.fileHint,
     });
@@ -137,9 +184,9 @@ export default function Chat({ initialDescription, onComplete }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to start the interview');
-      hideStatus();
+      const elapsed = hideStatus();
       setConversationId(data.conversationId);
-      applyTurn(data);
+      applyTurn(data, elapsed);
     } catch (err) {
       hideStatus();
       showError('I had trouble reading that description.', err.message, () => beginConversation());
@@ -159,8 +206,8 @@ export default function Chat({ initialDescription, onComplete }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to continue the interview');
-      hideStatus();
-      applyTurn(data);
+      const elapsed = hideStatus();
+      applyTurn(data, elapsed);
     } catch (err) {
       hideStatus();
       showError('I ran into a problem with that answer.', err.message, () => submitReply(text));
@@ -273,12 +320,7 @@ export default function Chat({ initialDescription, onComplete }) {
                   {m.text}
                 </div>
 
-                {m.reasoning && (
-                  <details className="reasoning-toggle">
-                    <summary>Show reasoning</summary>
-                    <p>{m.reasoning}</p>
-                  </details>
-                )}
+                <ThinkingChain reasoningSteps={m.reasoningSteps} thinkingSeconds={m.thinkingSeconds} source={m.source} />
 
                 {m.chips && (
                   <div className="reply-chips">
@@ -319,7 +361,7 @@ export default function Chat({ initialDescription, onComplete }) {
             </div>
           );
         })}
-        {typing && <TypingBubble label={statusLabel} />}
+        {typing && <TypingBubble label={statusLabel} elapsedSeconds={elapsedSeconds} />}
         <div ref={bottomRef} />
       </div>
 

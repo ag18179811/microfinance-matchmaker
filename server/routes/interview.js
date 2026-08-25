@@ -4,6 +4,7 @@ import { PDFParse } from 'pdf-parse';
 import pool from '../db/connection.js';
 import { extractApplicationFields } from '../services/groq-extract.js';
 import { runInterviewTurn, HARD_TURN_CAP } from '../services/groq-interview.js';
+import { reasonAboutTurn } from '../services/openai-interview-reason.js';
 import { nextFallbackTurn, coerceFallbackAnswer } from '../services/interview-fallback.js';
 import { generateFollowUpReply } from '../services/groq-followup.js';
 import { loadResults, loadSubScores } from './match.js';
@@ -46,11 +47,11 @@ async function loadAttachmentTexts(conversationId) {
   return rows.map((r) => r.extracted_text);
 }
 
-async function saveMessage(conversationId, role, content, { reasoning = null, fieldKey = null, fieldKeySource = null } = {}) {
+async function saveMessage(conversationId, role, content, { reasoningSteps = null, fieldKey = null, fieldKeySource = null } = {}) {
   await pool.query(
     `INSERT INTO conversation_messages (conversation_id, role, content, reasoning, field_key, field_key_source)
      VALUES ($1, $2, $3, $4, $5, $6)`,
-    [conversationId, role, content, reasoning, fieldKey, fieldKeySource]
+    [conversationId, role, content, reasoningSteps ? JSON.stringify(reasoningSteps) : null, fieldKey, fieldKeySource]
   );
 }
 
@@ -67,7 +68,8 @@ async function persistConversationState(conversationId, fields, notes, turnCount
 function toClientMessage(turn) {
   return {
     text: turn.nextQuestion,
-    reasoning: turn.reasoning ?? null,
+    reasoningSteps: turn.reasoningSteps ?? [],
+    source: turn.source ?? 'ai',
     questionType: turn.questionType,
     options: turn.options,
     fileHint: turn.fileHint ?? null,
@@ -92,10 +94,24 @@ function computeStuckField(fullHistoryRows) {
   return last.field_key === secondLast.field_key ? last.field_key : null;
 }
 
-// Runs one interview turn: tries the LLM, falls back to the deterministic
-// field walk if GROQ_API_KEY is unset or the call fails. Persists the
-// resulting fields/notes/turn_count/status and, if not done, the
-// assistant's question — tagged with which field it's chiefly about and
+// Runs one interview turn in two AI steps, falling back to the
+// deterministic field walk only if both are unavailable:
+//   1. openai-interview-reason.js does the actual thinking — reads the full
+//      conversation and, if it decides it's genuinely useful, searches the
+//      web for something the user mentioned (a permit, a certification, a
+//      program). This is real analysis, not a prompted-for one-liner.
+//   2. groq-interview.js structures that analysis into the turn the app
+//      needs (next question, updated fields, notes, and reasoningSteps for
+//      the UI's thinking-chain). If step 1 didn't run or failed, this still
+//      works — it just reasons from the raw history itself, same as before
+//      step 1 existed.
+// Only if step 2 ALSO fails does this drop to interview-fallback.js — and
+// when it does, the turn is explicitly labeled source:'fallback' so the
+// client can say so plainly instead of silently substituting a generic
+// question that looks like the real thing.
+//
+// Persists the resulting fields/notes/turn_count/status and, if not done,
+// the assistant's question — tagged with which field it's chiefly about and
 // where that question came from, so the next reply knows how strictly to
 // validate. `notes` is the free-form, business-specific facts list — this
 // is where most of what makes a given interview genuinely different from
@@ -103,34 +119,56 @@ function computeStuckField(fullHistoryRows) {
 async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnCount) {
   const attachmentTexts = await loadAttachmentTexts(conversationId);
   const historyForModel = fullHistoryRows.map((m) => ({ role: m.role, content: m.content }));
+  const stuckField = computeStuckField(fullHistoryRows);
+
+  const analysis = await reasonAboutTurn({ history: historyForModel, currentFields: fields, currentNotes: notes, stuckField });
+
   const llmTurn = await runInterviewTurn({
     history: historyForModel,
     currentFields: fields,
     currentNotes: notes,
     attachmentTexts,
     turnCount: turnCount + 1,
-    stuckField: computeStuckField(fullHistoryRows),
+    stuckField,
+    analysisText: analysis.ok ? analysis.analysisText : undefined,
+    citedUrls: analysis.ok ? analysis.citedUrls : undefined,
   });
 
   let turn;
   let fieldKey = null;
   let fieldKeySource = null;
   if (llmTurn.ok) {
-    turn = llmTurn;
+    turn = { ...llmTurn, source: 'ai' };
+    // Deterministic, not left to the model's discretion inside one field: if
+    // the user asked a direct question this turn and directAnswer has a real
+    // answer, it always appears first in what's actually shown/saved — found
+    // via live testing that a natural-language instruction to "combine them"
+    // was not reliably followed, silently dropping the answer.
+    if (turn.directAnswer && !turn.done) {
+      turn = { ...turn, nextQuestion: `${turn.directAnswer}\n\n${turn.nextQuestion}` };
+    }
     fields = { ...fields, ...turn.updatedFields };
     notes = [...notes, ...turn.newNotes];
     fieldKey = turn.targetField;
     fieldKeySource = fieldKey ? 'llm' : null;
   } else {
     const fb = nextFallbackTurn(fields);
-    turn = { done: fb.done, reasoning: null, nextQuestion: fb.nextQuestion, questionType: fb.questionType, options: fb.options, fileHint: null };
+    turn = {
+      done: fb.done,
+      source: 'fallback',
+      reasoningSteps: ['AI analysis is temporarily unavailable right now — here are a few direct questions in the meantime.'],
+      nextQuestion: fb.nextQuestion,
+      questionType: fb.questionType,
+      options: fb.options,
+      fileHint: null,
+    };
     fieldKey = fb.fieldKey;
     fieldKeySource = fieldKey ? 'fallback' : null;
   }
 
   const newTurnCount = turnCount + 1;
   await persistConversationState(conversationId, fields, notes, newTurnCount, turn.done);
-  if (!turn.done) await saveMessage(conversationId, 'assistant', turn.nextQuestion, { reasoning: turn.reasoning, fieldKey, fieldKeySource });
+  if (!turn.done) await saveMessage(conversationId, 'assistant', turn.nextQuestion, { reasoningSteps: turn.reasoningSteps, fieldKey, fieldKeySource });
 
   return { turn, fields, notes, turnCount: newTurnCount };
 }
@@ -201,35 +239,53 @@ router.post('/:id/reply', async (req, res) => {
   const lastAssistant = [...fullHistory].reverse().find((m) => m.role === 'assistant');
 
   // The previous question came from the deterministic fallback path (no LLM
-  // available) — there's no model to interpret nuance, so the reply must
-  // coerce cleanly against that exact field or we ask again. This retry still
-  // counts as a turn and respects the same hard cap as the LLM path, so a
-  // string of unparseable answers can't loop forever.
+  // available) — there's no model to interpret nuance, so this first tries a
+  // fuzzy match (coerceFallbackAnswer now understands plain-English answers,
+  // not just the literal enum string). If that still doesn't resolve it, the
+  // raw answer is never just thrown away and the same question is never
+  // blindly repeated: it's captured as a note (the fallback path's only way
+  // to preserve information it can't structure) and the interview moves on
+  // to the next distinct question — found via live testing, where a rich,
+  // specific answer to an unrelated question was silently discarded and the
+  // identical question re-asked, which is exactly the "same questions for
+  // every business" failure mode this fixes.
   if (lastAssistant?.field_key_source === 'fallback') {
     const { ok, value } = coerceFallbackAnswer(lastAssistant.field_key, text);
-    if (!ok) {
-      await saveMessage(conversationId, 'user', text);
-      const newTurnCount = convo.turn_count + 1;
-      if (newTurnCount >= HARD_TURN_CAP) {
-        await persistConversationState(conversationId, fields, notes, newTurnCount, true);
-        return res.json({ conversationId, done: true, fields, notes });
-      }
-      const retry = nextFallbackTurn(fields); // fields unchanged -> same field again
-      await persistConversationState(conversationId, fields, notes, newTurnCount, false);
-      await saveMessage(conversationId, 'assistant', retry.nextQuestion, { fieldKey: retry.fieldKey, fieldKeySource: 'fallback' });
-      return res.json({
-        conversationId,
-        done: false,
-        message: toClientMessage({
-          reasoning: "Sorry, I couldn't quite parse that.",
-          nextQuestion: retry.nextQuestion,
-          questionType: retry.questionType,
-          options: retry.options,
-          fileHint: null,
-        }),
-      });
+    let updatedNotes = notes;
+    if (ok) {
+      fields[lastAssistant.field_key] = value;
+    } else {
+      fields[lastAssistant.field_key] = ''; // resolved-but-unparsed sentinel — never re-asked
+      updatedNotes = [...notes, { topic: lastAssistant.content, detail: text }];
     }
-    fields[lastAssistant.field_key] = value;
+
+    await saveMessage(conversationId, 'user', text);
+    const newTurnCount = convo.turn_count + 1;
+    const next = nextFallbackTurn(fields);
+    const done = next.done || newTurnCount >= HARD_TURN_CAP;
+    await persistConversationState(conversationId, fields, updatedNotes, newTurnCount, done);
+    if (done) return res.json({ conversationId, done: true, fields, notes: updatedNotes });
+
+    const stepReasoning = ok
+      ? ['AI analysis is temporarily unavailable — continuing with a direct question.']
+      : ["That didn't map to one of the options, so I've saved it as-is and I'll move on."];
+    await saveMessage(conversationId, 'assistant', next.nextQuestion, {
+      reasoningSteps: stepReasoning,
+      fieldKey: next.fieldKey,
+      fieldKeySource: 'fallback',
+    });
+    return res.json({
+      conversationId,
+      done: false,
+      message: toClientMessage({
+        reasoningSteps: stepReasoning,
+        source: 'fallback',
+        nextQuestion: next.nextQuestion,
+        questionType: next.questionType,
+        options: next.options,
+        fileHint: null,
+      }),
+    });
   }
 
   await saveMessage(conversationId, 'user', text);

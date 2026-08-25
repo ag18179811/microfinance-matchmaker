@@ -1188,11 +1188,11 @@ select {
 
 /* ---------- Chain-of-thought reasoning toggle ---------- */
 
-.reasoning-toggle {
+.thinking-chain {
   margin-top: 0.4rem;
 }
 
-.reasoning-toggle summary {
+.thinking-chain summary {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-text-muted);
@@ -1204,33 +1204,59 @@ select {
   user-select: none;
 }
 
-.reasoning-toggle summary::-webkit-details-marker {
+.thinking-chain summary::-webkit-details-marker {
   display: none;
 }
 
-.reasoning-toggle summary::before {
+.thinking-chain summary::before {
   content: '▸';
   font-size: 0.7rem;
   transition: transform 0.15s;
 }
 
-.reasoning-toggle[open] summary::before {
+.thinking-chain[open] summary::before {
   transform: rotate(90deg);
 }
 
-.reasoning-toggle summary:hover {
+.thinking-chain summary:hover {
   color: var(--color-primary);
 }
 
-.reasoning-toggle p {
-  margin: 0.4rem 0 0;
-  padding: 0.6rem 0.75rem;
-  background: var(--color-bg);
+/* The deterministic no-AI safety net — deliberately styled to look like a
+   notice, never like the same "real thinking" affordance above, so it's
+   never mistaken for genuine analysis. */
+.thinking-chain-fallback summary {
+  color: var(--color-warning-text);
+}
+
+.thinking-steps {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   border-left: 2px solid var(--color-border-strong);
+  padding-left: 0.85rem;
+}
+
+.thinking-steps li {
+  position: relative;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg);
   border-radius: 6px;
   font-size: 0.83rem;
   color: var(--color-text-secondary);
   line-height: 1.5;
+}
+
+.thinking-chain-fallback .thinking-steps {
+  border-left-color: var(--color-warning);
+}
+
+.thinking-chain-fallback .thinking-steps li {
+  background: var(--color-warning-light);
+  color: var(--color-warning-text);
 }
 
 /* ---------- Attachment affordance ---------- */
