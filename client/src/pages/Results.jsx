@@ -1,5 +1,6 @@
 import ScoreGauge from '../components/ScoreGauge.jsx';
 import FollowUpChat from '../components/FollowUpChat.jsx';
+import WhatIfSimulator from '../components/WhatIfSimulator.jsx';
 
 const READINESS_FACTORS = [
   { key: 'timeInBusiness', label: 'Time in business', blurb: 'Longer operating history lowers lender risk.' },
@@ -54,8 +55,18 @@ function formatCurrency(n) {
   return `$${Number(n).toLocaleString()}`;
 }
 
+// The bare domain, shown under the apply button as a trust cue so the user
+// can see where the link goes before clicking.
+function linkHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
 export default function Results({ results, conversationId }) {
-  const { readinessScore, aiSummary, matches, subScores } = results;
+  const { readinessScore, aiSummary, matches, subScores, applicationId } = results;
   const topMatch = matches[0]?.match_score ?? 0;
 
   return (
@@ -135,7 +146,15 @@ export default function Results({ results, conversationId }) {
         </div>
       )}
 
+      {applicationId && <WhatIfSimulator applicationId={applicationId} />}
+
       <h2 className="section-title">Matched lenders</h2>
+      {matches.length > 0 && (
+        <p className="section-note">
+          Every match below links straight to that program's official application page. Apply to as many as you
+          qualify for — approvals and terms vary, so more applications means better odds.
+        </p>
+      )}
 
       {matches.length === 0 ? (
         <div className="empty-state">No lenders matched your current profile — try adjusting your funding amount or location.</div>
@@ -234,16 +253,36 @@ export default function Results({ results, conversationId }) {
 
                 {m.eligibility_notes && <div className="lender-notes">{m.eligibility_notes}</div>}
 
-                {m.source_url ? (
-                  <a className="btn btn-primary lender-apply-btn" href={m.source_url} target="_blank" rel="noreferrer">
-                    Visit official website &amp; apply
-                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                      <path d="M5 2h7v7M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </a>
-                ) : (
-                  <div className="lender-no-link">No verified official link on file for this program yet — search for it directly before applying.</div>
-                )}
+                <div className="lender-apply">
+                  {m.source_url ? (
+                    <>
+                      <a className="btn btn-primary lender-apply-btn" href={m.source_url} target="_blank" rel="noreferrer">
+                        Apply with {m.name}
+                        <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                          <path d="M5 2h7v7M12 2L2 12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </a>
+                      {linkHost(m.source_url) && (
+                        <span className="lender-apply-host">opens {linkHost(m.source_url)} in a new tab</span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <a
+                        className="btn btn-secondary lender-apply-btn"
+                        href={`https://www.google.com/search?q=${encodeURIComponent(`${m.name} small business loan application`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Find {m.name}'s application page
+                        <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                          <path d="M5 2h7v7M12 2L2 12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </a>
+                      <span className="lender-apply-host">no official link on file yet — this searches for it</span>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}

@@ -1028,11 +1028,65 @@ select {
   cursor: default;
 }
 
-.chat-input-bar {
+.chat-composer {
   position: sticky;
   bottom: 0;
-  background: linear-gradient(180deg, transparent, var(--color-bg) 30%);
-  padding: 0.75rem 0 1.5rem;
+  background: linear-gradient(180deg, transparent, var(--color-bg) 24%);
+  padding-top: 1.1rem;
+}
+
+.chat-progress {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 0.65rem 0.9rem 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.chat-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.chat-progress-phase {
+  font-size: 0.83rem;
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+.chat-progress-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.chat-progress-track {
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.chat-progress-fill {
+  height: 100%;
+  min-width: 7px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--color-primary), #7c3aed);
+  transition: width 0.55s var(--ease-out-precise);
+}
+
+.chat-input-bar {
+  padding: 0 0 1.5rem;
 }
 
 .chat-input-inner {
@@ -1474,6 +1528,221 @@ select {
   margin-bottom: 0.2rem;
 }
 
+/* ---------- What-if simulator ---------- */
+
+.whatif-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2.25rem;
+  overflow: hidden;
+}
+
+.whatif-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.whatif-toggle:hover {
+  background: var(--color-bg);
+}
+
+.whatif-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.whatif-toggle-title {
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+.whatif-toggle-sub {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.whatif-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.2s var(--ease-out-precise);
+}
+
+.whatif-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.whatif-body {
+  padding: 0.25rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  animation: fadeInUp 0.25s var(--ease-out-precise) both;
+}
+
+.whatif-levers {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  margin: 1.5rem 0;
+}
+
+.whatif-lever-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.whatif-lever-top label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.whatif-lever-val {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.whatif-lever-val.is-moved {
+  color: var(--color-primary);
+}
+
+.whatif-lever input[type='range'] {
+  width: 100%;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.whatif-lever-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.whatif-lever-foot strong {
+  color: var(--color-text-secondary);
+}
+
+.whatif-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 2rem;
+  align-items: flex-start;
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  transition: opacity 0.15s;
+}
+
+.whatif-result.is-pending {
+  opacity: 0.55;
+}
+
+.whatif-result-score {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.whatif-result-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.whatif-result-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.whatif-result-line strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.whatif-from {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.whatif-delta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+.whatif-delta-up {
+  background: var(--color-success-light);
+  color: var(--color-success-text);
+}
+
+.whatif-delta-down {
+  background: var(--color-danger-light);
+  color: var(--color-danger-text);
+}
+
+.whatif-delta-flat {
+  background: var(--color-neutral-tag-bg);
+  color: var(--color-text-secondary);
+}
+
+.whatif-result-matches {
+  flex: 1;
+  min-width: 220px;
+}
+
+.whatif-change {
+  font-size: 0.83rem;
+  margin-top: 0.5rem;
+  line-height: 1.45;
+}
+
+.whatif-change-add {
+  color: var(--color-success-text);
+}
+
+.whatif-change-drop {
+  color: var(--color-danger-text);
+}
+
+.whatif-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.whatif-disclaimer {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  flex: 1;
+  min-width: 220px;
+}
+
 /* ---------- Per-lender analysis (reasons / cautions) ---------- */
 
 .lender-analysis {
@@ -1524,6 +1793,13 @@ select {
 .section-title {
   font-size: 1.05rem;
   margin-bottom: 1rem;
+}
+
+.section-note {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
 }
 
 .lender-list {
@@ -1697,21 +1973,31 @@ select {
   border-top: 1px solid var(--color-border);
 }
 
-.lender-apply-btn {
-  display: inline-flex;
+.lender-apply {
+  margin-top: 1.15rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
-  margin-top: 1rem;
+  gap: 0.4rem;
+}
+
+.lender-apply-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  font-size: 0.98rem;
+  font-weight: 650;
   text-decoration: none;
 }
 
-.lender-no-link {
-  margin-top: 1rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-warning-light);
-  color: var(--color-warning-text);
-  font-size: 0.83rem;
+.lender-apply-host {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
 }
 
 .empty-state {

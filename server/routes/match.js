@@ -11,6 +11,26 @@ const DISCOVERED_CACHE_DAYS = 30;
 const DISCOVERED_LENDER_COLUMNS =
   'id, name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type';
 
+// Cache-only read of previously discovered lenders for this (state,
+// industry). Split out from getDiscoveredLenders so the what-if simulator
+// can reuse whatever's already been found without ever triggering a fresh
+// (billed) web search on every slider move.
+async function getCachedDiscoveredLenders(state, industry) {
+  if (!state) return [];
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${DISCOVERED_LENDER_COLUMNS} FROM discovered_lenders
+       WHERE search_state = $1 AND search_industry IS NOT DISTINCT FROM $2
+         AND discovered_at > now() - interval '${DISCOVERED_CACHE_DAYS} days'`,
+      [state, industry || null]
+    );
+    return rows;
+  } catch (err) {
+    console.error('[match] cached discovered-lender read failed:', err.message);
+    return [];
+  }
+}
+
 // Live-searched lenders (server/services/openai-lender-search.js), cached by
 // (state, industry) so the same combo isn't re-searched for every applicant
 // that shares it. Never blocks the match response — a search failure just
@@ -20,12 +40,7 @@ async function getDiscoveredLenders(state, industry) {
   if (!state) return [];
 
   try {
-    const { rows: cached } = await pool.query(
-      `SELECT ${DISCOVERED_LENDER_COLUMNS} FROM discovered_lenders
-       WHERE search_state = $1 AND search_industry IS NOT DISTINCT FROM $2
-         AND discovered_at > now() - interval '${DISCOVERED_CACHE_DAYS} days'`,
-      [state, industry || null]
-    );
+    const cached = await getCachedDiscoveredLenders(state, industry);
     if (cached.length > 0) return cached;
 
     const found = await searchLiveLenders({ state, industry });
@@ -182,6 +197,87 @@ router.get('/:applicationId', async (req, res) => {
     subScores: await loadSubScores(application.id),
     aiSummary: results[0].ai_summary,
     matches: results,
+  });
+});
+
+// The financial levers the what-if simulator is allowed to change. Location
+// and industry are deliberately excluded: changing them would require a
+// fresh (billed) lender search, and they aren't really "what if I adjusted
+// my plan" levers the way these three are.
+const SIMULATABLE_FIELDS = ['requested_amount', 'time_in_business_months', 'annual_revenue'];
+
+function readOverrides(body) {
+  const overrides = {};
+  for (const key of SIMULATABLE_FIELDS) {
+    const raw = body?.[key];
+    if (raw === undefined || raw === null || raw === '') continue;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0) overrides[key] = Math.round(n);
+  }
+  return overrides;
+}
+
+// Re-runs the deterministic readiness + matching engine against a
+// hypothetical version of the application, WITHOUT persisting anything.
+// Lets the user see "if I asked for less / waited a few months / grew
+// revenue, where would I land and who else would match" directly on the
+// results screen. answerQuality is held at its stored value on purpose — a
+// hypothetical number can't change how credible the user's typed answers
+// were.
+router.post('/:applicationId/simulate', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const storedSubScores = await loadSubScores(application.id);
+  const baseline = await loadResults(application.id);
+  if (!storedSubScores || baseline.length === 0) {
+    return res.status(409).json({ error: 'Run matching first, then you can simulate changes to it.' });
+  }
+
+  const overrides = readOverrides(req.body);
+  const simulated = { ...application, ...overrides };
+
+  const heldQuality = { qualityScore: storedSubScores.answerQuality };
+  const { readinessScore, subScores } = computeReadiness(simulated, heldQuality);
+
+  const [{ rows: staticLenders }, discoveredLenders] = await Promise.all([
+    pool.query('SELECT * FROM lenders'),
+    getCachedDiscoveredLenders(application.state, application.industry),
+  ]);
+  const taggedLenders = [
+    ...staticLenders.map((l) => ({ ...l, provenance: 'verified' })),
+    ...discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' })),
+  ];
+  const simMatches = matchLenders(simulated, taggedLenders);
+
+  const baselineNames = new Set(baseline.map((m) => m.name));
+  const simNames = new Set(simMatches.map((m) => m.lender.name));
+
+  res.json({
+    overrides,
+    applicationSnapshot: {
+      requested_amount: application.requested_amount,
+      time_in_business_months: application.time_in_business_months,
+      annual_revenue: application.annual_revenue,
+    },
+    baseline: {
+      readinessScore: baseline[0].readiness_score,
+      matchCount: baseline.length,
+    },
+    readinessScore,
+    subScores: { ...subScores, answerQualityConcerns: storedSubScores.answerQualityConcerns || [] },
+    matchCount: simMatches.length,
+    matches: simMatches.map((m) => ({
+      name: m.lender.name,
+      type: m.lender.type,
+      match_score: m.matchScore,
+      provenance: m.lender.provenance,
+      min_loan: m.lender.min_loan,
+      max_loan: m.lender.max_loan,
+      source_url: m.lender.source_url,
+    })),
+    newlyMatched: simMatches.filter((m) => !baselineNames.has(m.lender.name)).map((m) => m.lender.name),
+    nowExcluded: baseline.filter((m) => !simNames.has(m.name)).map((m) => m.name),
   });
 });
 
