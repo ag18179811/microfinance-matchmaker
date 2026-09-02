@@ -46,24 +46,29 @@ export default function BusinessCase({ applicationId }) {
   const inputRef = useRef(null);
   const startedRef = useRef(false);
 
+  async function load() {
+    setState('loading');
+    setErrorMsg(null);
+    try {
+      const res = await authedFetch(`/api/business-case/${applicationId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not load your funding story');
+      setSections(data.sections || []);
+      setAssumptions(data.assumptions || []);
+      setHistory(data.history || []);
+      setMeta(data.meta || {});
+      setState('ready');
+    } catch (err) {
+      setErrorMsg(err.message);
+      setState('error');
+    }
+  }
+
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    (async () => {
-      try {
-        const res = await authedFetch(`/api/business-case/${applicationId}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Could not load your funding story');
-        setSections(data.sections || []);
-        setAssumptions(data.assumptions || []);
-        setHistory(data.history || []);
-        setMeta(data.meta || {});
-        setState('ready');
-      } catch (err) {
-        setErrorMsg(err.message);
-        setState('error');
-      }
-    })();
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationId]);
 
   function applyResult(data) {
@@ -141,7 +146,7 @@ export default function BusinessCase({ applicationId }) {
         <div className="bc-head">
           <h2 className="section-title" style={{ marginBottom: 0 }}>Your funding story</h2>
         </div>
-        <p className="bc-error">{errorMsg} <button type="button" className="btn btn-secondary btn-sm" onClick={() => { startedRef.current = false; setState('loading'); }}>Try again</button></p>
+        <p className="bc-error">{errorMsg} <button type="button" className="btn btn-secondary btn-sm" onClick={load}>Try again</button></p>
       </div>
     );
   }
