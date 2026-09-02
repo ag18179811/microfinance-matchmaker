@@ -143,6 +143,37 @@ CREATE TABLE IF NOT EXISTS conversation_attachments (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- The Living Business Case: one evolving, first-person funding narrative per
+-- application, drafted from the interview and refined by conversation. Also
+-- created on server boot by db/migrate.js so a deploy needs no manual step.
+CREATE TABLE IF NOT EXISTS business_cases (
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER NOT NULL UNIQUE REFERENCES applications(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  sections JSONB NOT NULL DEFAULT '[]'::jsonb,     -- [{ key, heading, body, confidence, sources }]
+  assumptions JSONB NOT NULL DEFAULT '[]'::jsonb,  -- [{ id, text, resolved }]
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+  history JSONB NOT NULL DEFAULT '[]'::jsonb,       -- [{ at, summary }]
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Underwriter simulation: a per-(application, lender) review conversation
+-- held as that lender's reviewer.
+CREATE TABLE IF NOT EXISTS underwriter_reviews (
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  lender_key TEXT NOT NULL,                         -- `${provenance}:${lender_id}`
+  lender_name TEXT NOT NULL,
+  messages JSONB NOT NULL DEFAULT '[]'::jsonb,      -- [{ role: 'underwriter'|'owner', content }]
+  prepared_answers JSONB NOT NULL DEFAULT '[]'::jsonb, -- [{ question, answer }]
+  verdict JSONB,                                    -- { timing, strengths, gaps, recommendation }
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (application_id, lender_key)
+);
+
 CREATE TABLE IF NOT EXISTS match_results (
   id SERIAL PRIMARY KEY,
   application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE,
@@ -169,6 +200,8 @@ ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversation_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversation_attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE underwriter_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own applications" ON applications;
@@ -191,6 +224,12 @@ DROP POLICY IF EXISTS "own match results" ON match_results;
 CREATE POLICY "own match results" ON match_results FOR ALL USING (
   EXISTS (SELECT 1 FROM applications a WHERE a.id = application_id AND a.user_id = auth.uid())
 );
+
+DROP POLICY IF EXISTS "own business cases" ON business_cases;
+CREATE POLICY "own business cases" ON business_cases FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own underwriter reviews" ON underwriter_reviews;
+CREATE POLICY "own underwriter reviews" ON underwriter_reviews FOR ALL USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "own profile" ON profiles;
 CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);

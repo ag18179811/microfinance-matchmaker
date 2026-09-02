@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { seedLenders } from './seed-lenders.js';
+import { runMigrations } from './migrate.js';
 
 const { Pool } = pg;
 
@@ -29,10 +30,15 @@ pool.on('error', (err) => {
   console.error('[db] idle client error (pool recovers automatically):', err.message);
 });
 
-// The schema (including the auth.users trigger) is run once by hand via
+// The base schema (including the auth.users trigger) is run once by hand via
 // Supabase's SQL editor rather than auto-executed here — see
-// server/db/schema.sql. This just seeds the lender catalog on boot if it's
-// empty, same behavior as before, ported to async Postgres queries.
+// server/db/schema.sql. runMigrations() applies only the idempotent
+// CREATE TABLE IF NOT EXISTS statements for app tables added after launch,
+// so a deploy doesn't need a manual SQL-editor step for those.
+await runMigrations(pool);
+
+// Seed the lender catalog on boot if it's empty, same behavior as before,
+// ported to async Postgres queries.
 const { rows } = await pool.query('SELECT COUNT(*) AS count FROM lenders');
 if (Number(rows[0].count) === 0) {
   await seedLenders(pool);

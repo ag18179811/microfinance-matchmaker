@@ -1,6 +1,8 @@
 import ScoreGauge from '../components/ScoreGauge.jsx';
 import FollowUpChat from '../components/FollowUpChat.jsx';
 import WhatIfSimulator from '../components/WhatIfSimulator.jsx';
+import BusinessCase from '../components/BusinessCase.jsx';
+import LenderPrep from '../components/LenderPrep.jsx';
 
 const READINESS_FACTORS = [
   { key: 'timeInBusiness', label: 'Time in business', blurb: 'Longer operating history lowers lender risk.' },
@@ -105,6 +107,10 @@ export default function Results({ results, conversationId }) {
         </div>
         <div className="coaching-body">{aiSummary}</div>
       </div>
+
+      {applicationId && <BusinessCase applicationId={applicationId} />}
+
+      {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} />}
 
       {subScores && (
         <div className="breakdown-card">
