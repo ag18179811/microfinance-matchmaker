@@ -100,19 +100,34 @@ The rules-based matching engine and the extraction coercion/validation logic are
 npm test
 ```
 
+### Post-match application-prep layer
+
+After matching, the app helps the owner actually apply — as a conversation, never a form:
+
+- **Living Business Case** (`services/business-case.js`) — a first-person funding narrative drafted from the interview in the owner's voice, refined only by talking to it. Every extrapolation is surfaced as an assumption the owner corrects; sections carry a `stated` / `inferred` / `thin` confidence; it never invents a number.
+- **Underwriter simulation** (`services/underwriter-sim.js`) — per matched lender, a review conversation held as that lender's actual reviewer. The persona differs by application model (a Kiva story reviewer vs. a CDFI cash-flow analyst vs. an SBA-intermediary counselor), grounded in that file's specific cautions and weak sub-scores. Ends with prepared answers in the owner's voice and an honest now / soon / later timing call.
+- **Verified lender application profiles** (`services/lender-application-profiles.js`) — dated, cited data on how each of the eight verified programs actually intakes applications (five genuinely different models). Web-discovered lenders get a model guess marked `verified: false` — never a fabricated checklist.
+- **Application pack** (`services/application-pack.js`) — assembles the Business Case + underwriter-review answers into the exact blocks a specific lender's process consumes.
+
 ### API
 
-- `POST /api/intake/extract` — `{ description, known? }` → extracts structured fields from free text, merges in any already-confirmed `known` answers, returns `{ fields, missingFields }`
+> Some endpoints below predate the migration to Supabase Postgres + Google auth; every route now requires a `Bearer` access token (`middleware/auth.js`) and is scoped to the calling user.
+
+- `POST /api/interview/start` · `POST /api/interview/:id/reply` · `POST /api/interview/:id/attachments` — the adaptive readiness interview; each turn returns a `progress` estimate toward matches
 - `POST /api/applications` — create a borrower application
 - `GET /api/applications/:id` — fetch a stored application
-- `POST /api/match/:applicationId` — run the matching engine + readiness scoring + Groq coaching, persist results, return the ranked match list
+- `POST /api/match/:applicationId` — run the matching engine + readiness scoring + Groq coaching + live lender discovery, persist, return the ranked match list
 - `GET /api/match/:applicationId` — fetch previously computed match results
+- `POST /api/match/:applicationId/simulate` — re-run readiness + matching against hypothetical numbers, without persisting (the what-if simulator)
+- `GET /api/business-case/:applicationId` · `POST /api/business-case/:applicationId/message` · `.../regenerate` — the Living Business Case
+- `GET /api/underwriter/:applicationId/lenders` · `POST /api/underwriter/:applicationId/:lenderKey/start` · `.../message` · `.../pack` — the underwriter simulation and application pack
+- `GET /api/conversations` · `GET /api/conversations/:id` — conversation history and stored results
 
 ### Notes for production
 
-- The seeded lender data in `server/db/seed-lenders.js` is **placeholder data** — replace it with real curated entries from the [CDFI Fund Awards Database](https://www.cdfifund.gov/programs-training/programs/cdfi-fund-awards) before launch.
-- No auth, payments, or live external API integrations beyond Groq are implemented in this MVP pass.
-- SQLite is the MVP datastore; swap for Postgres when moving beyond a single-instance deployment.
+- The seeded lender data in `server/db/seed-lenders.js` is **eight real, individually verified programs** (each checked against the org's own site, dates noted). Expanding it should pull from the [CDFI Fund Awards Database](https://www.cdfifund.gov/awards/state-awards) with the same per-entry verification — never bulk-generate entries from a model's knowledge.
+- Auth is Google sign-in via Supabase; the datastore is Supabase Postgres. App tables added after launch are created idempotently on boot by `server/db/migrate.js`, so a deploy needs no manual SQL-editor step; `server/db/schema.sql` stays the canonical definition for a fresh project.
+- No payments or live external integrations beyond Groq (interview, coaching, business case, underwriter) and OpenAI (interview web-search reasoning, live lender discovery).
 
 ### Deploying for a public demo (Render + Vercel)
 
