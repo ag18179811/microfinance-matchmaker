@@ -104,6 +104,134 @@ function HowTheyApply({ lender }) {
   );
 }
 
+function copy(text) {
+  navigator.clipboard?.writeText(text).catch(() => {});
+}
+
+function Pack({ applicationId, lender }) {
+  const [pack, setPack] = useState(null);
+  const [phase, setPhase] = useState('idle'); // idle | building | ready | error
+  const [err, setErr] = useState(null);
+
+  async function build(rebuild) {
+    setPhase('building');
+    setErr(null);
+    try {
+      const res = await authedFetch(`/api/underwriter/${applicationId}/${encodeURIComponent(lender.key)}/pack`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rebuild ? { rebuild: true } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not assemble the pack');
+      setPack(data);
+      setPhase('ready');
+    } catch (e) {
+      setErr(e.message);
+      setPhase('error');
+    }
+  }
+
+  if (phase === 'idle' || phase === 'error') {
+    return (
+      <div className="lp-pack-cta">
+        <p>
+          Pull your funding story and everything you just worked out into the exact pieces {lender.name}'s
+          application asks for.
+        </p>
+        {err && <p className="bc-error">{err}</p>}
+        <button type="button" className="btn btn-primary btn-sm" onClick={() => build(false)}>
+          Assemble my {lender.name} pack
+        </button>
+      </div>
+    );
+  }
+  if (phase === 'building') {
+    return (
+      <div className="lp-loading">
+        <span className="status-spinner" />
+        <span>Assembling your {lender.name} pack…</span>
+      </div>
+    );
+  }
+
+  const allText = [
+    ...pack.blocks.map((b) => `## ${b.label}\n${b.text}`),
+    pack.preparedAnswers?.length
+      ? `## Prepared answers\n${pack.preparedAnswers.map((p) => `${p.question}\n${p.answer}`).join('\n\n')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  return (
+    <div className="lp-pack">
+      <div className="lp-pack-head">
+        <span className="lp-prepared-title" style={{ margin: 0 }}>Your {lender.name} application pack</span>
+        <div className="lp-pack-actions">
+          <button type="button" className="bc-copy bc-copy-sm" style={{ position: 'static', opacity: 1 }} onClick={() => copy(allText)}>
+            Copy all
+          </button>
+          <button type="button" className="bc-linkbtn" onClick={() => build(true)}>
+            Rebuild
+          </button>
+        </div>
+      </div>
+
+      {!pack.ok && (
+        <p className="bc-error">Some of the pack couldn't be generated, but your checklist and steps below are still accurate.</p>
+      )}
+
+      {pack.blocks.map((b) => (
+        <div className="lp-pack-block" key={b.key}>
+          <div className="lp-pack-block-head">
+            <h4>{b.label}</h4>
+            <button type="button" className="bc-copy bc-copy-sm" style={{ position: 'static', opacity: 1 }} onClick={() => copy(b.text)}>
+              Copy
+            </button>
+          </div>
+          <p className="lp-pack-block-body">{b.text}</p>
+        </div>
+      ))}
+
+      {pack.checklist?.length > 0 && (
+        <div className="lp-pack-block">
+          <h4>Documents to gather</h4>
+          <ul className="lp-pack-checklist">
+            {pack.checklist.map((c, i) => (
+              <li key={i}>
+                {c.item}
+                {c.note && <span className="lp-need-note"> — {c.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {pack.steps?.length > 0 && (
+        <div className="lp-pack-block">
+          <h4>Then</h4>
+          <ol className="lp-steps" style={{ marginBottom: 0 }}>
+            {pack.steps.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {pack.applyUrl && (
+        <a className="btn btn-primary btn-sm" href={pack.applyUrl} target="_blank" rel="noreferrer" style={{ marginTop: '0.75rem' }}>
+          Start the real application at {lender.name} ↗
+        </a>
+      )}
+      <p className="whatif-disclaimer" style={{ marginTop: '0.75rem' }}>
+        Drafted from your own words for you to review and edit — not a finished application. Always confirm the
+        current requirements on {lender.name}'s site.
+      </p>
+    </div>
+  );
+}
+
 function Review({ applicationId, lender }) {
   const [messages, setMessages] = useState([]);
   const [prepared, setPrepared] = useState([]);
@@ -307,6 +435,8 @@ function Review({ applicationId, lender }) {
           {verdict.recommendation && <p className="lp-verdict-rec">{verdict.recommendation}</p>}
         </div>
       )}
+
+      {(verdict || prepared.length >= 2) && <Pack applicationId={applicationId} lender={lender} />}
     </div>
   );
 }

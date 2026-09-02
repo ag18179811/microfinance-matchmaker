@@ -43,6 +43,10 @@ const STATEMENTS = [
      UNIQUE (application_id, lender_key)
    )`,
 
+  // The assembled, lender-shaped application pack (business summary,
+  // use-of-funds, etc.) — cached on the review it's built from.
+  `ALTER TABLE underwriter_reviews ADD COLUMN IF NOT EXISTS pack JSONB`,
+
   `ALTER TABLE business_cases ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE underwriter_reviews ENABLE ROW LEVEL SECURITY`,
 

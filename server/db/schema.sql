@@ -169,6 +169,7 @@ CREATE TABLE IF NOT EXISTS underwriter_reviews (
   messages JSONB NOT NULL DEFAULT '[]'::jsonb,      -- [{ role: 'underwriter'|'owner', content }]
   prepared_answers JSONB NOT NULL DEFAULT '[]'::jsonb, -- [{ question, answer }]
   verdict JSONB,                                    -- { timing, strengths, gaps, recommendation }
+  pack JSONB,                                       -- assembled lender-shaped application pack
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (application_id, lender_key)

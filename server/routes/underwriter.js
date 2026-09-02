@@ -3,6 +3,7 @@ import pool from '../db/connection.js';
 import { loadResults, loadSubScores } from './match.js';
 import { deriveProfile, modelInfo } from '../services/lender-application-profiles.js';
 import { startReview, continueReview } from '../services/underwriter-sim.js';
+import { buildPack } from '../services/application-pack.js';
 
 const router = Router();
 
@@ -37,6 +38,7 @@ function shapeReview(row) {
     messages: row.messages || [],
     preparedAnswers: row.prepared_answers || [],
     verdict: row.verdict || null,
+    pack: row.pack || null,
     updatedAt: row.updated_at,
   };
 }
@@ -175,6 +177,42 @@ router.post('/:applicationId/:lenderKey/message', async (req, res) => {
   );
 
   res.json({ ...shapeReview(rows[0]), readyToClose: turn.readyToClose });
+});
+
+// POST /:applicationId/:lenderKey/pack — assemble (or return the cached)
+// lender-shaped application pack from the business case + prepared answers.
+router.post('/:applicationId/:lenderKey/pack', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const reviewRow = (
+    await pool.query('SELECT * FROM underwriter_reviews WHERE application_id = $1 AND lender_key = $2', [
+      application.id,
+      req.params.lenderKey,
+    ])
+  ).rows[0];
+  if (!reviewRow) return res.status(409).json({ error: 'Practice the review first — the pack is built from your prepared answers.' });
+
+  if (reviewRow.pack && !req.body?.rebuild) return res.json(reviewRow.pack);
+
+  const lender = await findMatchedLender(application.id, req.params.lenderKey);
+  if (!lender) return res.status(404).json({ error: 'That lender is not among your matches.' });
+
+  const businessCase = (
+    await pool.query('SELECT sections FROM business_cases WHERE application_id = $1', [application.id])
+  ).rows[0] || { sections: [] };
+
+  const profile = deriveProfile(lender);
+  const pack = await buildPack({ businessCase, review: reviewRow, profile, lender });
+  if (!pack.ok) return res.status(502).json({ error: `Couldn't assemble the pack — ${pack.reason}.` });
+
+  await pool.query('UPDATE underwriter_reviews SET pack = $1, updated_at = now() WHERE application_id = $2 AND lender_key = $3', [
+    JSON.stringify(pack),
+    application.id,
+    req.params.lenderKey,
+  ]);
+
+  res.json(pack);
 });
 
 export default router;
