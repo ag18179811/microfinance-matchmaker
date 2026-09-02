@@ -7,6 +7,7 @@ import { runInterviewTurn, HARD_TURN_CAP } from '../services/groq-interview.js';
 import { reasonAboutTurn } from '../services/openai-interview-reason.js';
 import { nextFallbackTurn, coerceFallbackAnswer } from '../services/interview-fallback.js';
 import { generateFollowUpReply } from '../services/groq-followup.js';
+import { computeInterviewProgress } from '../services/interview-progress.js';
 import { loadResults, loadSubScores } from './match.js';
 import { DEEP_PROFILE_FIELDS } from '../constants.js';
 
@@ -218,10 +219,17 @@ router.post('/start', async (req, res) => {
   const conversationId = rows[0].id;
   await saveMessage(conversationId, 'user', description);
 
-  const { turn, fields, notes } = await advanceTurn(conversationId, [{ role: 'user', content: description }], seededFields, [], 0);
+  const { turn, fields, notes, turnCount } = await advanceTurn(
+    conversationId,
+    [{ role: 'user', content: description }],
+    seededFields,
+    [],
+    0
+  );
 
-  if (turn.done) return res.json({ conversationId, done: true, fields, notes });
-  res.json({ conversationId, done: false, message: toClientMessage(turn) });
+  const progress = computeInterviewProgress({ fields, notes, turnCount, done: turn.done });
+  if (turn.done) return res.json({ conversationId, done: true, fields, notes, progress });
+  res.json({ conversationId, done: false, message: toClientMessage(turn), progress });
 });
 
 router.post('/:id/reply', async (req, res) => {
@@ -264,7 +272,8 @@ router.post('/:id/reply', async (req, res) => {
     const next = nextFallbackTurn(fields);
     const done = next.done || newTurnCount >= HARD_TURN_CAP;
     await persistConversationState(conversationId, fields, updatedNotes, newTurnCount, done);
-    if (done) return res.json({ conversationId, done: true, fields, notes: updatedNotes });
+    const progress = computeInterviewProgress({ fields, notes: updatedNotes, turnCount: newTurnCount, done });
+    if (done) return res.json({ conversationId, done: true, fields, notes: updatedNotes, progress });
 
     const stepReasoning = ok
       ? ['AI analysis is temporarily unavailable — continuing with a direct question.']
@@ -285,6 +294,7 @@ router.post('/:id/reply', async (req, res) => {
         options: next.options,
         fileHint: null,
       }),
+      progress,
     });
   }
 
@@ -319,8 +329,9 @@ router.post('/:id/reply', async (req, res) => {
     }
   }
 
-  if (turn.done) return res.json({ conversationId, done: true, fields: finalFields, notes: notesAfterTurn });
-  res.json({ conversationId, done: false, message: toClientMessage(turn) });
+  const progress = computeInterviewProgress({ fields: finalFields, notes: notesAfterTurn, turnCount, done: turn.done });
+  if (turn.done) return res.json({ conversationId, done: true, fields: finalFields, notes: notesAfterTurn, progress });
+  res.json({ conversationId, done: false, message: toClientMessage(turn), progress });
 });
 
 router.post('/:id/attachments', handleUpload, async (req, res) => {

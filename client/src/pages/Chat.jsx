@@ -57,6 +57,40 @@ function TypingBubble({ label, elapsedSeconds }) {
   );
 }
 
+// Horizontal progress toward "here are your matches". The interview is
+// adaptive so there's no exact question count — the server blends field
+// completeness, facts gathered, and turn count into a single 0–100 value
+// (services/interview-progress.js) that only ever moves forward. This gives
+// the user a read on how much longer the interview will run before the
+// readiness score and lender matches appear.
+function MatchProgress({ percent, phase }) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  return (
+    <div
+      className="chat-progress"
+      role="progressbar"
+      aria-valuenow={clamped}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`Progress toward your funding matches: ${phase}`}
+    >
+      <div className="chat-progress-head">
+        <span className="chat-progress-phase">{phase}</span>
+        <span className="chat-progress-target">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="8" cy="8" r="2.5" fill="currentColor" />
+          </svg>
+          Funding matches
+        </span>
+      </div>
+      <div className="chat-progress-track">
+        <div className="chat-progress-fill" style={{ width: `${clamped}%` }} />
+      </div>
+    </div>
+  );
+}
+
 // The reasoning chain, collapsed by default but always showing how long it
 // took — click to expand the actual sequence of distinct reasoning steps.
 // Visually distinct when source is 'fallback': that's the deterministic,
@@ -90,6 +124,7 @@ export default function Chat({ initialDescription, onComplete }) {
   const [inputDisabled, setInputDisabled] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [retry, setRetry] = useState(null);
+  const [progress, setProgress] = useState({ percent: 3, phase: 'Getting started' });
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -101,6 +136,14 @@ export default function Chat({ initialDescription, onComplete }) {
     const id = nextId();
     setMessages((prev) => [...prev, { id, role, text, ...extra }]);
     return id;
+  }
+
+  // The server value is monotonic by construction, but guard here too so a
+  // fallback turn following an AI turn can never visibly walk the bar
+  // backward.
+  function advanceProgress(next) {
+    if (!next || typeof next.percent !== 'number') return;
+    setProgress((prev) => (next.percent >= prev.percent ? next : prev));
   }
 
   // showStatus can be called more than once in a row for one logical wait
@@ -155,9 +198,11 @@ export default function Chat({ initialDescription, onComplete }) {
   }, []);
 
   function applyTurn(payload, thinkingSeconds) {
+    advanceProgress(payload.progress);
     if (payload.done) {
       setActiveMessageId(null);
       addMessage('ai', "That's everything I need.");
+      advanceProgress({ percent: 100, phase: 'Building your matches' });
       finalizeAndMatch({ ...payload.fields, notes: payload.notes || [] });
       return;
     }
@@ -175,6 +220,7 @@ export default function Chat({ initialDescription, onComplete }) {
 
   async function beginConversation() {
     addMessage('user', initialDescription);
+    setProgress({ percent: 5, phase: 'Reading your description' });
     showStatus('Reading your description…');
     try {
       const res = await authedFetch('/api/interview/start', {
@@ -367,24 +413,28 @@ export default function Chat({ initialDescription, onComplete }) {
 
       <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleFileSelected} />
 
-      <form className="chat-input-bar" onSubmit={handleSubmit}>
-        <div className="chat-input-inner">
-          <textarea
-            ref={inputRef}
-            rows="1"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={inputDisabled ? 'Waiting…' : 'Type your answer…'}
-            disabled={inputDisabled}
-          />
-          <button className="send-btn" type="submit" disabled={inputDisabled || !inputValue.trim()} aria-label="Send">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-      </form>
+      <div className="chat-composer">
+        <MatchProgress percent={progress.percent} phase={progress.phase} />
+
+        <form className="chat-input-bar" onSubmit={handleSubmit}>
+          <div className="chat-input-inner">
+            <textarea
+              ref={inputRef}
+              rows="1"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={inputDisabled ? 'Waiting…' : 'Type your answer…'}
+              disabled={inputDisabled}
+            />
+            <button className="send-btn" type="submit" disabled={inputDisabled || !inputValue.trim()} aria-label="Send">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
