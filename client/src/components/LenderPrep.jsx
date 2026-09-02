@@ -110,11 +110,22 @@ function Review({ applicationId, lender }) {
   const [verdict, setVerdict] = useState(null);
   const [focusPoints, setFocusPoints] = useState([]);
   const [hardBlocker, setHardBlocker] = useState(null);
-  const [phase, setPhase] = useState('idle'); // idle | starting | active | error
+  const [phase, setPhase] = useState(lender.review?.started ? 'starting' : 'idle'); // idle | starting | active | error
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const bottomRef = useRef(null);
+  const resumedRef = useRef(false);
+
+  // A review already exists from a previous visit — /start is idempotent and
+  // returns the existing transcript, so just call it to resume.
+  useEffect(() => {
+    if (lender.review?.started && !resumedRef.current) {
+      resumedRef.current = true;
+      start();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'nearest' });

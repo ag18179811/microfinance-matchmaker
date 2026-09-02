@@ -100,11 +100,38 @@ export async function loadResults(applicationId) {
     [applicationId]
   );
 
-  return rows.map((row) => {
+  const mapped = rows.map((row) => {
     const { match_details, readiness_breakdown, ...rest } = row;
     const details = match_details ? JSON.parse(match_details) : { breakdown: {}, reasons: [], cautions: [] };
     return { ...rest, ...details };
   });
+
+  return dedupeByName(mapped, (m) => m.name, (m) => m.provenance === 'verified', (m) => m.match_score);
+}
+
+// A live web search can surface a program that's already in the
+// hand-verified static table (e.g. "SBA Microloan Program"), which would
+// otherwise show up as two near-identical results. Collapse by normalized
+// name, preferring the verified entry on a clash and otherwise the higher
+// score.
+export function dedupeByName(items, nameOf, isPreferred, scoreOf) {
+  const seen = new Map();
+  for (const item of items) {
+    const key = (nameOf(item) || '').trim().toLowerCase();
+    if (!key) {
+      seen.set(Symbol(), item);
+      continue;
+    }
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, item);
+    } else if (!isPreferred(existing) && isPreferred(item)) {
+      seen.set(key, item);
+    } else if (isPreferred(existing) === isPreferred(item) && scoreOf(item) > scoreOf(existing)) {
+      seen.set(key, item);
+    }
+  }
+  return [...seen.values()].sort((a, b) => scoreOf(b) - scoreOf(a));
 }
 
 export async function loadSubScores(applicationId) {
@@ -248,7 +275,12 @@ router.post('/:applicationId/simulate', async (req, res) => {
     ...staticLenders.map((l) => ({ ...l, provenance: 'verified' })),
     ...discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' })),
   ];
-  const simMatches = matchLenders(simulated, taggedLenders);
+  const simMatches = dedupeByName(
+    matchLenders(simulated, taggedLenders),
+    (m) => m.lender.name,
+    (m) => m.lender.provenance === 'verified',
+    (m) => m.matchScore
+  );
 
   const baselineNames = new Set(baseline.map((m) => m.name));
   const simNames = new Set(simMatches.map((m) => m.lender.name));
