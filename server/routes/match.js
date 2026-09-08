@@ -149,10 +149,11 @@ async function loadOwnedApplication(applicationId, userId) {
   return rows[0] || null;
 }
 
-router.post('/:applicationId', async (req, res) => {
-  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
-  if (!application) return res.status(404).json({ error: 'Application not found' });
-
+// The full match pipeline for one application — readiness scoring, help-mode
+// classification, lender matching (static + live-discovered), the coaching
+// summary, and persistence of match_results. Used by both the initial
+// POST /:applicationId and the recompute endpoint.
+async function runMatchPipeline(application) {
   const [{ rows: staticLenders }, discoveredLenders, contentQuality] = await Promise.all([
     pool.query('SELECT * FROM lenders'),
     getDiscoveredLenders(application.state, application.industry),
@@ -161,14 +162,8 @@ router.post('/:applicationId', async (req, res) => {
   const { readinessScore, subScores: rawSubScores } = computeReadiness(application, contentQuality);
   const help = classifyHelpMode(application, rawSubScores, readinessScore);
   await pool.query('UPDATE applications SET help_mode = $1 WHERE id = $2', [help.mode, application.id]);
-  // qualityConcerns rides along inside the same subScores object (no schema
-  // change needed) — both the API response and the follow-up chat's stored
-  // context already carry this object through as-is.
   const subScores = { ...rawSubScores, answerQualityConcerns: contentQuality.concerns };
-  // Tagging provenance here means it survives untouched through
-  // matchLenders() (which just returns the lender object it was given) all
-  // the way to match.lender.provenance below — matching-engine.js itself
-  // needs no changes and stays fully deterministic either way.
+
   const taggedLenders = [
     ...staticLenders.map((l) => ({ ...l, provenance: 'verified' })),
     ...discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' })),
@@ -213,14 +208,56 @@ router.post('/:applicationId', async (req, res) => {
     client.release();
   }
 
-  res.json({
+  return {
     applicationId: application.id,
     readinessScore,
     subScores,
     aiSummary,
     helpMode: helpModeInfo(help.mode),
     matches: await loadResults(application.id),
-  });
+  };
+}
+
+router.post('/:applicationId', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+  res.json(await runMatchPipeline(application));
+});
+
+// POST /:applicationId/recompute — apply owner-confirmed numeric changes
+// (from syncing their refined funding story) to the application, then
+// re-run the whole match pipeline so the score and matches reflect them.
+const RECOMPUTABLE_FIELDS = new Set([
+  'time_in_business_months',
+  'annual_revenue',
+  'requested_amount',
+  'existing_monthly_debt_payment',
+]);
+
+router.post('/:applicationId/recompute', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const apply = req.body?.apply || {};
+  const updates = {};
+  for (const [key, value] of Object.entries(apply)) {
+    if (!RECOMPUTABLE_FIELDS.has(key)) continue;
+    const n = Number(value);
+    if (Number.isFinite(n) && n >= 0) updates[key] = Math.round(n);
+  }
+
+  if (Object.keys(updates).length > 0) {
+    const setClause = Object.keys(updates)
+      .map((k, i) => `${k} = $${i + 1}`)
+      .join(', ');
+    await pool.query(`UPDATE applications SET ${setClause} WHERE id = $${Object.keys(updates).length + 1}`, [
+      ...Object.values(updates),
+      application.id,
+    ]);
+  }
+
+  const fresh = await loadOwnedApplication(req.params.applicationId, req.userId);
+  res.json({ ...(await runMatchPipeline(fresh)), applied: updates });
 });
 
 router.get('/:applicationId', async (req, res) => {

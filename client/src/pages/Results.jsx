@@ -76,7 +76,7 @@ const HELP_MODE_ICON = {
   strategist: '🔄',
 };
 
-export default function Results({ results, conversationId }) {
+export default function Results({ results, conversationId, onResultsUpdate }) {
   const { readinessScore, aiSummary, matches, subScores, applicationId, helpMode } = results;
   const topMatch = matches[0]?.match_score ?? 0;
 
@@ -191,7 +191,7 @@ export default function Results({ results, conversationId }) {
         <span className="results-phase-line" />
       </div>
 
-      {applicationId && <BusinessCase applicationId={applicationId} />}
+      {applicationId && <BusinessCase applicationId={applicationId} onProfileSynced={onResultsUpdate} />}
 
       {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} />}
 

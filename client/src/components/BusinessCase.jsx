@@ -32,7 +32,12 @@ function CopyButton({ text, small }) {
   );
 }
 
-export default function BusinessCase({ applicationId }) {
+function money(field, n) {
+  if (n === null || n === undefined) return 'not set';
+  return field === 'time_in_business_months' ? `${n} mo` : `$${Number(n).toLocaleString()}`;
+}
+
+export default function BusinessCase({ applicationId, onProfileSynced }) {
   const [state, setState] = useState('loading'); // loading | ready | error
   const [sections, setSections] = useState([]);
   const [assumptions, setAssumptions] = useState([]);
@@ -42,6 +47,8 @@ export default function BusinessCase({ applicationId }) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [syncChanges, setSyncChanges] = useState(null); // [{field,label,from,to}] | null
+  const [syncing, setSyncing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const inputRef = useRef(null);
   const startedRef = useRef(false);
@@ -94,11 +101,47 @@ export default function BusinessCase({ applicationId }) {
       if (!res.ok) throw new Error(data.error || 'That update did not go through');
       applyResult(data);
       setInput('');
+      checkProfileSync();
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
       setBusy(false);
       inputRef.current?.focus();
+    }
+  }
+
+  // After an edit, see whether the story now implies numbers different from
+  // the scored application. If so, offer to sync + re-run.
+  async function checkProfileSync() {
+    if (!onProfileSynced) return;
+    try {
+      const res = await authedFetch(`/api/business-case/${applicationId}/sync-check`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.changes?.length > 0) setSyncChanges(data.changes);
+    } catch {
+      /* non-critical */
+    }
+  }
+
+  async function applySync() {
+    if (!syncChanges || syncing) return;
+    setSyncing(true);
+    try {
+      const apply = Object.fromEntries(syncChanges.map((c) => [c.field, c.to]));
+      const res = await authedFetch(`/api/match/${applicationId}/recompute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apply }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Re-run failed');
+      onProfileSynced?.(data);
+      setSyncChanges(null);
+      setNote('Updated your profile and re-ran your readiness — the numbers above reflect it now.');
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -199,6 +242,28 @@ export default function BusinessCase({ applicationId }) {
           );
         })}
       </div>
+
+      {syncChanges && (
+        <div className="bc-sync">
+          <p className="bc-sync-title">Your story now says something different from your scored profile:</p>
+          <ul>
+            {syncChanges.map((c) => (
+              <li key={c.field}>
+                <span>{c.label}</span>: {money(c.field, c.from)} <span aria-hidden="true">→</span>{' '}
+                <strong>{money(c.field, c.to)}</strong>
+              </li>
+            ))}
+          </ul>
+          <div className="bc-sync-actions">
+            <button type="button" className="btn btn-primary btn-sm" onClick={applySync} disabled={syncing}>
+              {syncing ? 'Re-running…' : 'Update my profile & re-run readiness'}
+            </button>
+            <button type="button" className="bc-linkbtn" onClick={() => setSyncChanges(null)} disabled={syncing}>
+              Keep my current numbers
+            </button>
+          </div>
+        </div>
+      )}
 
       {note && <div className="bc-note">{note}</div>}
       {errorMsg && state === 'ready' && <div className="bc-error">{errorMsg}</div>}

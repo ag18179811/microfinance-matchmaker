@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db/connection.js';
-import { draftBusinessCase, reviseBusinessCase, emptyCase } from '../services/business-case.js';
+import { draftBusinessCase, reviseBusinessCase, emptyCase, extractProfileFromNarrative } from '../services/business-case.js';
 
 const router = Router();
 
@@ -164,6 +164,38 @@ router.post('/:applicationId/regenerate', async (req, res) => {
   }
 
   res.json(shapeCase(rows[0]));
+});
+
+// POST /:applicationId/sync-check — after the owner has refined their
+// funding story, see whether its prose now implies numbers different from
+// what's on the application. Returns proposed changes for the owner to
+// confirm (or not); never mutates anything.
+const SYNC_LABELS = {
+  time_in_business_months: 'Time in business (months)',
+  annual_revenue: 'Annual revenue',
+  requested_amount: 'Funding requested',
+  existing_monthly_debt_payment: 'Monthly debt payment',
+};
+
+router.post('/:applicationId/sync-check', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const row = await loadCase(application.id);
+  if (!row) return res.json({ changes: [] });
+
+  const fromNarrative = await extractProfileFromNarrative(row.sections || []);
+  const changes = [];
+  for (const [field, label] of Object.entries(SYNC_LABELS)) {
+    const stated = fromNarrative[field];
+    if (stated === undefined) continue;
+    const current = application[field] === null || application[field] === undefined ? null : Number(application[field]);
+    // Only surface a change if it's real and material (>5% or a null->value).
+    if (current === null || (Math.abs(stated - current) > Math.max(1, current * 0.05))) {
+      changes.push({ field, label, from: current, to: stated });
+    }
+  }
+  res.json({ changes });
 });
 
 export default router;

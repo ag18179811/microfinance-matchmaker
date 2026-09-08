@@ -210,6 +210,62 @@ export async function reviseBusinessCase({ application, additionalNotes, section
   };
 }
 
+// After the owner has refined their funding story, its prose may now imply
+// numbers that differ from what's stored on the application (revenue,
+// months in business, the ask, monthly debt). This pulls ONLY those four
+// scoring-relevant numbers out of the narrative, and only when the
+// narrative states them plainly — same "extract, never invent" discipline
+// as groq-extract.js. Returns { field: value } for numbers the narrative
+// clearly asserts; the caller diffs against the application and confirms
+// with the owner before applying anything.
+const SYNCABLE = {
+  time_in_business_months: 'integer number of months the business has been operating',
+  annual_revenue: 'approximate annual revenue in whole US dollars',
+  requested_amount: 'the funding amount being requested, in whole US dollars',
+  existing_monthly_debt_payment: 'total monthly payment toward existing business debt, in whole US dollars',
+};
+
+export async function extractProfileFromNarrative(sections) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return {};
+
+  const fieldList = Object.entries(SYNCABLE)
+    .map(([k, d]) => `  "${k}": ${d}, or null if the narrative does not clearly state it`)
+    .join('\n');
+
+  const result = await callGroqChat({
+    apiKey,
+    model: MODEL,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You are an extraction engine. Read this business funding narrative and return ONLY numbers it ' +
+          'states plainly and unambiguously. Never estimate, infer a range midpoint, or guess. If a number ' +
+          'is vague ("growing", "a few years"), return null for it. Respond with ONLY JSON:\n{\n' +
+          fieldList +
+          '\n}',
+      },
+      { role: 'user', content: (sections || []).map((s) => s.body).join('\n\n') },
+    ],
+    temperature: 0,
+    response_format: { type: 'json_object' },
+  });
+
+  if (!result.ok) return {};
+  try {
+    const raw = JSON.parse(result.data.choices?.[0]?.message?.content ?? '{}');
+    const out = {};
+    for (const key of Object.keys(SYNCABLE)) {
+      const n = Number(raw[key]);
+      if (Number.isFinite(n) && n >= 0) out[key] = Math.round(n);
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 export function emptyCase() {
   return {
     sections: SECTION_ORDER.map((key) => ({

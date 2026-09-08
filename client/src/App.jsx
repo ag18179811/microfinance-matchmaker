@@ -139,7 +139,13 @@ export default function App() {
               onComplete={finalizeApplication}
             />
           )}
-          {stage === 'results' && results && <Results results={results} conversationId={conversationId} />}
+          {stage === 'results' && results && (
+            <Results
+              results={results}
+              conversationId={conversationId}
+              onResultsUpdate={(next) => setResults((prev) => ({ ...prev, ...next }))}
+            />
+          )}
         </div>
       </main>
       {stage !== 'chat' && <Footer />}
