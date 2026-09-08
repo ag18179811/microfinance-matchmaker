@@ -5,6 +5,7 @@ import { generateCoachingSummary } from '../services/groq-coach.js';
 import { assessAnswerQuality } from '../services/groq-quality-check.js';
 import { searchLiveLenders } from '../services/openai-lender-search.js';
 import { computeImprovementPlan, personalizeImprovementPlan } from '../services/improvement-plan.js';
+import { classifyHelpMode, helpModeInfo } from '../services/help-mode.js';
 
 const router = Router();
 
@@ -158,6 +159,8 @@ router.post('/:applicationId', async (req, res) => {
     assessAnswerQuality(application),
   ]);
   const { readinessScore, subScores: rawSubScores } = computeReadiness(application, contentQuality);
+  const help = classifyHelpMode(application, rawSubScores, readinessScore);
+  await pool.query('UPDATE applications SET help_mode = $1 WHERE id = $2', [help.mode, application.id]);
   // qualityConcerns rides along inside the same subScores object (no schema
   // change needed) — both the API response and the follow-up chat's stored
   // context already carry this object through as-is.
@@ -172,7 +175,14 @@ router.post('/:applicationId', async (req, res) => {
   ];
   const matches = matchLenders(application, taggedLenders);
 
-  const aiSummary = await generateCoachingSummary(application, rawSubScores, readinessScore, contentQuality.concerns);
+  const aiSummary = await generateCoachingSummary(
+    application,
+    rawSubScores,
+    readinessScore,
+    contentQuality.concerns,
+    application.language || 'en',
+    help.mode
+  );
   const readinessBreakdownJson = JSON.stringify(subScores);
 
   const client = await pool.connect();
@@ -208,6 +218,7 @@ router.post('/:applicationId', async (req, res) => {
     readinessScore,
     subScores,
     aiSummary,
+    helpMode: helpModeInfo(help.mode),
     matches: await loadResults(application.id),
   });
 });
@@ -225,6 +236,7 @@ router.get('/:applicationId', async (req, res) => {
     readinessScore: results[0].readiness_score,
     subScores: await loadSubScores(application.id),
     aiSummary: results[0].ai_summary,
+    helpMode: helpModeInfo(application.help_mode),
     matches: results,
   });
 });
@@ -254,7 +266,7 @@ router.get('/:applicationId/improvement-plan', async (req, res) => {
 
   const readinessScore = baseline[0].readiness_score;
   const plan = computeImprovementPlan(application, subScores, readinessScore, subScores.answerQualityConcerns || []);
-  const personalized = await personalizeImprovementPlan(plan, application, parseNotes(application));
+  const personalized = await personalizeImprovementPlan(plan, application, parseNotes(application), application.language || 'en');
   res.json(personalized);
 });
 

@@ -20,6 +20,7 @@
 import { REQUIRED_APPLICATION_FIELDS, DEEP_PROFILE_FIELDS, DEEP_PROFILE_FIELD_ORDER, normalizeState } from '../constants.js';
 import { coerceNumber, coerceIndustry, coerceString, coerceSelect } from './field-coercion.js';
 import { callGroqChat } from './groq-client.js';
+import { languageDirective } from './language.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -42,7 +43,7 @@ function fieldSchemaDescription() {
   );
 }
 
-function buildSystemPrompt(hasAnalysis) {
+function buildSystemPrompt(hasAnalysis, language = 'en') {
   const reasoningSource = hasAnalysis
     ? 'You will be given a research analysis already written by a first-pass reasoning step (which may have ' +
       'searched the web for a specific detail the user mentioned) — that IS the actual thinking; your job is to ' +
@@ -97,7 +98,8 @@ function buildSystemPrompt(hasAnalysis) {
     'updatedFields should include EVERY structured field you can confidently determine from the full ' +
     'conversation so far, not just ones mentioned in the latest message. newNotes should only include facts ' +
     'not already captured in an earlier note or structured field — this is where most of what makes this ' +
-    'business unique should end up.'
+    'business unique should end up.' +
+    languageDirective(language)
   );
 }
 
@@ -216,6 +218,7 @@ export async function runInterviewTurn({
   attachmentTexts,
   turnCount,
   stuckField,
+  language = 'en',
   analysisText,
   citedUrls,
 }) {
@@ -223,7 +226,7 @@ export async function runInterviewTurn({
   if (!apiKey) return { ok: false };
 
   const messages = [
-    { role: 'system', content: buildSystemPrompt(Boolean(analysisText)) },
+    { role: 'system', content: buildSystemPrompt(Boolean(analysisText), language) },
     ...history.map((m) => ({ role: m.role, content: m.content })),
     {
       role: 'user',

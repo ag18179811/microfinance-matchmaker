@@ -117,12 +117,12 @@ function computeStuckField(fullHistoryRows) {
 // validate. `notes` is the free-form, business-specific facts list — this
 // is where most of what makes a given interview genuinely different from
 // the next one lives, as opposed to the fixed `fields` schema.
-async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnCount) {
+async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnCount, language = 'en') {
   const attachmentTexts = await loadAttachmentTexts(conversationId);
   const historyForModel = fullHistoryRows.map((m) => ({ role: m.role, content: m.content }));
   const stuckField = computeStuckField(fullHistoryRows);
 
-  const analysis = await reasonAboutTurn({ history: historyForModel, currentFields: fields, currentNotes: notes, stuckField });
+  const analysis = await reasonAboutTurn({ history: historyForModel, currentFields: fields, currentNotes: notes, stuckField, language });
 
   const llmTurn = await runInterviewTurn({
     history: historyForModel,
@@ -131,6 +131,7 @@ async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnC
     attachmentTexts,
     turnCount: turnCount + 1,
     stuckField,
+    language,
     analysisText: analysis.ok ? analysis.analysisText : undefined,
     citedUrls: analysis.ok ? analysis.citedUrls : undefined,
   });
@@ -198,7 +199,7 @@ async function handleFollowUp(req, res, convo) {
 
   await saveMessage(convo.id, 'user', text);
   const history = (await loadHistory(convo.id)).map((m) => ({ role: m.role, content: m.content }));
-  const reply = await generateFollowUpReply({ application, subScores, readinessScore, matches, history });
+  const reply = await generateFollowUpReply({ application, subScores, readinessScore, matches, history, language: application.language || convo.language || 'en' });
   await saveMessage(convo.id, 'assistant', reply);
 
   res.json({ conversationId: convo.id, mode: 'followup', reply });
@@ -209,12 +210,14 @@ router.post('/start', async (req, res) => {
   if (!description) return res.status(400).json({ error: 'description is required' });
 
   const extracted = await extractApplicationFields(description);
-  const { purpose, ...coreFields } = extracted;
-  const seededFields = { ...coreFields, use_of_funds_detail: purpose || null };
+  const { purpose, language, ...coreFields } = extracted;
+  // language rides along in `fields` (so it survives to the applications
+  // insert) and is also stored in its own column for direct queries.
+  const seededFields = { ...coreFields, use_of_funds_detail: purpose || null, language: language || 'en' };
 
   const { rows } = await pool.query(
-    `INSERT INTO conversations (user_id, status, fields, notes, turn_count) VALUES ($1, 'in_progress', '{}', '[]', 0) RETURNING id`,
-    [req.userId]
+    `INSERT INTO conversations (user_id, status, fields, notes, turn_count, language) VALUES ($1, 'in_progress', '{}', '[]', 0, $2) RETURNING id`,
+    [req.userId, language || 'en']
   );
   const conversationId = rows[0].id;
   await saveMessage(conversationId, 'user', description);
@@ -224,7 +227,8 @@ router.post('/start', async (req, res) => {
     [{ role: 'user', content: description }],
     seededFields,
     [],
-    0
+    0,
+    language || 'en'
   );
 
   const progress = computeInterviewProgress({ fields, notes, turnCount, done: turn.done });
@@ -243,6 +247,7 @@ router.post('/:id/reply', async (req, res) => {
 
   let fields = JSON.parse(convo.fields || '{}');
   const notes = JSON.parse(convo.notes || '[]');
+  const language = convo.language || fields.language || 'en';
   const fullHistory = await loadHistory(conversationId);
   const lastAssistant = [...fullHistory].reverse().find((m) => m.role === 'assistant');
 
@@ -305,7 +310,7 @@ router.post('/:id/reply', async (req, res) => {
     fields: fieldsAfterTurn,
     notes: notesAfterTurn,
     turnCount,
-  } = await advanceTurn(conversationId, updatedHistory, fields, notes, convo.turn_count);
+  } = await advanceTurn(conversationId, updatedHistory, fields, notes, convo.turn_count, language);
 
   // Safety net: the model is usually able to fold a reply into updatedFields
   // even for open-ended questions, but it can occasionally miss re-reporting

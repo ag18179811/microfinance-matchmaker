@@ -12,6 +12,7 @@
 
 import { callGroqChat } from './groq-client.js';
 import { coerceString } from './field-coercion.js';
+import { languageDirective } from './language.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -83,7 +84,7 @@ function coercePack(raw, model) {
 
 // Returns { ok, blocks, checklist, steps } — checklist/steps are copied
 // straight from the verified profile (or empty for unverified lenders).
-export async function buildPack({ businessCase, review, profile, lender }) {
+export async function buildPack({ businessCase, review, profile, lender, language = 'en' }) {
   const apiKey = process.env.GROQ_API_KEY;
   const model = profile?.model || 'cdfi_term_loan';
 
@@ -108,7 +109,7 @@ export async function buildPack({ businessCase, review, profile, lender }) {
     apiKey,
     model: MODEL,
     messages: [
-      { role: 'system', content: buildSystemPrompt(model, lender?.name || 'this lender') },
+      { role: 'system', content: buildSystemPrompt(model, lender?.name || 'this lender') + languageDirective(language) },
       { role: 'user', content: payload },
     ],
     temperature: 0.4,

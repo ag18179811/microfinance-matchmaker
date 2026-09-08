@@ -17,6 +17,8 @@
 
 import { callGroqChat } from './groq-client.js';
 import { coerceString } from './field-coercion.js';
+import { languageDirective } from './language.js';
+import { helpModeDirective } from './help-mode.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -141,7 +143,7 @@ function parseJson(result) {
 }
 
 // Returns { ok: true, sections, assumptions } or { ok: false, reason }.
-export async function draftBusinessCase({ application, additionalNotes }) {
+export async function draftBusinessCase({ application, additionalNotes, language = 'en', helpMode = null }) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return { ok: false, reason: 'no GROQ_API_KEY configured' };
 
@@ -149,7 +151,7 @@ export async function draftBusinessCase({ application, additionalNotes }) {
     apiKey,
     model: MODEL,
     messages: [
-      { role: 'system', content: buildDraftSystemPrompt() },
+      { role: 'system', content: buildDraftSystemPrompt() + helpModeDirective(helpMode) + languageDirective(language) },
       { role: 'user', content: ownerContext(application, additionalNotes) },
     ],
     temperature: 0.5,
@@ -169,7 +171,7 @@ export async function draftBusinessCase({ application, additionalNotes }) {
 
 // history: [{ at, summary }] — passed through for the model's awareness; the
 // route owns persistence. Returns { ok, sections, assumptions, reply, changeSummary }.
-export async function reviseBusinessCase({ application, additionalNotes, sections, assumptions, userMessage }) {
+export async function reviseBusinessCase({ application, additionalNotes, sections, assumptions, userMessage, language = 'en' }) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return { ok: false, reason: 'no GROQ_API_KEY configured' };
 
@@ -184,7 +186,7 @@ export async function reviseBusinessCase({ application, additionalNotes, section
     apiKey,
     model: MODEL,
     messages: [
-      { role: 'system', content: buildReviseSystemPrompt() },
+      { role: 'system', content: buildReviseSystemPrompt() + languageDirective(language) },
       { role: 'user', content: payload },
     ],
     temperature: 0.4,

@@ -72,18 +72,30 @@ const STATEMENTS = [
 ];
 
 export async function runMigrations(pool) {
+  // Warm up the pool first — a brand-new connection to Supabase's pooler
+  // occasionally drops the first TLS handshake, and we'd rather absorb that
+  // here than on the first migration statement.
+  for (let i = 0; i < 4; i++) {
+    try {
+      await pool.query('SELECT 1');
+      break;
+    } catch {
+      await new Promise((r) => setTimeout(r, 600));
+    }
+  }
+
   for (const sql of STATEMENTS) {
     // Every statement is idempotent, so a transient network/SSL blip on the
-    // pooled Supabase connection is worth one retry — otherwise a deploy
+    // pooled Supabase connection is worth retrying — otherwise a deploy
     // boot could silently skip a column.
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 4; attempt++) {
       try {
         await pool.query(sql);
         break;
       } catch (err) {
-        const transient = /EPROTO|ECONNRESET|ETIMEDOUT|Connection terminated|socket hang up/i.test(err.message);
-        if (transient && attempt === 1) {
-          await new Promise((r) => setTimeout(r, 500));
+        const transient = /EPROTO|ECONNRESET|ETIMEDOUT|Connection terminated|socket hang up|SSL alert/i.test(err.message);
+        if (transient && attempt < 4) {
+          await new Promise((r) => setTimeout(r, 400 * attempt));
           continue;
         }
         // A migration failure shouldn't take the whole server down on boot —

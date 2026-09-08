@@ -68,8 +68,15 @@ function linkHost(url) {
   }
 }
 
+const HELP_MODE_ICON = {
+  organizer: '⚡',
+  demystifier: '🧭',
+  rebuilder: '🌱',
+  strategist: '🔄',
+};
+
 export default function Results({ results, conversationId }) {
-  const { readinessScore, aiSummary, matches, subScores, applicationId } = results;
+  const { readinessScore, aiSummary, matches, subScores, applicationId, helpMode } = results;
   const topMatch = matches[0]?.match_score ?? 0;
 
   return (
@@ -80,6 +87,16 @@ export default function Results({ results, conversationId }) {
           <p>Based on what you told us, here's where you stand and who's likely to fund you.</p>
         </div>
       </div>
+
+      {helpMode && (
+        <div className={`help-mode-banner help-mode-${helpMode.mode}`}>
+          <span className="help-mode-icon" aria-hidden="true">{HELP_MODE_ICON[helpMode.mode] || '•'}</span>
+          <div>
+            <div className="help-mode-headline">{helpMode.headline}</div>
+            <p className="help-mode-blurb">{helpMode.blurb}</p>
+          </div>
+        </div>
+      )}
 
       <div className="stat-row">
         <div className="stat-card gauge-card">

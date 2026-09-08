@@ -6,6 +6,7 @@
 // matching-engine.js remains the only thing that computes those.
 
 import { callGroqChat } from './groq-client.js';
+import { languageDirective } from './language.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -25,7 +26,7 @@ function fallbackReply() {
   );
 }
 
-export async function generateFollowUpReply({ application, subScores, readinessScore, matches, history }) {
+export async function generateFollowUpReply({ application, subScores, readinessScore, matches, history, language = 'en' }) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return fallbackReply();
 
@@ -52,7 +53,10 @@ export async function generateFollowUpReply({ application, subScores, readinessS
   });
 
   const messages = [
-    { role: 'system', content: `${SYSTEM_PROMPT_BASE}\n\nApplicant profile and match results (JSON):\n${context}` },
+    {
+      role: 'system',
+      content: `${SYSTEM_PROMPT_BASE}${languageDirective(language)}\n\nApplicant profile and match results (JSON):\n${context}`,
+    },
     ...history.map((m) => ({ role: m.role, content: m.content })),
   ];
 

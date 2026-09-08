@@ -6,6 +6,7 @@
 import { INDUSTRIES, normalizeState } from '../constants.js';
 import { coerceNumber, coerceIndustry, coerceString } from './field-coercion.js';
 import { callGroqChat } from './groq-client.js';
+import { normalizeLanguage } from './language.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -17,7 +18,8 @@ const SCHEMA_DESCRIPTION = `{
   "time_in_business_months": integer or null,
   "annual_revenue": integer, whole US dollars with no symbols or commas, or null,
   "requested_amount": integer, whole US dollars with no symbols or commas, or null,
-  "purpose": string or null
+  "purpose": string or null,
+  "language": ISO 639-1 code of the language the description is written in (e.g. "en", "es")
 }`;
 
 function buildSystemPrompt() {
@@ -46,6 +48,7 @@ export function emptyExtraction() {
     annual_revenue: null,
     requested_amount: null,
     purpose: null,
+    language: 'en',
   };
 }
 
@@ -86,6 +89,7 @@ export async function extractApplicationFields(description) {
       annual_revenue: coerceNumber(raw.annual_revenue),
       requested_amount: coerceNumber(raw.requested_amount),
       purpose: coerceString(raw.purpose) ?? coerceString(description),
+      language: normalizeLanguage(raw.language),
     };
   } catch (err) {
     console.error('Groq extraction response was not valid JSON:', err.message);

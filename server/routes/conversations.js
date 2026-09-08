@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/connection.js';
 import { loadResults, loadSubScores } from './match.js';
+import { helpModeInfo } from '../services/help-mode.js';
 
 const router = Router();
 
@@ -62,6 +63,7 @@ router.get('/:id', async (req, res) => {
           readinessScore: matches[0].readiness_score,
           subScores: await loadSubScores(application.id),
           aiSummary: matches[0].ai_summary,
+          helpMode: helpModeInfo(application.help_mode),
           matches,
         };
       }

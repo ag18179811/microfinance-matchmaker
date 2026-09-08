@@ -2,6 +2,8 @@
 // those come exclusively from matching-engine.js.
 
 import { callGroqChat } from './groq-client.js';
+import { languageDirective } from './language.js';
+import { helpModeDirective } from './help-mode.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -25,7 +27,7 @@ function fallbackSummary(readinessScore, reason, retryable) {
   );
 }
 
-export async function generateCoachingSummary(application, subScores, readinessScore, qualityConcerns = []) {
+export async function generateCoachingSummary(application, subScores, readinessScore, qualityConcerns = [], language = 'en', helpMode = null) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return fallbackSummary(readinessScore, 'no GROQ_API_KEY configured', false);
@@ -50,7 +52,7 @@ export async function generateCoachingSummary(application, subScores, readinessS
     apiKey,
     model: MODEL,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: SYSTEM_PROMPT + helpModeDirective(helpMode) + languageDirective(language) },
       { role: 'user', content: userPayload },
     ],
     temperature: 0.4,

@@ -13,6 +13,7 @@
 // the only source of truth for those, same as everywhere else in this app.
 
 import { callOpenAIResponses, findMessageText, collectCitedUrls } from './openai-client.js';
+import { languageName } from './language.js';
 
 const MODEL = 'gpt-4.1-mini';
 
@@ -31,11 +32,14 @@ const SYSTEM_PROMPT =
   'next and why. This is read by a second step that turns it into a structured question, so be concrete and ' +
   'specific rather than vague.';
 
-function buildUserContent(currentFields, currentNotes, stuckField) {
+function buildUserContent(currentFields, currentNotes, stuckField, language) {
   const parts = [
     `Current known profile (JSON): ${JSON.stringify(currentFields)}`,
     `Specific facts already gathered (JSON): ${JSON.stringify(currentNotes || [])}`,
   ];
+  if (language && language !== 'en') {
+    parts.push(`The applicant is communicating in ${languageName(language)}; the question they'll be asked next will be delivered in ${languageName(language)}.`);
+  }
   if (stuckField) {
     parts.push(
       `Note: the last two questions both targeted "${stuckField}" and it's still unresolved — do not reason ` +
@@ -49,7 +53,7 @@ function buildUserContent(currentFields, currentNotes, stuckField) {
 // { ok: false } when no key is configured or the call fails — callers
 // should treat this as an enhancement, not a hard dependency: proceed to
 // step 2 with the raw history instead of blocking the turn on this.
-export async function reasonAboutTurn({ history, currentFields, currentNotes, stuckField }) {
+export async function reasonAboutTurn({ history, currentFields, currentNotes, stuckField, language = 'en' }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false };
 
@@ -60,7 +64,7 @@ export async function reasonAboutTurn({ history, currentFields, currentNotes, st
       input: [
         { role: 'system', content: SYSTEM_PROMPT },
         ...history.map((m) => ({ role: m.role, content: m.content })),
-        { role: 'user', content: buildUserContent(currentFields, currentNotes, stuckField) },
+        { role: 'user', content: buildUserContent(currentFields, currentNotes, stuckField, language) },
       ],
       tools: [{ type: 'web_search' }],
     },

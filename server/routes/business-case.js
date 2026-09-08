@@ -46,7 +46,7 @@ router.get('/:applicationId', async (req, res) => {
   if (existing) return res.json(shapeCase(existing));
 
   const additionalNotes = parseNotes(application);
-  const draft = await draftBusinessCase({ application, additionalNotes });
+  const draft = await draftBusinessCase({ application, additionalNotes, language: application.language || 'en', helpMode: application.help_mode });
 
   const base = draft.ok ? draft : emptyCase();
   const meta = {
@@ -79,7 +79,7 @@ router.post('/:applicationId/message', async (req, res) => {
   if (!row) {
     // No case yet — draft one first so there's something to revise.
     const additionalNotes = parseNotes(application);
-    const draft = await draftBusinessCase({ application, additionalNotes });
+    const draft = await draftBusinessCase({ application, additionalNotes, language: application.language || 'en', helpMode: application.help_mode });
     const base = draft.ok ? draft : emptyCase();
     const { rows } = await pool.query(
       `INSERT INTO business_cases (application_id, user_id, sections, assumptions, meta, history)
@@ -98,6 +98,7 @@ router.post('/:applicationId/message', async (req, res) => {
     sections: row.sections || [],
     assumptions: row.assumptions || [],
     userMessage: text,
+    language: application.language || 'en',
   });
 
   if (!revised.ok) {
@@ -127,7 +128,7 @@ router.post('/:applicationId/regenerate', async (req, res) => {
   if (!application) return res.status(404).json({ error: 'Application not found' });
 
   const additionalNotes = parseNotes(application);
-  const draft = await draftBusinessCase({ application, additionalNotes });
+  const draft = await draftBusinessCase({ application, additionalNotes, language: application.language || 'en', helpMode: application.help_mode });
   if (!draft.ok) {
     return res.status(502).json({ error: `Couldn't redraft right now — ${draft.reason}. Your current version is unchanged.` });
   }

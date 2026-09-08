@@ -108,7 +108,7 @@ router.post('/:applicationId/:lenderKey/start', async (req, res) => {
   const profile = deriveProfile(lender);
   const matchDetail = { reasons: lender.reasons || [], cautions: lender.cautions || [] };
 
-  const started = await startReview({ application, additionalNotes, lender, profile, subScores, matchDetail });
+  const started = await startReview({ application, additionalNotes, lender, profile, subScores, matchDetail, language: application.language || 'en' });
   if (!started.ok) return res.status(502).json({ error: `Couldn't start the review right now — ${started.reason}.` });
 
   const messages = [{ role: 'underwriter', content: started.opening }];
@@ -156,6 +156,7 @@ router.post('/:applicationId/:lenderKey/message', async (req, res) => {
     matchDetail,
     history: reviewRow.messages || [],
     userMessage: text,
+    language: application.language || 'en',
   });
   if (!turn.ok) return res.status(502).json({ error: `The reviewer didn't respond — ${turn.reason}. Your progress is saved; try again.` });
 
@@ -204,7 +205,7 @@ router.post('/:applicationId/:lenderKey/pack', async (req, res) => {
   ).rows[0] || { sections: [] };
 
   const profile = deriveProfile(lender);
-  const pack = await buildPack({ businessCase, review: reviewRow, profile, lender });
+  const pack = await buildPack({ businessCase, review: reviewRow, profile, lender, language: application.language || 'en' });
   if (!pack.ok) return res.status(502).json({ error: `Couldn't assemble the pack — ${pack.reason}.` });
 
   await pool.query('UPDATE underwriter_reviews SET pack = $1, updated_at = now() WHERE application_id = $2 AND lender_key = $3', [

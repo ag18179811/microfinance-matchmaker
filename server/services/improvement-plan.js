@@ -9,6 +9,7 @@
 import { computeReadiness } from './matching-engine.js';
 import { callGroqChat } from './groq-client.js';
 import { coerceString } from './field-coercion.js';
+import { languageDirective } from './language.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -139,14 +140,14 @@ export function computeImprovementPlan(application, subScores, readinessScore, q
 
 // Optional: rewrite each `action` to reference something specific about
 // this business. Returns the plan unchanged if the AI call isn't available.
-export async function personalizeImprovementPlan(plan, application, additionalNotes) {
+export async function personalizeImprovementPlan(plan, application, additionalNotes, language = 'en') {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || plan.items.length === 0) return plan;
 
   const payload = JSON.stringify({
     business: { ...application, additional_notes: undefined, user_id: undefined },
     specificFacts: additionalNotes || [],
-    steps: plan.items.map((it) => ({ key: it.key, title: it.title, action: it.action })),
+    steps: plan.items.map((it) => ({ key: it.key, title: it.title, detail: it.detail, action: it.action, timeframe: it.timeframe })),
   });
 
   const result = await callGroqChat({
@@ -156,11 +157,13 @@ export async function personalizeImprovementPlan(plan, application, additionalNo
       {
         role: 'system',
         content:
-          'You are refining a funding-readiness action plan. For each step, keep the same advice and the same ' +
-          'numbers, but rewrite the "action" text so it references something concrete and specific about THIS ' +
-          "business (its industry, its situation, a fact from specificFacts). Never invent a fact or change a " +
-          'dollar figure or timeframe. Keep each action to 1–3 sentences, plain and direct. Respond with ONLY ' +
-          'JSON: { "steps": [ { "key": "...", "action": "rewritten text" } ] }',
+          'You are refining a funding-readiness action plan. Keep the same advice, the same numbers, and the ' +
+          'same timeframes exactly. Rewrite "action" so it references something concrete and specific about ' +
+          "THIS business (its industry, its situation, a fact from specificFacts). Never invent a fact or " +
+          'change a dollar figure or timeframe. Keep each action to 1–3 sentences, plain and direct. Also ' +
+          'return "title", "detail", and "timeframe" for each step (rewritten only as needed for the target ' +
+          'language). Respond with ONLY JSON: { "steps": [ { "key", "title", "detail", "action", "timeframe" } ] }' +
+          languageDirective(language),
       },
       { role: 'user', content: payload },
     ],
@@ -171,10 +174,20 @@ export async function personalizeImprovementPlan(plan, application, additionalNo
   if (!result.ok) return plan;
   try {
     const raw = JSON.parse(result.data.choices?.[0]?.message?.content ?? '{}');
-    const byKey = new Map((raw.steps || []).map((s) => [s.key, coerceString(s.action)]));
+    const byKey = new Map((raw.steps || []).map((s) => [s.key, s]));
     return {
       ...plan,
-      items: plan.items.map((it) => (byKey.get(it.key) ? { ...it, action: byKey.get(it.key) } : it)),
+      items: plan.items.map((it) => {
+        const s = byKey.get(it.key);
+        if (!s) return it;
+        return {
+          ...it,
+          title: coerceString(s.title) || it.title,
+          detail: coerceString(s.detail) || it.detail,
+          action: coerceString(s.action) || it.action,
+          timeframe: coerceString(s.timeframe) || it.timeframe,
+        };
+      }),
     };
   } catch {
     return plan;

@@ -18,6 +18,7 @@
 
 import { callGroqChat } from './groq-client.js';
 import { coerceString } from './field-coercion.js';
+import { languageDirective } from './language.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
@@ -156,7 +157,7 @@ export async function startReview(ctx) {
     apiKey,
     model: MODEL,
     messages: [
-      { role: 'system', content: startPrompt(model) },
+      { role: 'system', content: startPrompt(model) + languageDirective(ctx.language) },
       { role: 'user', content: fileContext(ctx) },
     ],
     temperature: 0.5,
@@ -191,7 +192,7 @@ export async function continueReview(ctx) {
     apiKey,
     model: MODEL,
     messages: [
-      { role: 'system', content: turnPrompt(model) },
+      { role: 'system', content: turnPrompt(model) + languageDirective(ctx.language) },
       { role: 'user', content: fileContext(ctx) },
       ...transcript,
       { role: 'user', content: ctx.userMessage },

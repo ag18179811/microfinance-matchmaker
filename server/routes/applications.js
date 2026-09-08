@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db/connection.js';
 import { REQUIRED_APPLICATION_FIELDS, DEEP_PROFILE_FIELDS, DEEP_PROFILE_FIELD_ORDER, normalizeState } from '../constants.js';
 import { coerceNumber, coerceSelect, coerceString } from '../services/field-coercion.js';
+import { normalizeLanguage } from '../services/language.js';
 
 const router = Router();
 
@@ -43,13 +44,14 @@ router.post('/', async (req, res) => {
 
   const deep = coerceDeepProfile(body);
   const additionalNotes = coerceAdditionalNotes(body.notes);
+  const language = normalizeLanguage(body.language);
   const { rows } = await pool.query(
     `INSERT INTO applications (
        user_id, business_name, industry, city, state, time_in_business_months, annual_revenue, requested_amount, purpose,
        existing_monthly_debt_payment, business_structure, employee_count, has_tax_returns, cash_flow_pattern,
-       credit_band, prior_funding_history, use_of_funds_detail, ownership_demographics, additional_notes
+       credit_band, prior_funding_history, use_of_funds_detail, ownership_demographics, additional_notes, language
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
      RETURNING *`,
     [
       req.userId,
@@ -71,6 +73,7 @@ router.post('/', async (req, res) => {
       deep.use_of_funds_detail,
       deep.ownership_demographics,
       JSON.stringify(additionalNotes),
+      language,
     ]
   );
 
