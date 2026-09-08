@@ -30,6 +30,7 @@ export default function App() {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
   const [stage, setStage] = useState('describe'); // 'describe' | 'chat' | 'results'
   const [initialDescription, setInitialDescription] = useState('');
+  const [resumeConversationId, setResumeConversationId] = useState(null);
   const [results, setResults] = useState(null);
   const [conversationId, setConversationId] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -37,6 +38,7 @@ export default function App() {
 
   function handleStart(description) {
     setInitialDescription(description);
+    setResumeConversationId(null);
     setConversationId(null);
     setStage('chat');
   }
@@ -52,6 +54,7 @@ export default function App() {
   function startOver() {
     setStage('describe');
     setInitialDescription('');
+    setResumeConversationId(null);
     setResults(null);
     setConversationId(null);
     setHistoryOpen(false);
@@ -63,11 +66,23 @@ export default function App() {
       const res = await authedFetch(`/api/conversations/${id}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load that conversation');
-      if (!data.results) throw new Error('This conversation has no results to show yet');
-      setResults(data.results);
-      setConversationId(id);
-      setStage('results');
-      setHistoryOpen(false);
+      if (data.results) {
+        setResults(data.results);
+        setConversationId(id);
+        setStage('results');
+        setHistoryOpen(false);
+        return;
+      }
+      if (data.status !== 'complete') {
+        // In-progress interview — resume it in the chat.
+        setInitialDescription('');
+        setResumeConversationId(id);
+        setConversationId(id);
+        setStage('chat');
+        setHistoryOpen(false);
+        return;
+      }
+      throw new Error('This conversation has no results to show yet');
     } catch (err) {
       setHistoryError(err.message);
     }
@@ -116,7 +131,14 @@ export default function App() {
       <main className="main">
         <div className="stage-transition" key={stage}>
           {stage === 'describe' && <DescribeBusiness onStart={handleStart} />}
-          {stage === 'chat' && <Chat initialDescription={initialDescription} onComplete={finalizeApplication} />}
+          {stage === 'chat' && (
+            <Chat
+              key={resumeConversationId || 'new'}
+              initialDescription={initialDescription}
+              resumeConversationId={resumeConversationId}
+              onComplete={finalizeApplication}
+            />
+          )}
           {stage === 'results' && results && <Results results={results} conversationId={conversationId} />}
         </div>
       </main>

@@ -55,13 +55,12 @@ export default function ChatHistoryDrawer({ open, onClose, onSelect, onNewChat }
               type="button"
               key={c.id}
               className={`history-item ${c.status !== 'complete' ? 'history-item-pending' : ''}`}
-              disabled={c.status !== 'complete'}
               onClick={() => onSelect(c.id)}
             >
               <span className="history-item-title">{c.title}</span>
               <span className="history-item-meta">
                 {formatDate(c.createdAt)}
-                {c.status !== 'complete' && ' · unfinished'}
+                {c.status !== 'complete' && ' · resume where you left off'}
               </span>
             </button>
           ))}

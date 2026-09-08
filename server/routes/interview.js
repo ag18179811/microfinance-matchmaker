@@ -236,6 +236,47 @@ router.post('/start', async (req, res) => {
   res.json({ conversationId, done: false, message: toClientMessage(turn), progress });
 });
 
+// GET /:id/resume — rehydrate an in-progress interview: the full message
+// thread plus the current progress, so the chat UI can pick up exactly
+// where the owner left off.
+router.get('/:id/resume', async (req, res) => {
+  const convo = await loadOwnedConversation(req.params.id, req.userId);
+  if (!convo) return res.status(404).json({ error: 'Conversation not found' });
+  if (convo.status === 'complete') {
+    return res.status(409).json({ error: 'This interview is already complete — open its results instead.' });
+  }
+
+  const { rows } = await pool.query(
+    'SELECT role, content, reasoning, field_key, field_key_source FROM conversation_messages WHERE conversation_id = $1 ORDER BY id ASC',
+    [convo.id]
+  );
+  const fields = JSON.parse(convo.fields || '{}');
+  const notes = JSON.parse(convo.notes || '[]');
+
+  const messages = rows.map((m) => ({
+    role: m.role === 'assistant' ? 'ai' : m.role === 'user' ? 'user' : 'system',
+    text: m.content,
+    reasoningSteps: m.reasoning ? safeParse(m.reasoning) : null,
+    source: m.field_key_source === 'fallback' ? 'fallback' : 'ai',
+  }));
+  const lastAi = [...messages].reverse().find((m) => m.role === 'ai');
+
+  res.json({
+    conversationId: convo.id,
+    messages,
+    activeQuestion: lastAi ? lastAi.text : null,
+    progress: computeInterviewProgress({ fields, notes, turnCount: convo.turn_count, done: false }),
+  });
+});
+
+function safeParse(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
 router.post('/:id/reply', async (req, res) => {
   const convo = await loadOwnedConversation(req.params.id, req.userId);
   if (!convo) return res.status(404).json({ error: 'Conversation not found' });

@@ -113,7 +113,7 @@ function ThinkingChain({ reasoningSteps, thinkingSeconds, source }) {
   );
 }
 
-export default function Chat({ initialDescription, onComplete }) {
+export default function Chat({ initialDescription, resumeConversationId, onComplete }) {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [activeMessageId, setActiveMessageId] = useState(null);
@@ -187,7 +187,8 @@ export default function Chat({ initialDescription, onComplete }) {
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    beginConversation();
+    if (resumeConversationId) resumeInterview();
+    else beginConversation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -216,6 +217,37 @@ export default function Chat({ initialDescription, onComplete }) {
     });
     setActiveMessageId(id);
     setInputDisabled(false);
+  }
+
+  async function resumeInterview() {
+    setInputDisabled(true);
+    showStatus('Picking up where you left off…');
+    try {
+      const res = await authedFetch(`/api/interview/${resumeConversationId}/resume`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not resume this interview');
+      hideStatus();
+      setConversationId(data.conversationId);
+      let lastAiId = null;
+      for (const m of data.messages) {
+        if (m.role === 'system') {
+          addMessage('system', m.text);
+        } else {
+          const id = addMessage(m.role, m.text, {
+            reasoningSteps: m.reasoningSteps || undefined,
+            source: m.source,
+          });
+          if (m.role === 'ai') lastAiId = id;
+        }
+      }
+      if (data.progress) setProgress(data.progress);
+      addMessage('system', 'Resumed — carry on from here.');
+      setActiveMessageId(lastAiId);
+      setInputDisabled(false);
+    } catch (err) {
+      hideStatus();
+      showError('I had trouble resuming that conversation.', err.message, () => resumeInterview());
+    }
   }
 
   async function beginConversation() {
