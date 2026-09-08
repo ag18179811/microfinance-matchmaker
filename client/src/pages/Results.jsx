@@ -4,6 +4,7 @@ import WhatIfSimulator from '../components/WhatIfSimulator.jsx';
 import BusinessCase from '../components/BusinessCase.jsx';
 import LenderPrep from '../components/LenderPrep.jsx';
 import ImprovementPlan from '../components/ImprovementPlan.jsx';
+import AdvisorBridge from '../components/AdvisorBridge.jsx';
 
 const READINESS_FACTORS = [
   { key: 'timeInBusiness', label: 'Time in business', blurb: 'Longer operating history lowers lender risk.' },
@@ -180,6 +181,8 @@ export default function Results({ results, conversationId }) {
 
       {applicationId && <ImprovementPlan applicationId={applicationId} />}
 
+      {helpMode?.mode === 'rebuilder' && <AdvisorBridge prominent />}
+
       {applicationId && <WhatIfSimulator applicationId={applicationId} />}
 
       <div className="results-phase">
@@ -337,6 +340,8 @@ export default function Results({ results, conversationId }) {
           })}
         </div>
       )}
+
+      {helpMode?.mode !== 'rebuilder' && <AdvisorBridge />}
 
       {conversationId && <FollowUpChat conversationId={conversationId} />}
     </div>
