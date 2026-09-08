@@ -246,6 +246,17 @@ ALTER TABLE applications ADD COLUMN IF NOT EXISTS additional_notes TEXT;
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE match_results ADD COLUMN IF NOT EXISTS lender_source TEXT NOT NULL DEFAULT 'static';
 
+-- Funding type: 'loan' (default) | 'grant' | 'other'. Grants and other
+-- non-debt capital are matched, scored, and prepared for differently.
+ALTER TABLE lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan';
+ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan';
+
+-- Adaptive follow-through + interview language.
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS help_mode TEXT;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS help_mode TEXT;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
+
 -- lender_id used to be a hard FK into `lenders` only; it now also needs to
 -- point into `discovered_lenders` when lender_source = 'discovered', which
 -- a single FK constraint can't express (see the column comment above). Drop

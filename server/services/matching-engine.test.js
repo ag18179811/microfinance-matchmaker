@@ -141,3 +141,32 @@ test('computeReadiness falls back to a neutral answerQuality when no quality sig
   const withoutSignal = computeReadiness(strongApplication);
   assert.equal(withoutSignal.subScores.answerQuality, 60);
 });
+
+test('a grant is never disqualified for an amount outside its award range, and is labelled as a grant', () => {
+  const grant = {
+    id: 9,
+    name: 'Austin Storefront Improvement Grant',
+    funding_type: 'grant',
+    geography: 'TX',
+    min_loan: 1000,
+    max_loan: 5000,
+    industries: '',
+  };
+  // Asking for $20k against a $5k-max grant would hard-disqualify a loan.
+  const result = scoreLenderMatch(grant, strongApplication);
+  assert.ok(result, 'grant stays eligible even though the ask exceeds the award ceiling');
+  assert.ok(result.reasons.some((r) => /grant/i.test(r) && /not a loan|don.t repay|keep/i.test(r)));
+  assert.ok(result.cautions.some((c) => /competitive/i.test(c)));
+});
+
+test('a loan with the same numbers as the grant above IS disqualified', () => {
+  const loan = {
+    id: 10,
+    name: 'Tiny Loan Fund',
+    geography: 'TX',
+    min_loan: 1000,
+    max_loan: 5000,
+    industries: '',
+  };
+  assert.equal(scoreLenderMatch(loan, strongApplication), null);
+});

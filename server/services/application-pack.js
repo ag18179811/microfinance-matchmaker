@@ -41,6 +41,12 @@ export const BLOCKS_BY_MODEL = {
     ['business_summary', 'Business summary', "One short paragraph on the business, in the owner's voice."],
     ['group_note', 'Forming your group', "A short, practical note to the owner on who in their life could be the other four women entrepreneurs in their lending group, and how to raise it with them — grounded in anyone they've mentioned (customers, other vendors, community)."],
   ],
+  grant: [
+    ['project_description', 'Project description', 'A specific, concrete description of exactly what this grant would fund — the purchase, the hire, the improvement — and the outcome it produces. Grant reviewers reward specificity; avoid "general operating support" language.'],
+    ['budget', 'Grant budget', 'A clean line-item budget: every dollar of the requested amount, what it buys, and the total. Only amounts the owner actually gave.'],
+    ['fit_statement', "Why this business fits the funder", "A short paragraph connecting this specific business and project to the grant's stated mission and priorities — the case for why this application deserves the award over others."],
+    ['impact', 'Expected impact', 'What measurably changes if the grant is awarded — jobs, customers served, revenue, community effect — stated concretely and only from what the owner has said, with a bracketed prompt where a number is missing.'],
+  ],
 };
 
 function buildSystemPrompt(model, lenderName) {

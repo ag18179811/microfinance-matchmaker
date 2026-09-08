@@ -19,26 +19,30 @@ const MODEL = 'gpt-4.1-mini';
 const MAX_RESULTS = 8;
 
 const SEARCH_SYSTEM_PROMPT =
-  'You are researching real, currently-operating small business funding programs (CDFIs, SBA microloan ' +
-  'intermediaries, city/state small business loan programs, nonprofit business lenders) FOR A FOR-PROFIT SMALL ' +
+  'You are researching real, currently-operating small business funding programs FOR A FOR-PROFIT SMALL ' +
   'BUSINESS OWNER — every program you report must be one a for-profit business (sole proprietorship, LLC, ' +
-  'corporation, partnership) can actually apply to and receive funds from. Explicitly EXCLUDE grant programs ' +
-  'restricted to 501(c)(3) nonprofits, arts councils, government agencies, or individual artists/creators only ' +
-  '— those cannot be used by this audience even if they turn up in search results for the industry. Use web ' +
-  'search to find programs that actually serve the given state and are relevant to the given industry. Only ' +
-  'describe programs you actually found via search results — never describe a program from memory without a ' +
-  'search result backing it up, and never estimate or guess loan amounts, eligibility rules, or URLs. For each ' +
-  'program found, state: its exact name, what states/regions it serves, its loan amount range if stated, any ' +
-  'industry restrictions, key eligibility requirements (time in business, revenue minimums, ownership ' +
-  'requirements, and explicitly note if it requires nonprofit/501(c)(3) status), and the exact URL of the page ' +
-  'describing its funding program. If you find nothing genuinely relevant and usable by a for-profit business ' +
-  'after searching, say so plainly instead of describing something tangential.';
+  'corporation, partnership) can actually apply to and receive funds from. Include BOTH:\n' +
+  '  - loans: CDFIs, SBA microloan intermediaries, city/state small business loan programs, nonprofit lenders\n' +
+  '  - grants: business grants a for-profit can actually win (e.g. Amber Grant, Comcast RISE, city/state ' +
+  'economic-development or storefront grants, industry-specific grants, minority/women/veteran business grants)\n' +
+  'Explicitly EXCLUDE anything restricted to 501(c)(3) nonprofits, arts councils, government agencies, or ' +
+  'individual artists/creators only — those cannot be used by this audience even if they turn up in search ' +
+  'results. Use web search to find programs that actually serve the given state and are relevant to the given ' +
+  'industry. Only describe programs you actually found via search results — never describe a program from ' +
+  'memory without a search result backing it up, and never estimate or guess amounts, eligibility rules, or ' +
+  'URLs. For each program found, state: its exact name, WHETHER IT IS A LOAN OR A GRANT, what states/regions ' +
+  'it serves, its funding amount range if stated, any industry restrictions, key eligibility requirements ' +
+  '(time in business, revenue minimums, ownership requirements, and explicitly note if it requires ' +
+  'nonprofit/501(c)(3) status), and the exact URL of the page describing the program. If you find nothing ' +
+  'genuinely relevant and usable by a for-profit business after searching, say so plainly instead of ' +
+  'describing something tangential.';
 
 const EXTRACTION_SYSTEM_PROMPT =
   'You will be given research notes about small business funding programs, each grounded in specific cited ' +
   'source URLs, plus the list of URLs that were actually cited. Extract each genuinely distinct, real program ' +
   'into a structured record. Rules: source_url MUST be one of the cited URLs given to you — never invent or ' +
-  'modify a URL. If a field is not clearly stated in the research notes, use null rather than guessing. Skip ' +
+  'modify a URL. Set funding_type to "grant" if the notes describe it as a grant (money not repaid) and "loan" ' +
+  'otherwise. If a field is not clearly stated in the research notes, use null rather than guessing. Skip ' +
   'any program the notes describe as restricted to 501(c)(3) nonprofits, arts councils, government agencies, ' +
   'or individual artists/creators only — this platform serves for-profit small businesses, so those programs ' +
   'are not usable even if the research notes mention them. If the research notes say nothing relevant was ' +
@@ -56,9 +60,10 @@ function extractionSchema() {
           properties: {
             name: { type: 'string' },
             type: { type: 'string', enum: ['CDFI', 'nonprofit', 'city_program', 'state_program'] },
+            funding_type: { type: 'string', enum: ['loan', 'grant', 'other'], description: 'loan = repaid; grant = not repaid' },
             geography: { type: 'string', description: 'Comma-separated two-letter state codes, or "National"' },
-            min_loan: { type: ['integer', 'null'] },
-            max_loan: { type: ['integer', 'null'] },
+            min_loan: { type: ['integer', 'null'], description: 'min funding amount (award floor for grants)' },
+            max_loan: { type: ['integer', 'null'], description: 'max funding amount (award ceiling for grants)' },
             industries: { type: 'string', description: 'Comma-separated, or empty string if no restriction' },
             eligibility_notes: { type: 'string' },
             source_url: { type: 'string' },
@@ -68,6 +73,7 @@ function extractionSchema() {
           required: [
             'name',
             'type',
+            'funding_type',
             'geography',
             'min_loan',
             'max_loan',
@@ -93,10 +99,12 @@ function extractionSchema() {
 function coerceEntries(raw, citedUrls) {
   if (!Array.isArray(raw)) return [];
   const citedSet = new Set(citedUrls);
+  const FUNDING_TYPES = new Set(['loan', 'grant', 'other']);
   return raw
     .map((entry) => ({
       name: coerceString(entry?.name),
       type: coerceString(entry?.type),
+      funding_type: FUNDING_TYPES.has(entry?.funding_type) ? entry.funding_type : 'loan',
       geography: coerceString(entry?.geography),
       min_loan: coerceNumber(entry?.min_loan),
       max_loan: coerceNumber(entry?.max_loan),

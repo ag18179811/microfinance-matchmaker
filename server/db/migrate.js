@@ -47,6 +47,20 @@ const STATEMENTS = [
   // use-of-funds, etc.) — cached on the review it's built from.
   `ALTER TABLE underwriter_reviews ADD COLUMN IF NOT EXISTS pack JSONB`,
 
+  // Funding type — most programs are loans, but grants (money that isn't
+  // repaid) and other non-debt capital are matched and prepared for
+  // differently. 'loan' | 'grant' | 'other'.
+  `ALTER TABLE lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan'`,
+  `ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan'`,
+
+  // Adaptive follow-through: which kind of help this owner needs, inferred
+  // from the interview — shapes the tone of the post-match features.
+  `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS help_mode TEXT`,
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS help_mode TEXT`,
+  // Language the interview was conducted in (BCP-47-ish, e.g. 'en', 'es').
+  `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
+
   `ALTER TABLE business_cases ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE underwriter_reviews ENABLE ROW LEVEL SECURITY`,
 

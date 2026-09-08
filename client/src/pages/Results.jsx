@@ -90,7 +90,9 @@ export default function Results({ results, conversationId }) {
         </div>
         <div className="stat-card">
           <div className="stat-value">{matches.length}</div>
-          <div className="stat-label">Matched lenders</div>
+          <div className="stat-label">
+            Matched {matches.some((m) => m.funding_type === 'grant') ? 'programs' : 'lenders'}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{matches.length > 0 ? `${topMatch}%` : '—'}</div>
@@ -183,6 +185,11 @@ export default function Results({ results, conversationId }) {
                   <div className="lender-name">
                     <span className="lender-rank">#{i + 1}</span>
                     {m.name}
+                    {m.funding_type === 'grant' && (
+                      <span className="tag tag-grant" title="A grant is money you don't repay — competitive and awarded on a cycle.">
+                        Grant
+                      </span>
+                    )}
                     {m.provenance === 'discovered' && (
                       <span className="tag tag-discovered" title="Found via live web search rather than our hand-verified list — confirm details on the official site before applying.">
                         Auto-discovered
@@ -221,7 +228,7 @@ export default function Results({ results, conversationId }) {
                     </dd>
                   </div>
                   <div>
-                    <dt>Loan range</dt>
+                    <dt>{m.funding_type === 'grant' ? 'Award range' : 'Loan range'}</dt>
                     <dd>
                       {formatCurrency(m.min_loan)} – {formatCurrency(m.max_loan)}
                     </dd>
@@ -263,7 +270,7 @@ export default function Results({ results, conversationId }) {
                   {m.source_url ? (
                     <>
                       <a className="btn btn-primary lender-apply-btn" href={m.source_url} target="_blank" rel="noreferrer">
-                        Apply with {m.name}
+                        {m.funding_type === 'grant' ? `Apply for the ${m.name}` : `Apply with ${m.name}`}
                         <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                           <path d="M5 2h7v7M12 2L2 12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

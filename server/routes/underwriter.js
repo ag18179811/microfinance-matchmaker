@@ -66,6 +66,7 @@ router.get('/:applicationId/lenders', async (req, res) => {
         key,
         name: m.name,
         type: m.type,
+        fundingType: m.funding_type || 'loan',
         matchScore: m.match_score,
         provenance: m.provenance,
         applyUrl: profile.applyUrl || m.source_url || null,

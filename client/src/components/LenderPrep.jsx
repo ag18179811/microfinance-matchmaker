@@ -34,7 +34,10 @@ function HowTheyApply({ lender }) {
     <div className="lp-how">
       <p className="lp-how-model">
         <strong>{lender.modelLabel}</strong>
-        {!lender.verified && <span className="lp-unverified">process not verified — confirm on their site</span>}
+        {!lender.verified && lender.model !== 'grant' && (
+          <span className="lp-unverified">process not verified — confirm on their site</span>
+        )}
+        {lender.model === 'grant' && <span className="lp-unverified lp-grant-tag">grant — confirm the current cycle &amp; rules</span>}
       </p>
       <p className="lp-how-blurb">{lender.howItWorks || lender.modelBlurb}</p>
 

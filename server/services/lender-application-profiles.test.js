@@ -30,6 +30,14 @@ test('the eight programs cover genuinely different application models', () => {
   assert.ok(models.has('referral_network'));
 });
 
+test('a grant gets the grant model regardless of the issuing org type or verified status', () => {
+  const p = deriveProfile({ id: 5, name: 'City Storefront Grant', type: 'city_program', funding_type: 'grant', source_url: 'https://city.gov/grant' });
+  assert.equal(p.model, 'grant');
+  assert.ok(p.need.some((n) => /project|budget|fit/i.test(n.item)));
+  assert.ok(/no credit check|no repayment|not a loan|keep/i.test(p.howItWorks) === false || /panel|priorities|specific/i.test(p.howItWorks));
+  assert.equal(p.applyUrl, 'https://city.gov/grant');
+});
+
 test('an unknown (web-discovered) lender is never presented as verified', () => {
   const p = deriveProfile({ id: 99, name: 'Some Regional Loan Fund Nobody Verified', type: 'CDFI', source_url: 'https://example.org/apply' });
   assert.equal(p.verified, false);

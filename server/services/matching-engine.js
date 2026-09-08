@@ -39,6 +39,15 @@ function loanSizeFit(lender, application) {
   const min = Number(lender.min_loan) || 0;
   const max = Number(lender.max_loan) || Infinity;
 
+  // For a grant, the requested amount isn't a hard ask — you accept
+  // whatever award you're offered — so being outside the award range is
+  // never disqualifying, just a weaker fit.
+  if (lender.funding_type === 'grant') {
+    if (max === Infinity && min === 0) return { eligible: true, score: 85, edge: false };
+    const fits = requested >= min && requested <= max;
+    return { eligible: true, score: fits ? 100 : 60, edge: !fits };
+  }
+
   if (requested >= min && requested <= max) {
     // Flag amounts sitting right at the edge of the window as worth a second look,
     // even though they technically clear the bar.
@@ -122,8 +131,15 @@ export function scoreLenderMatch(lender, application) {
 
   const reasons = [];
   const cautions = [];
+  const isGrant = lender.funding_type === 'grant';
 
-  if (loanFit.score === 100 && !loanFit.edge) {
+  if (isGrant) {
+    reasons.push('This is a grant — funding you keep, not a loan to repay');
+    if (Number.isFinite(max) && max > 0) {
+      reasons.push(`Awards run up to $${max.toLocaleString()}${min > 0 ? ` (from $${min.toLocaleString()})` : ''}`);
+    }
+    cautions.push('Grants are competitive and awarded on a cycle — treat it as a bonus to pursue, not a sure thing');
+  } else if (loanFit.score === 100 && !loanFit.edge) {
     reasons.push(`Your $${requested.toLocaleString()} request comfortably fits this lender's $${min.toLocaleString()}–$${Number.isFinite(max) ? max.toLocaleString() : 'no max'} range`);
   } else if (loanFit.edge) {
     cautions.push(`Your request sits near the ${requested <= min * 1.1 ? 'minimum' : 'maximum'} of this lender's loan range — approval may hinge on additional documentation`);

@@ -2667,6 +2667,21 @@ select {
   cursor: help;
 }
 
+.tag-grant {
+  margin-left: 0.6rem;
+  vertical-align: middle;
+  background: var(--color-success-light);
+  color: var(--color-success-text);
+  border-color: transparent;
+  font-weight: 700;
+  cursor: help;
+}
+
+.lp-grant-tag {
+  background: var(--color-success-light);
+  color: var(--color-success-text);
+}
+
 .lender-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

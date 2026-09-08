@@ -52,6 +52,11 @@ export const APPLICATION_MODELS = {
     blurb:
       'Loans are made to a small group of entrepreneurs who support each other. Almost no paperwork, but you commit to onboarding training and a short weekly meeting for the life of the loan.',
   },
+  grant: {
+    label: 'Competitive grant application',
+    blurb:
+      'A grant is money you keep — no repayment, no interest. In exchange it is competitive: a written application judged by a review panel or a scoring rubric against the funder\'s priorities, usually on a fixed cycle with a deadline. What wins is a specific, credible project that fits exactly what the funder said they want to support.',
+  },
 };
 
 // slug         — stable id
@@ -341,6 +346,39 @@ function inferModelFromType(type) {
 // generic guidance as fact.
 export function deriveProfile(lender) {
   const name = (lender?.name || '').trim().toLowerCase();
+
+  // A grant is a grant regardless of the issuing org's type or whether it's
+  // in the verified table — the application model is fundamentally different
+  // (a competitive written application, not an underwriter).
+  if (lender?.funding_type === 'grant') {
+    return {
+      slug: `grant-${lender?.id ?? 'unknown'}`,
+      matchNames: [name],
+      model: 'grant',
+      verified: false,
+      applyUrl: lender?.source_url || null,
+      timeline: 'Grants run on a cycle with a fixed deadline — check the funder\'s site for the current round.',
+      howItWorks:
+        'A written application scored by a review panel against the funder\'s stated priorities. There is no credit check or collateral — what matters is a specific project that clearly fits what this grant is meant to fund, and evidence you can deliver and report on it.',
+      need: [
+        { item: "A clear description of the specific project or purchase the grant would fund", when: 'always' },
+        { item: 'A simple budget showing how every dollar is used', when: 'always' },
+        { item: "A short statement of why your business fits this funder's mission and priorities", when: 'always' },
+        { item: 'Proof the business is real and operating (registration, EIN, recent activity)', when: 'always' },
+      ],
+      steps: [
+        "Read the grant's priorities and eligibility on the funder's page — grants reward tight fit, not general need.",
+        'Confirm the current cycle is open and note the deadline.',
+        'Write a specific project description and a line-item budget.',
+        'Submit before the deadline and keep a copy of everything.',
+      ],
+      gotchas: lender?.eligibility_notes ? [lender.eligibility_notes] : [],
+      underwriterFocus:
+        "Fit with the funder's stated priorities first, then how specific and credible the project is, then whether you can execute and report on it. Financial strength matters far less than for a loan.",
+      sources: lender?.source_url ? [lender.source_url] : [],
+    };
+  }
+
   const exact = PROFILE_BY_NAME.get(name);
   if (exact) return { ...exact, verified: true };
 

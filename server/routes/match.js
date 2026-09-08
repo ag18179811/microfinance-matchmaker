@@ -9,7 +9,7 @@ const router = Router();
 
 const DISCOVERED_CACHE_DAYS = 30;
 const DISCOVERED_LENDER_COLUMNS =
-  'id, name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type';
+  'id, name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type';
 
 // Cache-only read of previously discovered lenders for this (state,
 // industry). Split out from getDiscoveredLenders so the what-if simulator
@@ -50,13 +50,14 @@ async function getDiscoveredLenders(state, industry) {
     for (const lender of found) {
       const { rows } = await pool.query(
         `INSERT INTO discovered_lenders
-           (name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url,
+           (name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url,
             min_months_in_business, min_months_in_business_type, search_state, search_industry)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
          RETURNING ${DISCOVERED_LENDER_COLUMNS}`,
         [
           lender.name,
           lender.type,
+          lender.funding_type || 'loan',
           lender.geography,
           lender.min_loan,
           lender.max_loan,
@@ -81,7 +82,7 @@ async function getDiscoveredLenders(state, industry) {
 export async function loadResults(applicationId) {
   const { rows } = await pool.query(
     `SELECT mr.match_score, mr.readiness_score, mr.ai_summary, mr.match_details, mr.readiness_breakdown,
-            l.id, l.name, l.type, l.geography, l.min_loan, l.max_loan, l.industries, l.eligibility_notes,
+            l.id, l.name, l.type, l.funding_type, l.geography, l.min_loan, l.max_loan, l.industries, l.eligibility_notes,
             l.source_url, l.min_months_in_business, l.min_months_in_business_type, 'verified' AS provenance
      FROM match_results mr
      JOIN lenders l ON l.id = mr.lender_id AND mr.lender_source = 'static'
@@ -90,7 +91,7 @@ export async function loadResults(applicationId) {
      UNION ALL
 
      SELECT mr.match_score, mr.readiness_score, mr.ai_summary, mr.match_details, mr.readiness_breakdown,
-            dl.id, dl.name, dl.type, dl.geography, dl.min_loan, dl.max_loan, dl.industries, dl.eligibility_notes,
+            dl.id, dl.name, dl.type, dl.funding_type, dl.geography, dl.min_loan, dl.max_loan, dl.industries, dl.eligibility_notes,
             dl.source_url, dl.min_months_in_business, dl.min_months_in_business_type, 'discovered' AS provenance
      FROM match_results mr
      JOIN discovered_lenders dl ON dl.id = mr.lender_id AND mr.lender_source = 'discovered'

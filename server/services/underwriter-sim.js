@@ -48,6 +48,12 @@ const PERSONAS = {
     'meet for 30 minutes every week. There is no credit check and no collateral. What you are really ' +
     'checking is whether this person can form a real group and commit to the weekly meeting for the life of ' +
     'the loan. You are warm and community-oriented.',
+  grant:
+    'You are a grants program officer scoring this application against your program\'s published priorities. ' +
+    'There is no credit check, no collateral, no repayment — a grant is a competitive award. You are judging: ' +
+    'does this project fit exactly what our grant is meant to fund, is it specific and credible, and can this ' +
+    'person actually deliver it and report back. You are encouraging but candid about whether the fit is ' +
+    'strong enough to be competitive this cycle, and you push for specificity over general need.',
 };
 
 function fileContext({ application, additionalNotes, subScores, matchDetail, profile, lender }) {
