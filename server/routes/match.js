@@ -4,6 +4,7 @@ import { computeReadiness, matchLenders } from '../services/matching-engine.js';
 import { generateCoachingSummary } from '../services/groq-coach.js';
 import { assessAnswerQuality } from '../services/groq-quality-check.js';
 import { searchLiveLenders } from '../services/openai-lender-search.js';
+import { computeImprovementPlan, personalizeImprovementPlan } from '../services/improvement-plan.js';
 
 const router = Router();
 
@@ -226,6 +227,35 @@ router.get('/:applicationId', async (req, res) => {
     aiSummary: results[0].ai_summary,
     matches: results,
   });
+});
+
+function parseNotes(application) {
+  try {
+    return typeof application.additional_notes === 'string'
+      ? JSON.parse(application.additional_notes || '[]')
+      : application.additional_notes || [];
+  } catch {
+    return [];
+  }
+}
+
+// GET /:applicationId/improvement-plan — prioritized, concrete steps to
+// raise the readiness score, each with a real projected impact computed by
+// re-running the scoring engine.
+router.get('/:applicationId/improvement-plan', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const subScores = await loadSubScores(application.id);
+  const baseline = await loadResults(application.id);
+  if (!subScores || baseline.length === 0) {
+    return res.status(409).json({ error: 'Run matching first, then you can see how to improve.' });
+  }
+
+  const readinessScore = baseline[0].readiness_score;
+  const plan = computeImprovementPlan(application, subScores, readinessScore, subScores.answerQualityConcerns || []);
+  const personalized = await personalizeImprovementPlan(plan, application, parseNotes(application));
+  res.json(personalized);
 });
 
 // The financial levers the what-if simulator is allowed to change. Location

@@ -1528,6 +1528,153 @@ select {
   margin-bottom: 0.2rem;
 }
 
+/* ---------- Improvement plan ---------- */
+
+.ip-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.75rem;
+  margin-bottom: 2.25rem;
+}
+
+.ip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ip-item {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.ip-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.ip-rank {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ip-item-head h3 {
+  font-size: 0.98rem;
+  margin: 0;
+  flex: 1;
+}
+
+.ip-timeframe {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+
+.ip-detail {
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.ip-action {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 0.85rem;
+  color: var(--color-text);
+}
+
+.ip-gain {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ip-gain-track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.ip-gain-base {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--color-text-muted);
+  border-radius: var(--radius-full);
+}
+
+.ip-gain-add {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--color-success);
+}
+
+.ip-gain-label {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.ip-gain-label strong {
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.ip-gain-delta {
+  margin-left: 0.4rem;
+  font-weight: 700;
+  color: var(--color-success-text);
+}
+
+/* ---------- Results phase divider ---------- */
+
+.results-phase {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0 2rem;
+}
+
+.results-phase-line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-strong);
+}
+
+.results-phase-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
 /* ---------- What-if simulator ---------- */
 
 .whatif-card {

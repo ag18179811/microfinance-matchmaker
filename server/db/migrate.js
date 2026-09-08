@@ -73,13 +73,25 @@ const STATEMENTS = [
 
 export async function runMigrations(pool) {
   for (const sql of STATEMENTS) {
-    try {
-      await pool.query(sql);
-    } catch (err) {
-      // A migration failure shouldn't take the whole server down on boot —
-      // log it loudly and let the features that need the table fail their
-      // own requests with a clear error instead.
-      console.error('[db] migration statement failed:', err.message, '\n  ', sql.split('\n')[0]);
+    // Every statement is idempotent, so a transient network/SSL blip on the
+    // pooled Supabase connection is worth one retry — otherwise a deploy
+    // boot could silently skip a column.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await pool.query(sql);
+        break;
+      } catch (err) {
+        const transient = /EPROTO|ECONNRESET|ETIMEDOUT|Connection terminated|socket hang up/i.test(err.message);
+        if (transient && attempt === 1) {
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+        // A migration failure shouldn't take the whole server down on boot —
+        // log it loudly and let the features that need the table fail their
+        // own requests with a clear error instead.
+        console.error('[db] migration statement failed:', err.message, '\n  ', sql.split('\n')[0]);
+        break;
+      }
     }
   }
 }
