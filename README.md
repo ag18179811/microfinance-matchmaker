@@ -53,16 +53,15 @@ The resource data in this prototype is illustrative. Production use should conne
 
 Alongside the static GitHub Pages site above, this repo also contains a working full-stack MVP:
 
-- **`/server`** — Node/Express API backed by SQLite. Deterministic, rules-based lender matching and readiness scoring (`services/matching-engine.js`, no LLM involved), a Groq-powered free-text extraction step (`services/groq-extract.js`) that turns a plain-English business description into structured fields, and a Groq-powered coaching layer (`services/groq-coach.js`) that only ever generates explanatory text — never eligibility decisions.
-- **`/client`** — Minimal Vite + React app: a single "describe your business" box, a short dynamic follow-up form for whatever the description didn't cover, and a results page.
+- **`/server`** — Node/Express API on Supabase Postgres. Deterministic, rules-based lender matching and readiness scoring (`services/matching-engine.js`, no LLM), a Groq free-text extraction step (`services/groq-extract.js`) that seeds structured fields from the opening description, an adaptive interview, and a set of AI layers that only ever generate explanatory or narrative text — never eligibility decisions.
+- **`/client`** — Vite + React app: a no-account preview, a "describe your business" box, the adaptive chat interview, and a results page with the full application-prep layer.
 
 ### How intake works
 
-1. The user describes their business in one free-text box (`POST /api/intake/extract`).
-2. Groq (JSON mode, temperature 0) extracts only what's explicitly or unambiguously stated — business name, industry (matched against a fixed list), city/state, time in business, revenue, requested amount, purpose. It's instructed to never guess a number, location, or industry it isn't confident about, and every field is re-validated server-side (industry must match the fixed enum, state is normalized against a real US-states table, dollar/month figures are coerced to numbers or dropped) so a bad or missing value always becomes `null` rather than a hallucinated guess.
-3. The server deterministically diffs the extracted fields against the required set — the LLM never decides what's required — and returns only the genuinely missing fields.
-4. The client renders a short form for just those fields (typically 0–3 questions if the description was reasonably complete), the user fills them in, and the combined data is submitted to the existing `POST /api/applications` → `POST /api/match/:id` pipeline unchanged.
-5. If `GROQ_API_KEY` isn't set, extraction returns everything as `null` (no heuristic guessing) and the user is simply asked every question — the app degrades gracefully rather than fabricating data.
+1. The user describes their business in one free-text box (`POST /api/interview/start`).
+2. Groq (JSON mode, temperature 0) extracts only what's explicitly or unambiguously stated — business name, industry (matched against a fixed list), city/state, time in business, revenue, requested amount, purpose, and the description's language. Every field is re-validated server-side (industry must match the fixed enum, state is normalized against a real US-states table, dollar/month figures are coerced or dropped) so a bad or missing value always becomes `null` rather than a guess.
+3. The adaptive interview then fills the rest through conversation, asking only what's genuinely useful for *this* business, and the completed profile flows into `POST /api/applications` → `POST /api/match/:id`.
+4. If `GROQ_API_KEY` isn't set, extraction returns everything as `null` and the deterministic fallback interview (`services/interview-fallback.js`) walks a fixed question list — the app degrades gracefully rather than fabricating data.
 
 ### Setup
 
@@ -86,7 +85,7 @@ npm run server:dev           # http://localhost:3001
 npm run client:dev           # http://localhost:5173 (proxies /api to the server)
 ```
 
-The SQLite database (`server/db/database.sqlite`) is created and auto-seeded with 18 placeholder CDFI/city-program lenders on first server start. To re-seed manually:
+The server connects to Supabase Postgres via `DATABASE_URL`. On boot it runs the idempotent migrations in `server/db/migrate.js` and seeds the eight verified lenders (`server/db/seed-lenders.js`) if the table is empty. For a brand-new Supabase project, run `server/db/schema.sql` once in the SQL editor first (it creates the `auth.users` trigger, which needs privileges the pooled connection doesn't have). To re-seed lenders manually:
 
 ```bash
 npm run seed
@@ -100,48 +99,61 @@ The rules-based matching engine and the extraction coercion/validation logic are
 npm test
 ```
 
-### Post-match application-prep layer
+### What makes it different
 
-After matching, the app helps the owner actually apply — as a conversation, never a form:
+Most tools are a lender lookup — match you, hand off. This one sits with the owner *after* the match and carries their specific, real story through to the person who will actually read it, as a conversation, never a form.
 
-- **Living Business Case** (`services/business-case.js`) — a first-person funding narrative drafted from the interview in the owner's voice, refined only by talking to it. Every extrapolation is surfaced as an assumption the owner corrects; sections carry a `stated` / `inferred` / `thin` confidence; it never invents a number.
-- **Underwriter simulation** (`services/underwriter-sim.js`) — per matched lender, a review conversation held as that lender's actual reviewer. The persona differs by application model (a Kiva story reviewer vs. a CDFI cash-flow analyst vs. an SBA-intermediary counselor), grounded in that file's specific cautions and weak sub-scores. Ends with prepared answers in the owner's voice and an honest now / soon / later timing call.
-- **Verified lender application profiles** (`services/lender-application-profiles.js`) — dated, cited data on how each of the eight verified programs actually intakes applications (five genuinely different models). Web-discovered lenders get a model guess marked `verified: false` — never a fabricated checklist.
-- **Application pack** (`services/application-pack.js`) — assembles the Business Case + underwriter-review answers into the exact blocks a specific lender's process consumes.
+**Before the match**
+- **Adaptive interview** — a real underwriting-style conversation (two-step reason-then-structure pipeline: `openai-interview-reason.js` does the thinking, with live web search; `groq-interview.js` structures it). A visible progress bar (`services/interview-progress.js`) estimates how far the interview is from matches. Half-finished interviews resume from history.
+- **No-account preview** — `POST /api/preview` gives a deterministic readiness estimate from four numbers, no sign-in, no persistence.
+- **Language** — the opening description's language is detected and threaded into every AI prompt (`services/language.js`); a Spanish description yields a Spanish interview, coaching, funding story, and reviewer.
+
+**At the match**
+- **Deterministic engine** — `services/matching-engine.js` (no LLM) scores readiness on five factors and matches against verified lenders + live-discovered programs. **Grants** are a first-class `funding_type`: never disqualified for an amount outside the award range, scored and prepared for differently.
+- **Help mode** — the application is classified (`services/help-mode.js`) as *organizer* / *demystifier* / *rebuilder* / *strategist* from deterministic signals, tuning the tone of every AI surface and a banner on the results page.
+- **Improvement plan** — `services/improvement-plan.js` returns prioritized levers, each with a *real* projected impact (the scoring engine re-run with that one change applied).
+- **What-if simulator** — `POST /api/match/:id/simulate` re-runs readiness + matching on hypothetical numbers without persisting.
+
+**After the match**
+- **Living Business Case** (`services/business-case.js`) — a first-person funding narrative drafted from the interview in the owner's voice, refined only by talking to it. Every extrapolation is a correctable assumption; sections carry a `stated`/`inferred`/`thin` confidence; it never invents a number. Refining it can sync the profile and re-run the score (`POST /api/match/:id/recompute`).
+- **Underwriter simulation** (`services/underwriter-sim.js`) — per matched program, a review conversation held as *that program's* reviewer. The persona differs by application model (a Kiva story reviewer vs. a CDFI cash-flow analyst vs. an SBA-intermediary counselor vs. a grants program officer), grounded in the file's specific cautions. Ends with prepared answers in the owner's voice and a now/soon/later timing call.
+- **Verified application profiles** (`services/lender-application-profiles.js`) — dated, cited data on how each of the eight verified programs actually intakes applications (six distinct models). Web-discovered lenders are marked `verified: false` — never a fabricated checklist.
+- **Application pack** (`services/application-pack.js`) — assembles the Business Case + prepared answers into the exact blocks a program's process consumes (Kiva: personal story + private-lender invite; CDFI: use-of-funds + repayment narrative; grant: project description + budget + fit statement).
+- **Application tracker** — a status board per program (`/api/tracker`), auto-tracking a program once its pack is built, with passive stale-row nudges.
+- **Advisor bridge** — routes complex cases to the free human advisors (SBDC, SCORE, the lender's own coaching) with a print/PDF of the report to bring.
 
 ### API
 
-> Some endpoints below predate the migration to Supabase Postgres + Google auth; every route now requires a `Bearer` access token (`middleware/auth.js`) and is scoped to the calling user.
+Every route requires a `Bearer` access token (`middleware/auth.js`) and is scoped to the calling user — except `POST /api/preview`, the one public endpoint.
 
-- `POST /api/interview/start` · `POST /api/interview/:id/reply` · `POST /api/interview/:id/attachments` — the adaptive readiness interview; each turn returns a `progress` estimate toward matches
-- `POST /api/applications` — create a borrower application
-- `GET /api/applications/:id` — fetch a stored application
-- `POST /api/match/:applicationId` — run the matching engine + readiness scoring + Groq coaching + live lender discovery, persist, return the ranked match list
-- `GET /api/match/:applicationId` — fetch previously computed match results
-- `POST /api/match/:applicationId/simulate` — re-run readiness + matching against hypothetical numbers, without persisting (the what-if simulator)
-- `GET /api/business-case/:applicationId` · `POST /api/business-case/:applicationId/message` · `.../regenerate` — the Living Business Case
-- `GET /api/underwriter/:applicationId/lenders` · `POST /api/underwriter/:applicationId/:lenderKey/start` · `.../message` · `.../pack` — the underwriter simulation and application pack
-- `GET /api/conversations` · `GET /api/conversations/:id` — conversation history and stored results
+- `POST /api/preview` — no-account deterministic readiness estimate
+- `POST /api/interview/start` · `POST /api/interview/:id/reply` · `GET /api/interview/:id/resume` · `POST /api/interview/:id/attachments`
+- `POST /api/applications` · `GET /api/applications/:id`
+- `POST /api/match/:id` · `GET /api/match/:id` · `POST /api/match/:id/simulate` · `POST /api/match/:id/recompute` · `GET /api/match/:id/improvement-plan`
+- `GET|POST /api/business-case/:id` · `.../message` · `.../regenerate` · `.../sync-check`
+- `GET /api/underwriter/:id/lenders` · `POST /api/underwriter/:id/:lenderKey/start` · `.../message` · `.../pack`
+- `GET|POST /api/tracker/:id` · `DELETE /api/tracker/:id/:lenderKey`
+- `GET /api/conversations` · `GET /api/conversations/:id`
 
 ### Notes for production
 
 - The seeded lender data in `server/db/seed-lenders.js` is **eight real, individually verified programs** (each checked against the org's own site, dates noted). Expanding it should pull from the [CDFI Fund Awards Database](https://www.cdfifund.gov/awards/state-awards) with the same per-entry verification — never bulk-generate entries from a model's knowledge.
-- Auth is Google sign-in via Supabase; the datastore is Supabase Postgres. App tables added after launch are created idempotently on boot by `server/db/migrate.js`, so a deploy needs no manual SQL-editor step; `server/db/schema.sql` stays the canonical definition for a fresh project.
-- No payments or live external integrations beyond Groq (interview, coaching, business case, underwriter) and OpenAI (interview web-search reasoning, live lender discovery).
+- Auth is Google sign-in via Supabase; the datastore is Supabase Postgres. App tables added after launch are created idempotently on boot by `server/db/migrate.js` (with transient-error retries), so a deploy needs no manual SQL-editor step; `server/db/schema.sql` stays the canonical definition for a fresh project.
+- No payments. External calls: Groq (interview structuring, coaching, business case, underwriter, improvement-plan polish, pack) and OpenAI (interview web-search reasoning, live lender/grant discovery). Everything degrades gracefully when a key is missing.
 
 ### Deploying for a public demo (Render + Vercel)
 
-GitHub Pages can only serve static files — it can't run the Express/SQLite backend, so it isn't part of this path. The backend goes on Render, the frontend on Vercel, exactly as the original brief specified.
+GitHub Pages can only serve static files — it can't run the Express backend, so it isn't part of this path. The backend goes on Render, the frontend on Vercel.
 
 **1. Backend → Render**
 
 1. In the [Render dashboard](https://dashboard.render.com), click **New +** → **Blueprint**.
-2. Connect this GitHub repo and pick the `claude/microfinance-matchmaker-mvp-7w6yzg` branch (or whichever branch you're deploying). Render reads `render.yaml` at the repo root automatically and configures the service.
-3. When prompted for the `GROQ_API_KEY` environment variable, paste in a Groq API key. It's stored only in Render's dashboard, never in the repo.
+2. Connect this GitHub repo and pick `main`. Render reads `render.yaml` at the repo root automatically and configures the service.
+3. Set the environment variables Render prompts for (from `render.yaml`): `GROQ_API_KEY`, `OPENAI_API_KEY`, `DATABASE_URL` (Supabase Postgres connection string), `VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_ORIGINS` (your Vercel URL + `http://localhost:5173`). They're stored only in Render's dashboard, never in the repo. Migrations run automatically on boot.
 4. Deploy. Once live, copy the service URL Render gives you (something like `https://microfinance-matchmaker-api.onrender.com`) — you'll need it for the frontend step.
 5. Sanity-check it: `curl https://<your-render-url>/api/health` should return `{"ok":true}`.
 
-Note: the free Render plan uses an ephemeral filesystem, so the SQLite database resets on redeploys/restarts. The 18 seed lenders repopulate automatically on startup; submitted applications won't persist across restarts. Fine for a demo, not for production — move to a managed Postgres (or a Render persistent disk) before real use.
+Data lives in Supabase Postgres, so it persists across Render restarts. The free Render plan still cold-starts after inactivity, so the first request after a while is slow.
 
 **2. Frontend → Vercel**
 
