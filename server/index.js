@@ -14,6 +14,7 @@ const { default: interviewRouter } = await import('./routes/interview.js');
 const { default: conversationsRouter } = await import('./routes/conversations.js');
 const { default: businessCaseRouter } = await import('./routes/business-case.js');
 const { default: underwriterRouter } = await import('./routes/underwriter.js');
+const { default: previewRouter } = await import('./routes/preview.js');
 const { requireAuth } = await import('./middleware/auth.js');
 
 const app = express();
@@ -42,6 +43,10 @@ const interviewLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeade
 const aiWorkLimiter = rateLimit({ windowMs: 60 * 1000, max: 40, standardHeaders: true, legacyHeaders: false });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+// No-account readiness estimate — the one public, unauthenticated route.
+// Deterministic and unpersisted; rate-limited harder than the rest.
+const previewLimiter = rateLimit({ windowMs: 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false });
+app.use('/api/preview', previewLimiter, previewRouter);
 app.use('/api/applications', requireAuth, applicationsRouter);
 app.use('/api/match', requireAuth, matchRouter);
 app.use('/api/interview', requireAuth, interviewLimiter, interviewRouter);

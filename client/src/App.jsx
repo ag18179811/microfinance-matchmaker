@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
 import ChatHistoryDrawer from './components/ChatHistoryDrawer.jsx';
-import SignIn from './pages/SignIn.jsx';
+import PreviewFlow from './pages/PreviewFlow.jsx';
 import DescribeBusiness from './pages/DescribeBusiness.jsx';
 import Chat from './pages/Chat.jsx';
 import Results from './pages/Results.jsx';
@@ -101,7 +101,7 @@ export default function App() {
       <>
         <Header stage="describe" />
         <main className="main">
-          <SignIn onSignIn={signInWithGoogle} />
+          <PreviewFlow onSignIn={signInWithGoogle} />
         </main>
         <Footer />
       </>
