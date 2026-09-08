@@ -1658,6 +1658,121 @@ select {
   margin: 0;
 }
 
+/* ---------- Application tracker ---------- */
+
+.tracker-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.75rem;
+  margin-bottom: 2.25rem;
+}
+
+.tracker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tracker-row {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+}
+
+.tracker-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.tracker-name {
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
+.tracker-remove {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+.tracker-remove:hover {
+  color: var(--color-danger-text);
+}
+
+.tracker-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tracker-controls select,
+.tracker-deadline input {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.83rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.tracker-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.tracker-updated {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.tracker-nudge {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-warning-text);
+}
+
+.lender-track-btn {
+  margin-top: 0.85rem;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lender-track-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.lender-track-btn.is-tracked {
+  border-style: solid;
+  border-color: var(--color-success);
+  color: var(--color-success-text);
+  background: var(--color-success-light);
+}
+
 /* ---------- Advisor bridge ---------- */
 
 .advisor-card {
@@ -3348,6 +3463,8 @@ select {
   .bc-assumptions,
   .bc-copy,
   .advisor-foot,
+  .tracker-card,
+  .lender-track-btn,
   .lender-apply,
   .drawer-overlay,
   .history-drawer {

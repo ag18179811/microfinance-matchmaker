@@ -61,14 +61,35 @@ const STATEMENTS = [
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
 
+  // Application tracker — which programs the owner is pursuing and where
+  // each one stands. One row per (application, lender).
+  `CREATE TABLE IF NOT EXISTS tracked_applications (
+     id SERIAL PRIMARY KEY,
+     application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+     user_id UUID NOT NULL,
+     lender_key TEXT NOT NULL,
+     lender_name TEXT NOT NULL,
+     funding_type TEXT NOT NULL DEFAULT 'loan',
+     status TEXT NOT NULL DEFAULT 'considering',
+     note TEXT,
+     deadline DATE,
+     created_at TIMESTAMPTZ DEFAULT now(),
+     updated_at TIMESTAMPTZ DEFAULT now(),
+     UNIQUE (application_id, lender_key)
+   )`,
+
   `ALTER TABLE business_cases ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE underwriter_reviews ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE tracked_applications ENABLE ROW LEVEL SECURITY`,
 
   `DROP POLICY IF EXISTS "own business cases" ON business_cases`,
   `CREATE POLICY "own business cases" ON business_cases FOR ALL USING (auth.uid() = user_id)`,
 
   `DROP POLICY IF EXISTS "own underwriter reviews" ON underwriter_reviews`,
   `CREATE POLICY "own underwriter reviews" ON underwriter_reviews FOR ALL USING (auth.uid() = user_id)`,
+
+  `DROP POLICY IF EXISTS "own tracked applications" ON tracked_applications`,
+  `CREATE POLICY "own tracked applications" ON tracked_applications FOR ALL USING (auth.uid() = user_id)`,
 ];
 
 export async function runMigrations(pool) {

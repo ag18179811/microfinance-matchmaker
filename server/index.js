@@ -15,6 +15,7 @@ const { default: conversationsRouter } = await import('./routes/conversations.js
 const { default: businessCaseRouter } = await import('./routes/business-case.js');
 const { default: underwriterRouter } = await import('./routes/underwriter.js');
 const { default: previewRouter } = await import('./routes/preview.js');
+const { default: trackerRouter } = await import('./routes/tracker.js');
 const { requireAuth } = await import('./middleware/auth.js');
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/interview', requireAuth, interviewLimiter, interviewRouter);
 app.use('/api/conversations', requireAuth, conversationsRouter);
 app.use('/api/business-case', requireAuth, aiWorkLimiter, businessCaseRouter);
 app.use('/api/underwriter', requireAuth, aiWorkLimiter, underwriterRouter);
+app.use('/api/tracker', requireAuth, trackerRouter);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

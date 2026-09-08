@@ -5,6 +5,9 @@ import BusinessCase from '../components/BusinessCase.jsx';
 import LenderPrep from '../components/LenderPrep.jsx';
 import ImprovementPlan from '../components/ImprovementPlan.jsx';
 import AdvisorBridge from '../components/AdvisorBridge.jsx';
+import Tracker from '../components/Tracker.jsx';
+import { useCallback, useEffect, useState } from 'react';
+import { authedFetch } from '../api.js';
 
 const READINESS_FACTORS = [
   { key: 'timeInBusiness', label: 'Time in business', blurb: 'Longer operating history lowers lender risk.' },
@@ -76,9 +79,43 @@ const HELP_MODE_ICON = {
   strategist: '🔄',
 };
 
+function lenderKeyOf(m) {
+  return `${m.provenance || 'verified'}:${m.id}`;
+}
+
 export default function Results({ results, conversationId, onResultsUpdate }) {
   const { readinessScore, aiSummary, matches, subScores, applicationId, helpMode } = results;
   const topMatch = matches[0]?.match_score ?? 0;
+
+  const [tracked, setTracked] = useState([]);
+  const refreshTracked = useCallback(() => {
+    if (!applicationId) return;
+    authedFetch(`/api/tracker/${applicationId}`)
+      .then((r) => (r.ok ? r.json() : { tracked: [] }))
+      .then((d) => setTracked(d.tracked || []))
+      .catch(() => {});
+  }, [applicationId]);
+  useEffect(refreshTracked, [refreshTracked]);
+
+  const trackedKeys = new Set(tracked.map((t) => t.lenderKey));
+
+  async function toggleTrack(m) {
+    const key = lenderKeyOf(m);
+    try {
+      if (trackedKeys.has(key)) {
+        await authedFetch(`/api/tracker/${applicationId}/${encodeURIComponent(key)}`, { method: 'DELETE' });
+      } else {
+        await authedFetch(`/api/tracker/${applicationId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lenderKey: key, lenderName: m.name, fundingType: m.funding_type || 'loan', status: 'considering' }),
+        });
+      }
+      refreshTracked();
+    } catch {
+      /* non-critical */
+    }
+  }
 
   return (
     <div className="page-wide">
@@ -190,6 +227,8 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
         <span className="results-phase-label">Now prepare to apply</span>
         <span className="results-phase-line" />
       </div>
+
+      {applicationId && <Tracker applicationId={applicationId} tracked={tracked} onChange={refreshTracked} />}
 
       {applicationId && <BusinessCase applicationId={applicationId} onProfileSynced={onResultsUpdate} />}
 
@@ -335,6 +374,16 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
                     </>
                   )}
                 </div>
+
+                {applicationId && (
+                  <button
+                    type="button"
+                    className={`lender-track-btn ${trackedKeys.has(lenderKeyOf(m)) ? 'is-tracked' : ''}`}
+                    onClick={() => toggleTrack(m)}
+                  >
+                    {trackedKeys.has(lenderKeyOf(m)) ? '✓ Tracking this' : '+ Track this program'}
+                  </button>
+                )}
               </div>
             );
           })}

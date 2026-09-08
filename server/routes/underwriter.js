@@ -4,6 +4,7 @@ import { loadResults, loadSubScores } from './match.js';
 import { deriveProfile, modelInfo } from '../services/lender-application-profiles.js';
 import { startReview, continueReview } from '../services/underwriter-sim.js';
 import { buildPack } from '../services/application-pack.js';
+import { autoTrack } from './tracker.js';
 
 const router = Router();
 
@@ -213,6 +214,10 @@ router.post('/:applicationId/:lenderKey/pack', async (req, res) => {
     application.id,
     req.params.lenderKey,
   ]);
+
+  // Building a pack means the owner is actively working this program —
+  // start tracking it.
+  await autoTrack(application.id, req.userId, req.params.lenderKey, lender.name, lender.funding_type || 'loan');
 
   res.json(pack);
 });

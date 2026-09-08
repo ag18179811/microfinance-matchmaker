@@ -175,6 +175,23 @@ CREATE TABLE IF NOT EXISTS underwriter_reviews (
   UNIQUE (application_id, lender_key)
 );
 
+-- Application tracker: which programs the owner is pursuing and where each
+-- one stands. Also created on boot by db/migrate.js.
+CREATE TABLE IF NOT EXISTS tracked_applications (
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  lender_key TEXT NOT NULL,                         -- `${provenance}:${lender_id}`
+  lender_name TEXT NOT NULL,
+  funding_type TEXT NOT NULL DEFAULT 'loan',
+  status TEXT NOT NULL DEFAULT 'considering',       -- considering|preparing|submitted|in_review|approved|declined|funded
+  note TEXT,
+  deadline DATE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (application_id, lender_key)
+);
+
 CREATE TABLE IF NOT EXISTS match_results (
   id SERIAL PRIMARY KEY,
   application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE,
@@ -203,6 +220,7 @@ ALTER TABLE conversation_attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE underwriter_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tracked_applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own applications" ON applications;
@@ -231,6 +249,9 @@ CREATE POLICY "own business cases" ON business_cases FOR ALL USING (auth.uid() =
 
 DROP POLICY IF EXISTS "own underwriter reviews" ON underwriter_reviews;
 CREATE POLICY "own underwriter reviews" ON underwriter_reviews FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own tracked applications" ON tracked_applications;
+CREATE POLICY "own tracked applications" ON tracked_applications FOR ALL USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "own profile" ON profiles;
 CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);
