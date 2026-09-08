@@ -3,12 +3,20 @@ import assert from 'node:assert/strict';
 import { classifyHelpMode, helpModeInfo, helpModeDirective } from './help-mode.js';
 
 test('a prior denial routes to strategist regardless of the rest', () => {
-  const r = classifyHelpMode(
-    { time_in_business_months: 60, prior_funding_history: 'Applied to a bank last year and was declined for short history.' },
-    { completeness: 90, answerQuality: 90 },
-    85
-  );
-  assert.equal(r.mode, 'strategist');
+  for (const priorFundingHistory of [
+    'Applied to a bank last year and was declined for short history.',
+    'A bank turned me down last month for being too new.',
+    'I applied to an SBA lender and they rejected my application.',
+    'Tried a credit union, it fell through.',
+    "Applied once, didn't go through.",
+  ]) {
+    const r = classifyHelpMode(
+      { time_in_business_months: 60, prior_funding_history: priorFundingHistory },
+      { completeness: 90, answerQuality: 90 },
+      85
+    );
+    assert.equal(r.mode, 'strategist', `"${priorFundingHistory}" -> strategist`);
+  }
 });
 
 test('low readiness or under six months routes to rebuilder', () => {

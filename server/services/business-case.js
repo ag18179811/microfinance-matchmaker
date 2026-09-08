@@ -257,7 +257,11 @@ export async function extractProfileFromNarrative(sections) {
     const raw = JSON.parse(result.data.choices?.[0]?.message?.content ?? '{}');
     const out = {};
     for (const key of Object.keys(SYNCABLE)) {
-      const n = Number(raw[key]);
+      const v = raw[key];
+      // Number(null) is 0 and Number('') is 0 — guard explicitly so a
+      // "not stated" field never turns into a spurious "changed to 0".
+      if (v === null || v === undefined || v === '') continue;
+      const n = Number(v);
       if (Number.isFinite(n) && n >= 0) out[key] = Math.round(n);
     }
     return out;

@@ -32,7 +32,7 @@ const MODES = {
   },
 };
 
-const DENIAL_RE = /\b(denied|denial|declin\w*|rejected|turned (us )?down|didn'?t (get|qualify)|not approved|fell through|got a no|wasn'?t approved)\b/i;
+const DENIAL_RE = /\b(denied|denial|declin\w*|rejected|reject\w* (me|us|my|our)|turned (me|us|them|it|my|our)?\s?down|didn'?t (get|qualify|go through)|not approved|fell through|got a no|was a no|wasn'?t approved|said no)\b/i;
 
 export function classifyHelpMode(application, subScores = {}, readinessScore = 50) {
   const months = Number(application.time_in_business_months) || 0;
