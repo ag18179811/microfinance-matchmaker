@@ -86,7 +86,17 @@ export default function Results({ results, conversationId }) {
           <h1>Your funding readiness</h1>
           <p>Based on what you told us, here's where you stand and who's likely to fund you.</p>
         </div>
+        <button type="button" className="btn btn-secondary btn-sm results-print-btn" onClick={() => window.print()}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M4 6V2h8v4M4 12H2V7h12v5h-2M4 10h8v4H4z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Save as PDF
+        </button>
       </div>
+      <p className="print-only print-tagline">
+        Microfinance Matchmaker — funding readiness report. Not a lender; does not guarantee approval. Confirm
+        every program's current requirements on its official site.
+      </p>
 
       {helpMode && (
         <div className={`help-mode-banner help-mode-${helpMode.mode}`}>

@@ -1350,6 +1350,13 @@ select {
   flex-wrap: wrap;
 }
 
+.results-print-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .results-heading h1 {
   font-size: 1.6rem;
   margin-bottom: 0.35rem;
@@ -3096,4 +3103,95 @@ select {
   color: var(--color-text-muted);
   font-size: 0.78rem;
   line-height: 1.6;
+}
+
+/* ---------- Print / Save as PDF ---------- */
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  :root {
+    --color-bg: #fff;
+    --color-surface: #fff;
+    --color-text: #111;
+    --color-text-secondary: #333;
+    --color-text-muted: #555;
+    --color-border: #ccc;
+    --color-border-strong: #999;
+  }
+
+  .topbar,
+  .site-footer,
+  .chat-page,
+  .results-print-btn,
+  .whatif-card,
+  .lp-card,
+  .followup-card,
+  .results-phase,
+  .bc-compose,
+  .bc-foot,
+  .bc-assumptions,
+  .bc-copy,
+  .lender-apply,
+  .drawer-overlay,
+  .history-drawer {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-tagline {
+    font-size: 0.72rem;
+    color: #555;
+    margin: -1rem 0 1.5rem;
+  }
+
+  body,
+  .main,
+  .page-wide {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .stat-card,
+  .coaching-card,
+  .breakdown-card,
+  .ip-card,
+  .bc-card,
+  .lender-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+  }
+
+  .bc-section,
+  .ip-item,
+  .breakdown-row {
+    break-inside: avoid;
+  }
+
+  .section-title,
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  .help-mode-banner {
+    border: 1px solid #ccc !important;
+    background: #f7f7f7 !important;
+  }
+
+  a[href^="http"]::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.75em;
+    color: #666;
+    word-break: break-all;
+  }
 }
