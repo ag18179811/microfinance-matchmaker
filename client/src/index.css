@@ -3409,3 +3409,112 @@ select {
     word-break: break-all;
   }
 }
+
+/* ---------- Mobile (small phones) ---------- */
+
+@media (max-width: 560px) {
+  .page-wide {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .results-heading h1 {
+    font-size: 1.35rem;
+  }
+
+  .bc-card,
+  .ip-card,
+  .lp-card,
+  .advisor-card,
+  .breakdown-card,
+  .coaching-card {
+    padding: 1.15rem;
+  }
+
+  .bc-head {
+    flex-direction: column;
+  }
+
+  .bc-compose {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bc-compose .btn {
+    width: 100%;
+  }
+
+  .bc-section-head {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .ip-item-head {
+    flex-wrap: wrap;
+  }
+
+  .ip-item-head h3 {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .whatif-result,
+  .whatif-foot,
+  .lp-how-foot,
+  .advisor-foot,
+  .help-mode-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .whatif-result-score {
+    width: 100%;
+  }
+
+  .lp-item-head {
+    padding: 0.85rem;
+  }
+
+  .lp-item-name {
+    font-size: 0.9rem;
+  }
+
+  .lp-tabs {
+    flex-wrap: wrap;
+  }
+
+  .lp-msg {
+    max-width: 100%;
+  }
+
+  .preview-card {
+    margin: 1.5rem auto;
+    padding: 1.5rem;
+  }
+
+  .preview-cta-row {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .preview-cta-row .btn {
+    width: 100%;
+  }
+
+  .chat-progress-head {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .results-phase-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+  }
+
+  .stat-card {
+    padding: 1rem 1.15rem;
+  }
+
+  .gauge-card {
+    justify-content: flex-start;
+  }
+}
