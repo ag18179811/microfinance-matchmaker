@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db/connection.js';
 import { draftBusinessCase, reviseBusinessCase, emptyCase, extractProfileFromNarrative } from '../services/business-case.js';
 import { seedProjection, recalcProjection } from '../services/cashflow-projection.js';
+import { draftBusinessPlan, reviseBusinessPlan } from '../services/business-plan.js';
 
 const router = Router();
 
@@ -197,6 +198,57 @@ router.post('/:applicationId/sync-check', async (req, res) => {
     }
   }
   res.json({ changes });
+});
+
+// GET /:applicationId/plan — the drafted business plan, drafted lazily on
+// first request from the interview + funding story + projection.
+router.get('/:applicationId/plan', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const row = await loadCase(application.id);
+  if (row?.plan?.sections?.length) return res.json(row.plan);
+
+  const draft = await draftBusinessPlan({
+    application,
+    additionalNotes: parseNotes(application),
+    businessCaseSections: row?.sections || [],
+    projection: row?.projection || null,
+    language: application.language || 'en',
+    helpMode: application.help_mode,
+  });
+  if (!draft.ok) return res.status(502).json({ error: `Couldn't draft the plan — ${draft.reason}.` });
+
+  const plan = { sections: draft.sections, draftedAt: new Date().toISOString() };
+  await pool.query(
+    `INSERT INTO business_cases (application_id, user_id, plan) VALUES ($1, $2, $3)
+     ON CONFLICT (application_id) DO UPDATE SET plan = EXCLUDED.plan, updated_at = now()`,
+    [application.id, req.userId, JSON.stringify(plan)]
+  );
+  res.json(plan);
+});
+
+router.post('/:applicationId/plan/message', async (req, res) => {
+  const text = String(req.body?.text ?? '').trim();
+  if (!text) return res.status(400).json({ error: 'text is required' });
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const row = await loadCase(application.id);
+  if (!row?.plan?.sections?.length) return res.status(409).json({ error: 'Open the plan first so there is something to revise.' });
+
+  const revised = await reviseBusinessPlan({
+    application,
+    additionalNotes: parseNotes(application),
+    sections: row.plan.sections,
+    userMessage: text,
+    language: application.language || 'en',
+  });
+  if (!revised.ok) return res.status(502).json({ error: `Couldn't update the plan — ${revised.reason}. Your last version is safe.` });
+
+  const plan = { sections: revised.sections, draftedAt: row.plan.draftedAt, updatedAt: new Date().toISOString() };
+  await pool.query('UPDATE business_cases SET plan = $1, updated_at = now() WHERE application_id = $2', [JSON.stringify(plan), application.id]);
+  res.json({ ...plan, reply: revised.reply });
 });
 
 // GET /:applicationId/projection — the saved 12-month cash-flow scaffold,

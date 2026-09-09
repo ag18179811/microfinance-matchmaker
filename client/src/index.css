@@ -1658,6 +1658,14 @@ select {
   margin: 0;
 }
 
+.bp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
 /* ---------- Document vault ---------- */
 
 .dv-card {

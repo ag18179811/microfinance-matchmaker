@@ -10,6 +10,7 @@ import FundingPlan from '../components/FundingPlan.jsx';
 import CashflowProjection from '../components/CashflowProjection.jsx';
 import DocumentVault from '../components/DocumentVault.jsx';
 import NextStep from '../components/NextStep.jsx';
+import BusinessPlan from '../components/BusinessPlan.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { authedFetch } from '../api.js';
 
@@ -242,6 +243,17 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       {applicationId && <BusinessCase applicationId={applicationId} onProfileSynced={onResultsUpdate} />}
 
       {applicationId && <CashflowProjection applicationId={applicationId} />}
+
+      {applicationId && (
+        <BusinessPlan
+          applicationId={applicationId}
+          hint={
+            matches.some((m) => /sba microloan/i.test(m.name)) || helpMode?.mode === 'rebuilder'
+              ? 'One of your matches (or your situation) calls for a written business plan — here\'s a draft to build on'
+              : undefined
+          }
+        />
+      )}
 
       {applicationId && <DocumentVault applicationId={applicationId} onChange={() => setDocsVersion((v) => v + 1)} />}
 

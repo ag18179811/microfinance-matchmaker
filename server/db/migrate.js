@@ -50,6 +50,10 @@ const STATEMENTS = [
   // The 12-month cash-flow projection scaffold, edited by the owner.
   `ALTER TABLE business_cases ADD COLUMN IF NOT EXISTS projection JSONB`,
 
+  // A drafted business plan (standard sections), edited by conversation —
+  // for SBA intermediaries and lenders that require a written plan.
+  `ALTER TABLE business_cases ADD COLUMN IF NOT EXISTS plan JSONB`,
+
   // Document vault — files stored in Supabase Storage ('documents' bucket),
   // this table is the index. storage_path is the object key.
   `CREATE TABLE IF NOT EXISTS documents (
