@@ -98,11 +98,29 @@ function extractionSchema() {
   };
 }
 
+// Does a program's stated geography plausibly include this state? A blank
+// or national geography passes (the matching engine handles those); a
+// geography that lists specific state codes, none of them this state, is a
+// wrong-location result (e.g. "Columbus, Indiana" for a Columbus, Ohio
+// business) and is dropped here before it can ever be shown.
+function geographyPlausible(geographyStr, state) {
+  const g = (geographyStr || '').trim();
+  if (!g) return true;
+  if (/national|nationwide|all states|united states|u\.?s\.?a?\b/i.test(g)) return true;
+  const codes = g
+    .split(/[,/;]/)
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => /^[A-Z]{2}$/.test(s));
+  if (codes.length === 0) return true; // couldn't parse — let the engine decide
+  return codes.includes(String(state || '').toUpperCase());
+}
+
 // Defensive coercion — never trust the model's structured output blindly,
 // same discipline as groq-extract.js. citedUrls is the ground truth list
 // from step 1; any entry whose source_url isn't literally in that list is
 // dropped, since that's the strongest available signal against invention.
-function coerceEntries(raw, citedUrls) {
+// `state` (optional) drops results whose geography excludes it.
+function coerceEntries(raw, citedUrls, state) {
   if (!Array.isArray(raw)) return [];
   const citedSet = new Set(citedUrls);
   const FUNDING_TYPES = new Set(['loan', 'grant', 'other']);
@@ -122,6 +140,7 @@ function coerceEntries(raw, citedUrls) {
     }))
     .filter((entry) => entry.name && entry.source_url && /^https?:\/\//i.test(entry.source_url))
     .filter((entry) => citedSet.size === 0 || citedSet.has(entry.source_url))
+    .filter((entry) => geographyPlausible(entry.geography, state))
     .slice(0, MAX_RESULTS);
 }
 
@@ -161,43 +180,33 @@ function ownerBrief({
   return lines.join('\n');
 }
 
-// Returns an array of program records (possibly empty) — never throws.
-// Callers treat this as a non-blocking enhancement: on failure or with no
-// key, matching proceeds on the verified catalog alone. `state` is the only
-// required field; everything else sharpens the search, especially for grants.
-export async function searchLiveLenders(context) {
-  const { state, industry } = context;
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || !state) return [];
-
-  console.log(`[openai-lender-search] live search: state=${state} industry=${industry || '(any)'} city=${context.city || '(any)'} owner=${context.ownershipDemographics ? 'stated' : 'n/a'}`);
-
+// One grounded-search + schema-extract round.
+//   { ok: false }            — the search API call hard-failed (429, network);
+//                              a retry would likely fail too, so don't.
+//   { ok: true, entries: [] } — the search ran but surfaced nothing usable;
+//                              a broadened retry is worth trying.
+//   { ok: true, entries }     — usable programs found.
+// Never throws.
+async function oneSearchPass(apiKey, userContent, state) {
   const searchResult = await callOpenAIResponses({
     apiKey,
     body: {
       model: MODEL,
       input: [
         { role: 'system', content: SEARCH_SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content:
-            'Find every real, currently-open loan and grant program this specific business could apply to. ' +
-            'Search for hyper-local (city/county), industry, use-of-funds, and — where they qualify — ownership-' +
-            `specific grants, not just national ones.\n\n${ownerBrief(context)}`,
-        },
+        { role: 'user', content: userContent },
       ],
       tools: [{ type: 'web_search' }],
     },
   });
-
   if (!searchResult.ok) {
     console.error(`[openai-lender-search] search call failed (${searchResult.status ?? 'network error'}): ${searchResult.error}`);
-    return [];
+    return { ok: false };
   }
 
   const { text: groundedText, annotations } = findMessageText(searchResult.data.output);
   const citedUrls = collectCitedUrls(annotations);
-  if (!groundedText || citedUrls.length === 0) return [];
+  if (!groundedText || citedUrls.length === 0) return { ok: true, entries: [] };
 
   const extractResult = await callOpenAIResponses({
     apiKey,
@@ -210,18 +219,59 @@ export async function searchLiveLenders(context) {
       text: { format: { type: 'json_schema', name: 'lender_list', strict: true, schema: extractionSchema() } },
     },
   });
-
   if (!extractResult.ok) {
     console.error(`[openai-lender-search] extraction call failed (${extractResult.status ?? 'network error'}): ${extractResult.error}`);
-    return [];
+    return { ok: false };
   }
 
   const { text: extractedJson } = findMessageText(extractResult.data.output);
   try {
-    const parsed = JSON.parse(extractedJson ?? '{}');
-    return coerceEntries(parsed.lenders, citedUrls);
+    return { ok: true, entries: coerceEntries(JSON.parse(extractedJson ?? '{}').lenders, citedUrls, state) };
   } catch (err) {
     console.error('[openai-lender-search] extraction response was not valid JSON:', err.message);
-    return [];
+    return { ok: true, entries: [] };
   }
+}
+
+// Returns an array of program records (possibly empty) — never throws.
+// Callers treat this as a non-blocking enhancement: on failure or with no
+// key, matching just proceeds with nothing. `state` is the only required
+// field; everything else sharpens the search, especially for grants.
+//
+// The first pass is tightly targeted to this owner's full situation
+// (hyper-local, use-of-funds, ownership). If it runs but surfaces nothing —
+// a real business in a thin area or an unusual niche — a second, broadened
+// pass drops the narrow filters and asks for the state and national
+// programs the business qualifies for, so the owner is never left with
+// nothing when something real exists. A hard API failure is not retried.
+export async function searchLiveLenders(context) {
+  const { state, industry } = context;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey || !state) return [];
+
+  console.log(
+    `[openai-lender-search] live search: state=${state} industry=${industry || '(any)'} city=${context.city || '(any)'} owner=${context.ownershipDemographics ? 'stated' : 'n/a'}`
+  );
+
+  const targeted = await oneSearchPass(
+    apiKey,
+    'Find every real, currently-open loan and grant program this specific business could apply to. ' +
+      'Search for hyper-local (city/county), industry, use-of-funds, and — where they qualify — ownership-' +
+      `specific grants, not just national ones. If local options are sparse, also include the state and ` +
+      `national programs this business clearly qualifies for.\n\n${ownerBrief(context)}`,
+    state
+  );
+  if (!targeted.ok) return [];
+  if (targeted.entries.length > 0) return targeted.entries;
+
+  console.log('[openai-lender-search] targeted pass empty — running a broadened fallback pass');
+  const broad = await oneSearchPass(
+    apiKey,
+    'The narrow search found nothing. Cast wider: find the CDFIs, SBA microloan intermediaries, ' +
+      'state and regional small-business loan funds, and grant programs that serve this state and that a ' +
+      'for-profit business like this one can actually apply to. National programs are fine here.\n\n' +
+      ownerBrief({ state, industry, ownershipDemographics: context.ownershipDemographics, requestedAmount: context.requestedAmount, timeInBusinessMonths: context.timeInBusinessMonths }),
+    state
+  );
+  return broad.ok ? broad.entries : [];
 }

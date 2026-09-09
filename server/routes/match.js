@@ -79,15 +79,18 @@ async function getDiscoveredForApplication(applicationId) {
 // owner just sees whatever the last successful search found (or nothing,
 // with a clear "we couldn't find programs right now" state), same as with
 // no OPENAI_API_KEY.
-async function discoverPrograms(application) {
+async function discoverPrograms(application, { force = false } = {}) {
   if (!application.state) return [];
   const fingerprint = profileFingerprint(application);
+  const lastSearchMs = application.discovery_at ? Date.now() - new Date(application.discovery_at).getTime() : Infinity;
 
   try {
-    const recent =
-      application.discovery_fingerprint === fingerprint &&
-      application.discovery_at &&
-      Date.now() - new Date(application.discovery_at).getTime() < 24 * 60 * 60 * 1000;
+    // A forced re-search (the "search again" button) bypasses the daily
+    // fingerprint reuse, but still won't fire more than once every 5
+    // minutes for one application — that's the cost/abuse ceiling.
+    const recent = force
+      ? lastSearchMs < 5 * 60 * 1000
+      : application.discovery_fingerprint === fingerprint && lastSearchMs < 24 * 60 * 60 * 1000;
     if (recent) return getDiscoveredForApplication(application.id);
 
     const found = await searchLiveLenders(discoveryContext(application));
@@ -204,9 +207,9 @@ async function loadOwnedApplication(applicationId, userId) {
 // classification, program matching against the per-application live search
 // (no preset catalog), the coaching summary, and persistence of
 // match_results. Used by both POST /:applicationId and recompute.
-async function runMatchPipeline(application) {
+async function runMatchPipeline(application, { forceRediscover = false } = {}) {
   const [discoveredLenders, contentQuality] = await Promise.all([
-    discoverPrograms(application),
+    discoverPrograms(application, { force: forceRediscover }),
     assessAnswerQuality(application),
   ]);
   const { readinessScore, subScores: rawSubScores } = computeReadiness(application, contentQuality);
@@ -268,7 +271,9 @@ async function runMatchPipeline(application) {
 router.post('/:applicationId', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
   if (!application) return res.status(404).json({ error: 'Application not found' });
-  res.json(await runMatchPipeline(application));
+  // `{ rediscover: true }` — the "search again for programs" button. Forces
+  // a fresh live search (still capped at once per 5 min per application).
+  res.json(await runMatchPipeline(application, { forceRediscover: req.body?.rediscover === true }));
 });
 
 // POST /:applicationId/recompute — apply owner-confirmed numeric changes

@@ -96,6 +96,26 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
   const [tracked, setTracked] = useState([]);
   const [docsVersion, setDocsVersion] = useState(0);
   const [shareState, setShareState] = useState('idle'); // idle | working | copied
+  const [rediscoverState, setRediscoverState] = useState('idle'); // idle | working | done | throttled
+
+  async function rediscover() {
+    if (rediscoverState === 'working') return;
+    setRediscoverState('working');
+    try {
+      const res = await authedFetch(`/api/match/${applicationId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rediscover: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'search failed');
+      onResultsUpdate?.(data);
+      setRediscoverState('done');
+      setTimeout(() => setRediscoverState('idle'), 4000);
+    } catch {
+      setRediscoverState('idle');
+    }
+  }
 
   async function shareReport() {
     setShareState('working');
@@ -293,19 +313,37 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       <div id="lenders">
       {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} refreshSignal={docsVersion} />}
 
-      <h2 className="section-title">Matched programs</h2>
+      <div className="section-title-row">
+        <h2 className="section-title" style={{ marginBottom: 0 }}>Matched programs</h2>
+        {applicationId && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={rediscover}
+            disabled={rediscoverState === 'working'}
+          >
+            {rediscoverState === 'working'
+              ? 'Searching…'
+              : rediscoverState === 'done'
+                ? '✓ Search refreshed'
+                : 'Search again'}
+          </button>
+        )}
+      </div>
       {matches.length > 0 && (
         <p className="section-note">
           These programs were found by a live web search matched to your specific business — your location, industry,
-          what the funding is for, and your situation. Confirm the current details on each program's official site
-          before applying; approvals and terms vary, so apply to as many as you qualify for.
+          what the funding is for, and your situation. A fresh search can turn up different programs (new rounds open
+          often), so it's worth running again later. Confirm current details on each program's official site before
+          applying; approvals and terms vary, so apply to as many as you qualify for.
         </p>
       )}
 
       {matches.length === 0 ? (
         <div className="empty-state">
-          The live search didn't surface programs for your current profile. Try adjusting your funding amount,
-          location, or what the money is for — or come back and re-run it, since new programs open regularly.
+          The live search didn't surface programs for your current profile right now. Try{' '}
+          <strong>Search again</strong> above, adjust your funding amount, location, or what the money is for — new
+          programs and rounds open regularly.
         </div>
       ) : (
         <div className="lender-list">
