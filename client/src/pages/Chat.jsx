@@ -298,12 +298,33 @@ export default function Chat({ initialDescription, resumeConversationId, onCompl
     try {
       await onComplete(fields, conversationId, (stage) => {
         if (stage === 'matching') {
-          showStatus('Checking eligibility and scoring your readiness against our lender database…');
+          showStatus('Scoring your readiness and searching the web for programs matched to your situation…');
         }
       });
     } catch (err) {
       hideStatus();
       showError('I ran into a problem finding your matches.', err.message, () => finalizeAndMatch(fields));
+    }
+  }
+
+  // The "I'm ready" escape hatch — the owner chooses to stop answering and
+  // go to matches with what's been gathered. Shown once the core profile is
+  // in (progress is well along and we're waiting on them).
+  async function finishEarly() {
+    if (!conversationId || inputDisabled) return;
+    setInputDisabled(true);
+    setActiveMessageId(null);
+    addMessage('ai', "Got it — going with what we have.");
+    advanceProgress({ percent: 100, phase: 'Building your matches' });
+    try {
+      const res = await authedFetch(`/api/interview/${conversationId}/finish`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not finish yet');
+      finalizeAndMatch({ ...data.fields, notes: data.notes || [] });
+    } catch (err) {
+      hideStatus();
+      showError('I could not wrap up the interview just yet.', err.message, () => finishEarly());
+      setInputDisabled(false);
     }
   }
 
@@ -447,6 +468,15 @@ export default function Chat({ initialDescription, resumeConversationId, onCompl
 
       <div className="chat-composer">
         <MatchProgress percent={progress.percent} phase={progress.phase} />
+
+        {progress.percent >= 80 && progress.percent < 100 && !inputDisabled && (
+          <div className="chat-finish-early">
+            <span>Enough for a first match?</span>
+            <button type="button" className="chat-finish-btn" onClick={finishEarly}>
+              Show my matches now
+            </button>
+          </div>
+        )}
 
         <form className="chat-input-bar" onSubmit={handleSubmit}>
           <div className="chat-input-inner">

@@ -9,7 +9,7 @@ import { nextFallbackTurn, coerceFallbackAnswer } from '../services/interview-fa
 import { generateFollowUpReply } from '../services/groq-followup.js';
 import { computeInterviewProgress } from '../services/interview-progress.js';
 import { loadResults, loadSubScores } from './match.js';
-import { DEEP_PROFILE_FIELDS } from '../constants.js';
+import { DEEP_PROFILE_FIELDS, REQUIRED_APPLICATION_FIELDS } from '../constants.js';
 
 const router = Router();
 
@@ -276,6 +276,37 @@ function safeParse(s) {
     return null;
   }
 }
+
+// POST /:id/finish — the owner chooses to stop the interview early and go
+// straight to matches ("I'm ready" button, shown once the core profile is
+// captured). Completes the conversation with whatever's been gathered so
+// far; the deterministic engine works with partial deep-profile data.
+router.post('/:id/finish', async (req, res) => {
+  const convo = await loadOwnedConversation(req.params.id, req.userId);
+  if (!convo) return res.status(404).json({ error: 'Conversation not found' });
+
+  const fields = JSON.parse(convo.fields || '{}');
+  const notes = JSON.parse(convo.notes || '[]');
+
+  if (convo.status !== 'complete') {
+    const missingCore = REQUIRED_APPLICATION_FIELDS.filter(
+      (k) => fields[k] === null || fields[k] === undefined || fields[k] === ''
+    );
+    if (missingCore.length > 0) {
+      return res.status(409).json({ error: `A few basics are still needed before matching: ${missingCore.join(', ')}.` });
+    }
+    await persistConversationState(convo.id, fields, notes, convo.turn_count, true);
+    await saveMessage(convo.id, 'assistant', "Got it — going with what we have. Building your matches now.");
+  }
+
+  res.json({
+    conversationId: convo.id,
+    done: true,
+    fields,
+    notes,
+    progress: computeInterviewProgress({ fields, notes, turnCount: convo.turn_count, done: true }),
+  });
+});
 
 router.post('/:id/reply', async (req, res) => {
   const convo = await loadOwnedConversation(req.params.id, req.userId);
