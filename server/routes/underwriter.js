@@ -5,6 +5,7 @@ import { deriveProfile, modelInfo } from '../services/lender-application-profile
 import { startReview, continueReview } from '../services/underwriter-sim.js';
 import { buildPack } from '../services/application-pack.js';
 import { autoTrack } from './tracker.js';
+import { coverageFor, DOCUMENT_KINDS } from '../services/document-kinds.js';
 
 const router = Router();
 
@@ -51,19 +52,29 @@ router.get('/:applicationId/lenders', async (req, res) => {
   if (!application) return res.status(404).json({ error: 'Application not found' });
 
   const matches = await loadResults(application.id);
-  const { rows: reviews } = await pool.query(
-    'SELECT lender_key, verdict, jsonb_array_length(messages) AS turns FROM underwriter_reviews WHERE application_id = $1',
-    [application.id]
-  );
+  const [{ rows: reviews }, { rows: docRows }] = await Promise.all([
+    pool.query(
+      'SELECT lender_key, verdict, jsonb_array_length(messages) AS turns FROM underwriter_reviews WHERE application_id = $1',
+      [application.id]
+    ),
+    pool.query('SELECT DISTINCT kind FROM documents WHERE application_id = $1', [application.id]),
+  ]);
   const reviewByKey = new Map(reviews.map((r) => [r.lender_key, r]));
+  const uploadedKinds = docRows.map((r) => r.kind);
 
   res.json({
+    documentKinds: DOCUMENT_KINDS,
     lenders: matches.map((m) => {
       const key = lenderKeyFor(m);
       const profile = deriveProfile(m);
       const info = modelInfo(profile.model);
       const rev = reviewByKey.get(key);
+      const cov = coverageFor(profile, uploadedKinds);
+      const label = (k) => DOCUMENT_KINDS[k] || k;
       return {
+        docCoverage: cov.needed.length
+          ? { total: cov.needed.length, haveCount: cov.have.length, missing: cov.missing.map(label) }
+          : null,
         key,
         name: m.name,
         type: m.type,

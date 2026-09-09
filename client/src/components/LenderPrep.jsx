@@ -59,6 +59,17 @@ function HowTheyApply({ lender }) {
         </div>
       )}
 
+      {lender.docCoverage && (
+        <div className={`lp-doccov ${lender.docCoverage.missing.length === 0 ? 'is-complete' : ''}`}>
+          <strong>
+            You have {lender.docCoverage.haveCount} of {lender.docCoverage.total} document types this program needs.
+          </strong>
+          {lender.docCoverage.missing.length > 0 && (
+            <span> Still to gather: {lender.docCoverage.missing.join(', ')}. Add them in the document vault above.</span>
+          )}
+        </div>
+      )}
+
       {lender.steps?.length > 0 && (
         <ol className="lp-steps">
           {lender.steps.map((s, i) => (
@@ -444,27 +455,30 @@ function Review({ applicationId, lender }) {
   );
 }
 
-export default function LenderPrep({ applicationId }) {
+export default function LenderPrep({ applicationId, refreshSignal }) {
   const [lenders, setLenders] = useState(null);
   const [openKey, setOpenKey] = useState(null);
   const [tab, setTab] = useState({}); // key -> 'how' | 'review'
   const [err, setErr] = useState(null);
-  const startedRef = useRef(false);
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+    let cancelled = false;
     (async () => {
       try {
         const res = await authedFetch(`/api/underwriter/${applicationId}/lenders`);
         const data = await res.json();
+        if (cancelled) return;
         if (!res.ok) throw new Error(data.error || 'Could not load lender prep');
         setLenders(data.lenders || []);
       } catch (e) {
-        setErr(e.message);
+        if (!cancelled) setErr(e.message);
       }
     })();
-  }, [applicationId]);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicationId, refreshSignal]);
 
   if (err) return null; // non-critical section — hide on failure
   if (!lenders) {

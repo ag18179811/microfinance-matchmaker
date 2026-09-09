@@ -193,6 +193,20 @@ CREATE TABLE IF NOT EXISTS tracked_applications (
   UNIQUE (application_id, lender_key)
 );
 
+-- Document vault index (files live in the Supabase Storage 'documents'
+-- bucket). Also created on boot by db/migrate.js.
+CREATE TABLE IF NOT EXISTS documents (
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL DEFAULT 'other',
+  filename TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  size_bytes INTEGER,
+  mime_type TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS match_results (
   id SERIAL PRIMARY KEY,
   application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE,
@@ -222,6 +236,7 @@ ALTER TABLE match_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE underwriter_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracked_applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own applications" ON applications;
@@ -253,6 +268,9 @@ CREATE POLICY "own underwriter reviews" ON underwriter_reviews FOR ALL USING (au
 
 DROP POLICY IF EXISTS "own tracked applications" ON tracked_applications;
 CREATE POLICY "own tracked applications" ON tracked_applications FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own documents" ON documents;
+CREATE POLICY "own documents" ON documents FOR ALL USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "own profile" ON profiles;
 CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);

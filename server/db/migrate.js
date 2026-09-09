@@ -50,6 +50,23 @@ const STATEMENTS = [
   // The 12-month cash-flow projection scaffold, edited by the owner.
   `ALTER TABLE business_cases ADD COLUMN IF NOT EXISTS projection JSONB`,
 
+  // Document vault — files stored in Supabase Storage ('documents' bucket),
+  // this table is the index. storage_path is the object key.
+  `CREATE TABLE IF NOT EXISTS documents (
+     id SERIAL PRIMARY KEY,
+     application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+     user_id UUID NOT NULL,
+     kind TEXT NOT NULL DEFAULT 'other',
+     filename TEXT NOT NULL,
+     storage_path TEXT NOT NULL,
+     size_bytes INTEGER,
+     mime_type TEXT,
+     created_at TIMESTAMPTZ DEFAULT now()
+   )`,
+  `ALTER TABLE documents ENABLE ROW LEVEL SECURITY`,
+  `DROP POLICY IF EXISTS "own documents" ON documents`,
+  `CREATE POLICY "own documents" ON documents FOR ALL USING (auth.uid() = user_id)`,
+
   // Funding type — most programs are loans, but grants (money that isn't
   // repaid) and other non-debt capital are matched and prepared for
   // differently. 'loan' | 'grant' | 'other'.
@@ -120,22 +137,49 @@ export async function runMigrations(pool) {
 
   try {
     for (const sql of STATEMENTS) {
-      for (let attempt = 1; attempt <= 3; attempt++) {
+      for (let attempt = 1; attempt <= 5; attempt++) {
         try {
           await client.query(sql);
           break;
         } catch (err) {
-          if (TRANSIENT.test(err.message) && attempt < 3) {
-            await new Promise((r) => setTimeout(r, 400 * attempt));
+          if (TRANSIENT.test(err.message) && attempt < 5) {
+            await new Promise((r) => setTimeout(r, 300 * attempt));
             continue;
           }
           // A migration failure shouldn't take the whole server down on
-          // boot — log it and let the features that need the table fail
-          // their own requests with a clear error instead.
-          console.error('[db] migration statement failed:', err.message, '\n  ', sql.split('\n')[0]);
+          // boot — the post-run check below reports anything actually
+          // missing; everything here is idempotent so a stale transient
+          // failure on an already-applied statement is harmless.
+          console.warn('[db] a migration statement did not apply this boot (may already exist):', err.message.slice(0, 120));
           break;
         }
       }
+    }
+
+    // The one signal that matters: did the columns/tables the code needs
+    // actually end up present?
+    const REQUIRED = [
+      ['business_cases', 'projection'],
+      ['lenders', 'funding_type'],
+      ['applications', 'language'],
+      ['applications', 'help_mode'],
+      ['tracked_applications', 'status'],
+      ['documents', 'storage_path'],
+      ['underwriter_reviews', 'pack'],
+    ];
+    const { rows } = await client.query(
+      `SELECT table_name, column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = ANY($1)`,
+      [[...new Set(REQUIRED.map((r) => r[0]))]]
+    );
+    const present = new Set(rows.map((r) => `${r.table_name}.${r.column_name}`));
+    const missing = REQUIRED.filter(([t, c]) => !present.has(`${t}.${c}`));
+    if (missing.length) {
+      console.error(
+        '[db] MIGRATION INCOMPLETE — missing:',
+        missing.map(([t, c]) => `${t}.${c}`).join(', '),
+        '— rerun server/db/schema.sql in the Supabase SQL editor.'
+      );
     }
   } finally {
     client.release();

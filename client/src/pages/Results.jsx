@@ -8,6 +8,7 @@ import AdvisorBridge from '../components/AdvisorBridge.jsx';
 import Tracker from '../components/Tracker.jsx';
 import FundingPlan from '../components/FundingPlan.jsx';
 import CashflowProjection from '../components/CashflowProjection.jsx';
+import DocumentVault from '../components/DocumentVault.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { authedFetch } from '../api.js';
 
@@ -90,6 +91,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
   const topMatch = matches[0]?.match_score ?? 0;
 
   const [tracked, setTracked] = useState([]);
+  const [docsVersion, setDocsVersion] = useState(0);
   const refreshTracked = useCallback(() => {
     if (!applicationId) return;
     authedFetch(`/api/tracker/${applicationId}`)
@@ -238,7 +240,9 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
 
       {applicationId && <CashflowProjection applicationId={applicationId} />}
 
-      {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} />}
+      {applicationId && <DocumentVault applicationId={applicationId} onChange={() => setDocsVersion((v) => v + 1)} />}
+
+      {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} refreshSignal={docsVersion} />}
 
       <h2 className="section-title">Matched lenders</h2>
       {matches.length > 0 && (

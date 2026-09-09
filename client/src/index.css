@@ -1658,6 +1658,109 @@ select {
   margin: 0;
 }
 
+/* ---------- Document vault ---------- */
+
+.dv-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2.25rem;
+  overflow: hidden;
+}
+
+.dv-upload {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+
+.dv-upload select {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.86rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dv-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0.5rem 0 0;
+}
+
+.dv-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dv-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.dv-kind {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  min-width: 110px;
+}
+
+.dv-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-name:hover {
+  text-decoration: underline;
+}
+
+.dv-size {
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.lp-doccov {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-light);
+  color: var(--color-warning-text);
+  margin: 0 0 1rem;
+}
+
+.lp-doccov.is-complete {
+  background: var(--color-success-light);
+  color: var(--color-success-text);
+}
+
 /* ---------- Cash-flow projection ---------- */
 
 .cf-card {
@@ -3762,6 +3865,8 @@ select {
   .advisor-foot,
   .tracker-card,
   .lender-track-btn,
+  .dv-card,
+  .cf-toggle,
   .lender-apply,
   .drawer-overlay,
   .history-drawer {
