@@ -18,6 +18,18 @@ test('name matching is case-insensitive and tolerant of slight variations', () =
   assert.equal(deriveProfile({ name: 'Justine Petersen Housing and Reinvestment Corporation' }).slug, 'justine-petersen');
 });
 
+test('the newly added CDFIs each resolve to a verified profile with a real checklist', () => {
+  for (const name of ['DreamSpring', 'Ascendus', 'Pursuit']) {
+    const p = deriveProfile({ name, type: 'CDFI' });
+    assert.equal(p.verified, true, `${name} is verified`);
+    assert.ok(p.need.length > 0, `${name} has a document list`);
+    assert.ok(p.steps.length > 0, `${name} has steps`);
+    assert.ok(p.sources.length > 0, `${name} carries sources`);
+    assert.equal(p.verifiedOn, '2026-09');
+    assert.ok(p.applyUrl?.startsWith('https://'));
+  }
+});
+
 test('the eight programs cover genuinely different application models', () => {
   const models = new Set(
     ['Accion Opportunity Fund', 'Kiva U.S.', 'SBA Microloan Program', 'Grameen America', 'Community Reinvestment Fund, USA (CRF)']

@@ -37,11 +37,11 @@ pool.on('error', (err) => {
 // so a deploy doesn't need a manual SQL-editor step for those.
 await runMigrations(pool);
 
-// Seed the lender catalog on boot if it's empty, same behavior as before,
-// ported to async Postgres queries.
-const { rows } = await pool.query('SELECT COUNT(*) AS count FROM lenders');
-if (Number(rows[0].count) === 0) {
-  await seedLenders(pool);
-}
+// Reconcile the lender catalog on boot: insert any verified program that
+// isn't in the table yet (matched by name), leaving existing rows alone.
+// This seeds an empty table and also picks up catalog additions on a plain
+// redeploy, without a manual reseed step.
+const seeded = await seedLenders(pool);
+if (seeded > 0) console.log(`[db] added ${seeded} lender(s) from the verified catalog`);
 
 export default pool;

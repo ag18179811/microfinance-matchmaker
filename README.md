@@ -1,57 +1,12 @@
 # Microfinance Matchmaker
 
-Microfinance Matchmaker is a static GitHub Pages platform for small business owners who need a clearer path to grants, microloans, city programs, CDFIs, and nonprofit coaching.
+Microfinance Matchmaker helps a small business owner who needs capital — a grant, a microloan, a city program, a CDFI — get from "where do I even start" to a real, submitted application. It is readiness-first: it does not just rank options. It explains why each match appears, flags the eligibility cautions, scores how ready the owner is, and then sits with them through the preparation the rest of the internet leaves out.
 
-The product is intentionally readiness-first: it does not just rank funding options. It also explains why each match appears, flags likely eligibility cautions, estimates readiness, and generates a downloadable packet of documents and next steps.
-
-## Site Pages
-
-- `index.html` - interactive funding match and readiness packet tool
-- `solutions.html` - services for business owners
-- `partners.html` - CDFI, city, chamber, and nonprofit partner offering
-- `research.html` - market case and source trail
-- `about.html` - mission and trust principles
-
-## Features
-
-- Guided intake survey with location, revenue, funding need, time in business, credit profile, owner profile, and eligibility screen
-- Ranked local and national resource matching
-- Transparent scoring reasons and cautions for each recommendation
-- Funding readiness estimate and likely preparation timeline
-- Document checklist and next-step plan
-- Downloadable text readiness packet
-- Startup-style Solutions, Partners, Research, and About pages
-- SEO basics: sitemap, robots file, manifest, and GitHub Pages workflow
-
-## Run locally
-
-Open `index.html` in a browser, or serve the directory:
-
-```bash
-python3 -m http.server 4173
-```
-
-Then visit `http://localhost:4173`.
-
-## Publish on GitHub Pages
-
-This repository includes a GitHub Actions workflow in `.github/workflows/pages.yml`. After pushing the repo to GitHub, go to repository **Settings -> Pages** and choose **GitHub Actions** as the source if GitHub does not select it automatically.
-
-The live site URL will normally be:
-
-```text
-https://ag18179811.github.io/microfinance-matchmaker/
-```
-
-## Production Notes
-
-The resource data in this prototype is illustrative. Production use should connect to verified program feeds, CDFI partner records, city program calendars, and maintained eligibility rules. Microfinance Matchmaker is not a lender and does not guarantee approval.
+The product is the **full-stack app** in [`/server`](server/) and [`/client`](client/), described below. The static HTML files at the repo root (`index.html`, `solutions.html`, `partners.html`, `research.html`, `about.html`) are an earlier design-only prototype kept for reference — they share the name and the mission but none of the code, and are not deployed.
 
 ---
 
-## Full-Stack MVP App (`/server` + `/client`)
-
-Alongside the static GitHub Pages site above, this repo also contains a working full-stack MVP:
+## The app (`/server` + `/client`)
 
 - **`/server`** — Node/Express API on Supabase Postgres. Deterministic, rules-based lender matching and readiness scoring (`services/matching-engine.js`, no LLM), a Groq free-text extraction step (`services/groq-extract.js`) that seeds structured fields from the opening description, an adaptive interview, and a set of AI layers that only ever generate explanatory or narrative text — never eligibility decisions.
 - **`/client`** — Vite + React app: a no-account preview, a "describe your business" box, the adaptive chat interview, and a results page with the full application-prep layer.
@@ -85,7 +40,7 @@ npm run server:dev           # http://localhost:3001
 npm run client:dev           # http://localhost:5173 (proxies /api to the server)
 ```
 
-The server connects to Supabase Postgres via `DATABASE_URL`. On boot it runs the idempotent migrations in `server/db/migrate.js` and seeds the eight verified lenders (`server/db/seed-lenders.js`) if the table is empty. For a brand-new Supabase project, run `server/db/schema.sql` once in the SQL editor first (it creates the `auth.users` trigger, which needs privileges the pooled connection doesn't have). To re-seed lenders manually:
+The server connects to Supabase Postgres via `DATABASE_URL`. On boot it runs the idempotent migrations in `server/db/migrate.js` and reconciles the verified lender catalog (`server/db/seed-lenders.js`) — it inserts any program not already in the table (matched by name) and leaves existing rows alone, so catalog additions ship on a plain redeploy without a manual reseed. For a brand-new Supabase project, run `server/db/schema.sql` once in the SQL editor first (it creates the `auth.users` trigger, which needs privileges the pooled connection doesn't have). To force a clean reseed (drop + insert):
 
 ```bash
 npm run seed
@@ -117,39 +72,43 @@ Most tools are a lender lookup — match you, hand off. This one sits with the o
 - **Funding plan** — `services/funding-plan.js`: when no single program covers the ask, a capital stack (which programs, how much each, greedy allocation within stated ranges), grants flagged speculative, the gap named, and an order to pursue them.
 
 **After the match**
-- **Living Business Case** (`services/business-case.js`) — a first-person funding narrative drafted from the interview in the owner's voice, refined only by talking to it. Every extrapolation is a correctable assumption; it never invents a number. Refining it can sync the profile and re-run the score (`POST /api/match/:id/recompute`).
+- **Living Business Case** (`services/business-case.js`) — a first-person funding narrative in the owner's voice, refined only by talking to it. Every extrapolation is a correctable assumption; it never invents a number. Opt-in — the first draft is one billed Groq call, so `GET` returns `{ exists: false }` until the owner clicks "Draft my funding story" (`POST .../draft`). Refining it can sync the profile and re-run the score (`POST /api/match/:id/recompute`).
 - **Cash-flow projection** (`services/cashflow-projection.js`) — a 12-month scaffold seeded from revenue, pattern, and an estimated loan payment; editable grid, warns when ending cash goes negative.
 - **Business plan** (`services/business-plan.js`) — the eight standard sections drafted from the funding story + interview + projection, edited by conversation; gaps become `[Add: ...]` prompts, never fabricated market data.
 - **Document vault** — upload what lenders ask for once (private Supabase Storage); `services/document-kinds.js` matches each verified checklist so lender prep shows "you have 2 of 7 document types this needs".
 - **Underwriter simulation** (`services/underwriter-sim.js`) — per matched program, a review conversation held as *that program's* reviewer (Kiva story reviewer / CDFI cash-flow analyst / SBA-intermediary counselor / grants program officer), grounded in the file's specific cautions. Ends with prepared answers and a now/soon/later timing call.
-- **Verified application profiles** (`services/lender-application-profiles.js`) — dated, cited data on how each verified program actually intakes applications (six distinct models). Discovered lenders are marked `verified: false` — never a fabricated checklist.
+- **Verified application profiles** (`services/lender-application-profiles.js`) — dated, cited data on how each verified program actually intakes applications (six distinct models: online CDFI term loan, character-based crowdfunding, SBA-intermediary, group lending, referral network, grant panel). Discovered lenders are marked `verified: false` — never a fabricated checklist.
+- **Shareable report** (`routes/share.js`) — the owner mints a revocable link; anyone with it sees a read-only report (score, coaching summary, readiness breakdown, funding story, funding plan, matched programs with apply links) — never the interview transcript, the documents, or any way to edit. For an advisor, a co-signer, or a business partner.
 - **Application pack** (`services/application-pack.js`) — assembles the Business Case + prepared answers into the exact blocks a program's process consumes.
 - **Application tracker** — a status board per program (`/api/tracker`), auto-tracking a program once its pack is built, with passive stale-row nudges.
 - **Advisor bridge** — routes complex cases to the free human advisors (SBDC, SCORE, the lender's own coaching) with a print/PDF of the report to bring.
 
 ### API
 
-Every route requires a `Bearer` access token (`middleware/auth.js`) and is scoped to the calling user — except `POST /api/preview`, the one public endpoint.
+Every route requires a `Bearer` access token (`middleware/auth.js`) and is scoped to the calling user — except `POST /api/preview`, `GET /api/shared/:token`, and `GET /api/unsubscribe`, the public endpoints.
 
 - `POST /api/preview` — no-account deterministic readiness estimate
 - `POST /api/interview/start` · `POST /api/interview/:id/reply` · `GET /api/interview/:id/resume` · `POST /api/interview/:id/attachments`
 - `POST /api/applications` · `GET /api/applications/:id`
 - `POST /api/match/:id` · `GET /api/match/:id` · `POST /api/match/:id/simulate` · `POST /api/match/:id/recompute` · `GET /api/match/:id/improvement-plan` · `GET /api/match/:id/funding-plan`
-- `GET|POST /api/business-case/:id` · `.../message` · `.../regenerate` · `.../sync-check` · `GET|PUT .../projection` · `GET|POST .../plan`
+- `GET|POST /api/business-case/:id` · `POST .../draft` · `.../message` · `.../regenerate` · `.../sync-check` · `GET|PUT .../projection` · `GET|POST .../plan`
 - `GET /api/underwriter/:id/lenders` · `POST /api/underwriter/:id/:lenderKey/start` · `.../message` · `.../pack`
 - `GET|POST /api/tracker/:id` · `DELETE /api/tracker/:id/:lenderKey`
 - `GET|POST /api/documents/:id` · `GET .../:docId/url` · `DELETE .../:docId`
+- `POST|GET|DELETE /api/applications/:id/share` (owner) · `GET /api/shared/:token` (public, read-only)
+- `GET|PUT /api/me/prefs` · `POST /api/cron/reminders` (`x-cron-secret`)
 - `GET /api/conversations` · `GET /api/conversations/:id`
 
 ### Notes for production
 
-- The seeded lender data in `server/db/seed-lenders.js` is **eight real, individually verified programs** (each checked against the org's own site, dates noted). Expanding it should pull from the [CDFI Fund Awards Database](https://www.cdfifund.gov/awards/state-awards) with the same per-entry verification — never bulk-generate entries from a model's knowledge.
+- The seeded lender data in `server/db/seed-lenders.js` is a small set of **real, individually verified programs** (11 loan programs + 2 grants at last count) — each checked against the org's own site, with the date noted in its `eligibility_notes` and its application profile. Expanding it should keep that discipline, ideally working from the [CDFI Fund Awards Database](https://www.cdfifund.gov/awards/state-awards) — never bulk-generate entries from a model's knowledge (that is exactly how an earlier fake dataset happened).
 - Auth is Google sign-in via Supabase; the datastore is Supabase Postgres. App tables added after launch are created idempotently on boot by `server/db/migrate.js` (with transient-error retries), so a deploy needs no manual SQL-editor step; `server/db/schema.sql` stays the canonical definition for a fresh project.
-- No payments. External calls: Groq (interview structuring, coaching, business case, underwriter, improvement-plan polish, pack) and OpenAI (interview web-search reasoning, live lender/grant discovery). Everything degrades gracefully when a key is missing.
+- No payments. External calls: Groq (interview structuring, coaching, business case, underwriter, improvement-plan polish, pack), OpenAI (interview web-search reasoning, live lender/grant discovery), and Resend (deadline-reminder emails). Everything degrades gracefully when a key is missing.
+- Billed AI calls on the Results page are gated: the funding-story draft is opt-in (a button), and the underwriter simulation, application pack, and what-if sim are each user-initiated. `render.yaml` also defines a daily cron service for reminder emails.
 
-### Deploying for a public demo (Render + Vercel)
+### Deploying (Render + Vercel)
 
-GitHub Pages can only serve static files — it can't run the Express backend, so it isn't part of this path. The backend goes on Render, the frontend on Vercel.
+The backend goes on Render, the frontend on Vercel.
 
 **1. Backend → Render**
 
@@ -164,6 +123,8 @@ Data lives in Supabase Postgres, so it persists across Render restarts. The free
 **2. Frontend → Vercel**
 
 1. In the [Vercel dashboard](https://vercel.com/new), import this same GitHub repo.
-2. Set **Root Directory** to `client` (Vercel auto-detects the Vite framework preset from there — no other config needed).
-3. Add an environment variable: `VITE_API_BASE_URL` = the Render URL from step 1 (no trailing slash).
-4. Deploy. Vercel gives you a public `https://*.vercel.app` URL — that's your shareable demo link.
+2. Set **Root Directory** to `client` (Vercel auto-detects the Vite framework preset from there). `client/vercel.json` adds the SPA rewrite so a deep link like `/shared/:token` serves `index.html`.
+3. Add an environment variable: `VITE_API_BASE_URL` = the Render URL from step 1 (no trailing slash), plus `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+4. Deploy. Vercel gives you a public `https://*.vercel.app` URL.
+
+Also set `APP_URL` (and, for reminder emails, `RESEND_API_KEY` + `FROM_EMAIL` + `CRON_SECRET`) on the Render service so links in shared reports and emails point back to the right place.

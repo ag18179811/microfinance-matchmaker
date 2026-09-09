@@ -5,12 +5,14 @@
 // reading history for, treat every entry before this comment as fictional
 // and do not rely on it.
 //
-// This list is intentionally small rather than broad: 8 real, checkable
-// programs beat 18 fabricated ones. Expanding it further should pull from
-// the CDFI Fund Awards Database (https://www.cdfifund.gov/awards/state-awards)
-// with the same per-entry verification discipline — never bulk-generate
-// entries from a model's own "knowledge," which is exactly how the fake
-// dataset happened in the first place.
+// This list is intentionally small rather than broad: real, checkable
+// programs beat a long list of fabricated ones. Every entry here was added
+// one at a time, each verified against the organization's own site on the
+// date noted. Expanding it further should keep that discipline — ideally
+// working from the CDFI Fund Awards Database
+// (https://www.cdfifund.gov/awards/state-awards) — and never bulk-generate
+// entries from a model's own "knowledge," which is exactly how the earlier
+// fake dataset happened.
 
 export const lenders = [
   {
@@ -105,6 +107,42 @@ export const lenders = [
     source_url: 'https://justinepetersen.org/what-we-do/small-business/',
   },
   {
+    name: 'DreamSpring',
+    type: 'CDFI',
+    geography: 'AL,AZ,CA,CO,FL,GA,IL,IA,KS,LA,MI,MO,MS,NE,NV,NM,NY,NC,OH,OK,PA,SC,TN,TX,UT,WA,WY',
+    min_loan: 1000,
+    max_loan: 250000,
+    industries: '',
+    eligibility_notes:
+      'Verified via dreamspring.org (checked Sep 2026). Nonprofit CDFI microlender serving 27 states. Open to both startups and existing businesses — you must be 18+, have an SSN or ITIN, and be located in a served state; there is no minimum time in business. Microloans and lines of credit up to $100,000, small business loans up to $250,000. For loans under $20,000, a credit score above 650 gets an expedited application.',
+    source_url: 'https://www.dreamspring.org/welcome',
+  },
+  {
+    name: 'Ascendus',
+    type: 'CDFI',
+    geography:
+      'AL,AK,AZ,AR,CA,CO,CT,DE,FL,GA,HI,ID,IL,IN,IA,KS,KY,LA,ME,MD,MA,MI,MN,MS,MO,MT,NE,NV,NH,NJ,NM,NY,NC,ND,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,WA,WV,WI,WY,DC',
+    min_loan: 500,
+    max_loan: 100000,
+    industries: '',
+    eligibility_notes:
+      'Verified via ascendus.org (checked Sep 2026). Nonprofit CDFI microlender, nationwide except Vermont. Business term loan up to $100,000 needs 6+ months in business, consistent revenue for 6 months, a FICO of 575+, and no more than $3,000 in past-due debt. The Get Ready credit-building loan starts at $500 (rising to $5,000 with on-time repayment). Lines of credit up to $50,000.',
+    source_url: 'https://www.ascendus.org/products/small-business/',
+    min_months_in_business: 6,
+    min_months_in_business_type: 'required',
+  },
+  {
+    name: 'Pursuit',
+    type: 'CDFI',
+    geography: 'CT,DE,IL,NJ,NY,PA',
+    min_loan: 10000,
+    max_loan: 5000000,
+    industries: '',
+    eligibility_notes:
+      'Verified via pursuitlending.com (checked Sep 2026). Nonprofit lender (formerly New York Business Development Corporation / Excelsior Growth Fund), 70+ years old, serving CT, DE, IL, NJ, NY, and PA. Runs many products — SBA 504 and 7(a), an SBA Microloan, FlexLoan and the Main Street Capital Loan Fund (up to $100,000 each), and lines of credit — so amounts and requirements vary by product; the online FlexLoan is built for faster approvals. Apply at pursuitlending.com/apply to be routed to the right one.',
+    source_url: 'https://pursuitlending.com/apply/',
+  },
+  {
     name: 'Amber Grant for Women (WomensNet)',
     type: 'nonprofit',
     funding_type: 'grant',
@@ -132,11 +170,20 @@ export const lenders = [
   },
 ];
 
+// Insert any catalog entry that isn't already in the table, matched by
+// name. Existing rows are left untouched (a hand-verified note fix in the
+// DB won't be clobbered) and rows not in the catalog are left alone too.
+// Safe to run on every boot; a full `node db/seed-lenders.js` drops first
+// for a clean reseed.
 export async function seedLenders(pool) {
   const client = await pool.connect();
+  let inserted = 0;
   try {
+    const { rows: existing } = await client.query('SELECT name FROM lenders');
+    const have = new Set(existing.map((r) => r.name));
     await client.query('BEGIN');
     for (const row of lenders) {
+      if (have.has(row.name)) continue;
       const full = { min_months_in_business: null, min_months_in_business_type: null, funding_type: 'loan', ...row };
       await client.query(
         `INSERT INTO lenders (name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type)
@@ -155,6 +202,7 @@ export async function seedLenders(pool) {
           full.min_months_in_business_type,
         ]
       );
+      inserted += 1;
     }
     await client.query('COMMIT');
   } catch (err) {
@@ -163,7 +211,7 @@ export async function seedLenders(pool) {
   } finally {
     client.release();
   }
-  return lenders.length;
+  return inserted;
 }
 
 // Allow running directly: `node db/seed-lenders.js` — force-reseeds the

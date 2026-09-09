@@ -380,6 +380,113 @@ const PROFILES = [
     verifiedOn: '2026-09',
     sources: ['https://justinepetersen.org/our-loan-process/', 'https://justinepetersen.org/what-we-do/small-business/'],
   },
+  {
+    slug: 'dreamspring',
+    matchNames: ['dreamspring', 'dream spring'],
+    model: 'cdfi_term_loan',
+    applyUrl: 'https://www.dreamspring.org/application-readiness',
+    timeline: 'A 6-step online application; the team follows up for anything missing, then finalizes the loan package with you.',
+    howItWorks:
+      'One online application, with the required documents scaled to the loan size. You connect bank statements through Plaid (free) or upload them. Uncollateralized options exist under $20,000 if your credit score is above 650.',
+    need: [
+      { item: 'Photo ID (driver’s license or government ID) plus a selfie holding it', when: 'always' },
+      { item: '3–6 most recent months of bank statements — personal, plus business if you have a business account', when: 'always', note: 'shared through Plaid or uploaded' },
+      { item: 'Address verification, if your application address doesn’t match your ID or statements', when: 'always' },
+      { item: 'A business profit-and-loss statement and your most recent year of personal + business tax returns', when: 'larger_loans', note: 'at $15,000 and up' },
+      { item: 'Two years of tax returns, a personal financial statement, and a business balance sheet', when: 'larger_loans', note: 'at $50,000 and up' },
+      { item: 'A business plan with financial projections', when: 'larger_loans', note: 'if the business has been open less than two years' },
+      { item: 'A business debt schedule, if you carry business debt', when: 'always' },
+    ],
+    steps: [
+      'Confirm your state is one of the 27 DreamSpring serves, and decide your loan amount — the document list grows in tiers at $15k, $50k, and $100k.',
+      'Gather your ID and 3–6 months of bank statements; set up Plaid access to your accounts if you can.',
+      'If you’re under two years old and asking for $50k+, prepare a business plan with projections.',
+      'Complete the 6-step online application and respond quickly to the team’s follow-up requests.',
+    ],
+    gotchas: [
+      'Not available outside the 27 served states.',
+      'Collateral may be required; the no-collateral path is only for sub-$20,000 requests with a 650+ score.',
+      'Businesses open less than two years need a full business plan with three-year projections.',
+    ],
+    underwriterFocus:
+      'Cash flow from your bank statements first, then your debt load and credit history, then collateral. For newer businesses, the plan and projections carry real weight.',
+    verifiedOn: '2026-09',
+    sources: [
+      'https://www.dreamspring.org/application-readiness',
+      'https://help.dreamspring.org/knowledge/what-documents-are-required-for-a-dreamspring-loan-application',
+    ],
+  },
+  {
+    slug: 'ascendus',
+    matchNames: ['ascendus', 'accion east', 'accion the u.s. network'],
+    model: 'cdfi_term_loan',
+    applyUrl: 'https://www.ascendus.org/products/small-business/',
+    timeline: 'They respond within ~2 business days on fit; if it’s a match, a lending team member works with you one-on-one to strengthen the application before it’s finalized.',
+    howItWorks:
+      'A short online application, then a conversation. Ascendus asks you to work with a local resource partner (like an SBDC) first to prepare a stronger application. Every loan is personally guaranteed; collateral like a vehicle or equipment can strengthen a borderline file.',
+    need: [
+      { item: 'Documentation confirming what you entered in the application (ID, business registration)', when: 'always' },
+      { item: 'Recent business bank statements showing consistent revenue for at least 6 months', when: 'always' },
+      { item: 'A personal guaranty from the owner(s)', when: 'always' },
+      { item: 'Collateral such as a vehicle or equipment', when: 'larger_loans', note: 'requested to strengthen an application, not always required' },
+      { item: 'Additional documents their team requests to understand your specific situation', when: 'always' },
+    ],
+    steps: [
+      'Check the basics: 6+ months in business, consistent revenue for 6 months, FICO 575+, and no more than $3,000 in past-due debt.',
+      'Meet with a local SBDC or business resource partner to sharpen your numbers and plan.',
+      'Submit the online application and wait ~2 business days for a fit decision.',
+      'Work one-on-one with the lending team to finalize; budget for the $200 application fee and 5% closing fee, charged only on approval.',
+    ],
+    gotchas: [
+      'Not available in Vermont.',
+      'A bankruptcy must be discharged over a year ago (over two years for loans above $25,000); a completed foreclosure must be 2+ years back.',
+      'Fees are real: $200 application, 5% closing, $80 UCC filing — all after approval.',
+    ],
+    underwriterFocus:
+      'Consistent revenue over the last six months first, then credit history (575+ but treated as one factor among several), then the personal guaranty and any collateral.',
+    verifiedOn: '2026-09',
+    sources: [
+      'https://www.ascendus.org/products/small-business/',
+      'https://www.ascendus.org/resources/ascendus-loans-faqs/',
+    ],
+  },
+  {
+    slug: 'pursuit',
+    matchNames: ['pursuit', 'pursuit lending', 'excelsior growth fund', 'new york business development corporation'],
+    model: 'cdfi_term_loan',
+    applyUrl: 'https://pursuitlending.com/apply/',
+    timeline: 'A completed application is generally evaluated for approval within 2–4 weeks.',
+    howItWorks:
+      'Pursuit runs many loan programs (SBA 504 and 7(a), an SBA Microloan, the online FlexLoan and Main Street Capital Loan Fund up to $100,000 each, lines of credit). You start one application at pursuitlending.com/apply and they route you to the program that fits. The FlexLoan is the startup-friendly one, for businesses up to two years old.',
+    need: [
+      { item: 'Most recent 2–3 years of personal and business federal tax returns with all schedules', when: 'always', note: 'fewer years if you’ve been in business less time' },
+      { item: 'An interim business financial statement (income statement + balance sheet) dated within 90 days', when: 'always' },
+      { item: 'Most recent 3 months of personal and business bank statements', when: 'always' },
+      { item: 'A current business debt schedule — every term loan, line of credit, and card', when: 'always' },
+      { item: 'A personal financial statement for each owner, and a photo ID', when: 'always' },
+      { item: 'A written business plan with 24 months of revenue and expense projections and stated assumptions', when: 'always', note: 'required for the FlexLoan and any startup' },
+      { item: 'Evidence of at least a 10% equity contribution to the project', when: 'larger_loans', note: 'FlexLoan' },
+    ],
+    steps: [
+      'Confirm you’re in CT, DE, IL, NJ, NY, or PA.',
+      'Pull 3 years of tax returns, an interim financial statement dated within 90 days, and your debt schedule.',
+      'Write (or update) a business plan with 24-month projections — needed for the FlexLoan and any startup.',
+      'Start the single application at pursuitlending.com/apply; expect a 2–4 week evaluation once it’s complete.',
+    ],
+    gotchas: [
+      'The conventional programs lean toward established businesses (often 2+ years, 640+ credit, $120k+ revenue, break-even cash flow); the FlexLoan exists for those who don’t clear that bar.',
+      'Tax liens or judgments in the last 3 years, or any prior bankruptcy, are close to disqualifying for the conventional programs.',
+      'A written explanation is expected for any negative credit item.',
+    ],
+    underwriterFocus:
+      'Repayment capacity from tax returns and the interim financials, then credit history and how you explain any blemishes, then equity in the deal and (for startups) the credibility of the plan and projections.',
+    verifiedOn: '2026-09',
+    sources: [
+      'https://pursuitlending.com/apply/',
+      'https://pursuitlending.com/resources/business-loan-application-checklist/',
+      'https://pursuitlending.com/business-loans/products/flex-loan/',
+    ],
+  },
 ];
 
 const PROFILE_BY_NAME = new Map();
