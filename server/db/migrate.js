@@ -99,6 +99,22 @@ const STATEMENTS = [
   // rematch/recompute. Stops the Results page re-billing those two Groq
   // calls on every view.
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS plan_cache JSONB`,
+
+  // Per-application live program discovery: grants and loans are now
+  // web-searched against the owner's full profile (not a shared
+  // state+industry list), so discovered rows belong to one application and
+  // the search is stamped on the application so an empty result is
+  // remembered too.
+  `ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE`,
+  `ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS profile_fingerprint TEXT`,
+  `ALTER TABLE discovered_lenders ALTER COLUMN search_state DROP NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_discovered_lenders_application ON discovered_lenders (application_id)`,
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_fingerprint TEXT`,
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_at TIMESTAMPTZ`,
+
+  // The old shared (state, industry) discovery cache is replaced by
+  // per-application rows — drop the un-attached ones once.
+  `DELETE FROM discovered_lenders WHERE application_id IS NULL`,
   // Language the interview was conducted in (BCP-47-ish, e.g. 'en', 'es').
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
@@ -185,9 +201,11 @@ export async function runMigrations(pool) {
       ['lenders', 'funding_type'],
       ['applications', 'language'],
       ['applications', 'help_mode'],
+      ['applications', 'discovery_at'],
       ['tracked_applications', 'status'],
       ['documents', 'storage_path'],
       ['underwriter_reviews', 'pack'],
+      ['discovered_lenders', 'application_id'],
     ];
     const { rows } = await client.query(
       `SELECT table_name, column_name FROM information_schema.columns

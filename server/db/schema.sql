@@ -59,12 +59,14 @@ CREATE TABLE IF NOT EXISTS lenders (
   min_months_in_business_type TEXT -- 'required' (hard gate) | 'preferred' (soft, scored down) | null
 );
 
--- Live-discovered lenders (server/services/openai-lender-search.js), cached
--- by (search_state, search_industry) so the same combo isn't re-searched
--- for every applicant. Same shape as `lenders` plus provenance/freshness
--- columns. Kept as a separate table (not merged into `lenders`) so the
--- hand-verified static set and auto-discovered results stay distinguishable
--- everywhere they're used, including in the UI.
+-- Live-discovered programs (server/services/openai-lender-search.js): a
+-- per-application web search built from the owner's full profile, so grants
+-- especially are matched to their specific situation (city, industry, use
+-- of funds, stage, stated ownership background) rather than a shared
+-- state+industry list. Rows belong to one application; the search itself is
+-- stamped on applications (discovery_fingerprint / discovery_at) so an
+-- empty result is remembered too. Kept separate from `lenders` so the
+-- hand-verified catalog and auto-discovered results stay distinguishable.
 CREATE TABLE IF NOT EXISTS discovered_lenders (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -77,12 +79,14 @@ CREATE TABLE IF NOT EXISTS discovered_lenders (
   source_url TEXT NOT NULL,
   min_months_in_business INTEGER,
   min_months_in_business_type TEXT,
-  search_state TEXT NOT NULL,
+  search_state TEXT,
   search_industry TEXT,
+  application_id INTEGER,
+  profile_fingerprint TEXT,
   discovered_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_discovered_lenders_cache ON discovered_lenders (search_state, search_industry);
+CREATE INDEX IF NOT EXISTS idx_discovered_lenders_application ON discovered_lenders (application_id);
 
 CREATE TABLE IF NOT EXISTS applications (
   id SERIAL PRIMARY KEY,
@@ -305,6 +309,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_share_token ON applications (
 -- Cache for the AI-narrated funding plan + personalized improvement plan,
 -- keyed by the match_results timestamp so it auto-invalidates on a rematch.
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS plan_cache JSONB;
+
+-- Per-application program discovery (see the discovered_lenders comment).
+ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE;
+ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS profile_fingerprint TEXT;
+ALTER TABLE discovered_lenders ALTER COLUMN search_state DROP NOT NULL;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_fingerprint TEXT;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_at TIMESTAMPTZ;
 
 -- lender_id used to be a hard FK into `lenders` only; it now also needs to
 -- point into `discovered_lenders` when lender_source = 'discovered', which

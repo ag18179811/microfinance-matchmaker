@@ -1,15 +1,18 @@
-// Real, individually verified lenders — each entry was checked against the
-// organization's own website via live web search before being added here
-// (dates noted per entry). This replaced an earlier placeholder dataset of
-// invented lender names that were never real; if that's the version you're
-// reading history for, treat every entry before this comment as fictional
-// and do not rely on it.
+// Real, individually verified LOAN programs — each entry was checked against
+// the organization's own website before being added here (dates noted per
+// entry). This replaced an earlier placeholder dataset of invented lender
+// names that were never real; treat any pre-this-comment history as fiction.
+//
+// GRANTS are deliberately not here. A hand-kept grant list shown to every
+// applicant is the "checklist" approach this product exists to avoid —
+// grants are the most case-specific funding type (city, county, industry,
+// use of funds, ownership background all change what a business qualifies
+// for). They come only from the per-application live search in
+// routes/match.js / services/openai-lender-search.js.
 //
 // This list is intentionally small rather than broad: real, checkable
-// programs beat a long list of fabricated ones. Every entry here was added
-// one at a time, each verified against the organization's own site on the
-// date noted. Expanding it further should keep that discipline — ideally
-// working from the CDFI Fund Awards Database
+// programs beat a long list of fabricated ones. Expanding it should keep
+// that discipline — ideally from the CDFI Fund Awards Database
 // (https://www.cdfifund.gov/awards/state-awards) — and never bulk-generate
 // entries from a model's own "knowledge," which is exactly how the earlier
 // fake dataset happened.
@@ -142,43 +145,26 @@ export const lenders = [
       'Verified via pursuitlending.com (checked Sep 2026). Nonprofit lender (formerly New York Business Development Corporation / Excelsior Growth Fund), 70+ years old, serving CT, DE, IL, NJ, NY, and PA. Runs many products — SBA 504 and 7(a), an SBA Microloan, FlexLoan and the Main Street Capital Loan Fund (up to $100,000 each), and lines of credit — so amounts and requirements vary by product; the online FlexLoan is built for faster approvals. Apply at pursuitlending.com/apply to be routed to the right one.',
     source_url: 'https://pursuitlending.com/apply/',
   },
-  {
-    name: 'Amber Grant for Women (WomensNet)',
-    type: 'nonprofit',
-    funding_type: 'grant',
-    geography: 'National',
-    min_loan: 0,
-    max_loan: 10000,
-    industries: '',
-    eligibility_notes:
-      'Verified via ambergrantsforwomen.com (checked Sep 2026). Open to any business at least 50% owned by a woman, based in the U.S. or Canada. One online application per month covers all that month\'s grants ($10,000 monthly, plus a $50,000 year-end grant for monthly winners). Judged 40% business potential, 30% impact, 30% personal story. Applications run the 1st through the last day of each month.',
-    source_url: 'https://ambergrantsforwomen.com/get-an-amber-grant/apply-now/',
-  },
-  {
-    name: 'Comcast RISE Small Business Grant',
-    type: 'nonprofit',
-    funding_type: 'grant',
-    geography: 'National',
-    min_loan: 0,
-    max_loan: 5000,
-    industries: '',
-    eligibility_notes:
-      'Verified via comcastrise.com / risegrants.ey.com (checked Sep 2026). A $5,000 monetary grant plus a support package (coaching, media, technology). Requires 2+ years in business, 100 or fewer employees, independently owned; you do NOT need to be a Comcast customer. IMPORTANT: each application cycle is limited to a rotating set of specific cities/regions — check the site for the current round\'s eligible locations before applying.',
-    source_url: 'https://www.comcastrise.com/',
-    min_months_in_business: 24,
-    min_months_in_business_type: 'required',
-  },
 ];
 
+// Grants used to live in this catalog too (Amber Grant, Comcast RISE), but
+// a hand-kept grant list shown to every applicant is exactly the "checklist"
+// approach this product avoids — grants are the most case-specific funding
+// type. They now come only from the per-application live search in
+// routes/match.js. These names are removed from the table on boot; their
+// verified application profiles in lender-application-profiles.js stay and
+// re-attach by name if the live search rediscovers them.
+const RETIRED_LENDER_NAMES = ['Amber Grant for Women (WomensNet)', 'Comcast RISE Small Business Grant'];
+
 // Insert any catalog entry that isn't already in the table, matched by
-// name. Existing rows are left untouched (a hand-verified note fix in the
-// DB won't be clobbered) and rows not in the catalog are left alone too.
-// Safe to run on every boot; a full `node db/seed-lenders.js` drops first
-// for a clean reseed.
+// name; remove any retired entry. Other existing rows are left untouched (a
+// hand-verified note fix in the DB won't be clobbered). Safe to run on
+// every boot; a full `node db/seed-lenders.js` drops first for a clean reseed.
 export async function seedLenders(pool) {
   const client = await pool.connect();
   let inserted = 0;
   try {
+    await client.query('DELETE FROM lenders WHERE name = ANY($1)', [RETIRED_LENDER_NAMES]);
     const { rows: existing } = await client.query('SELECT name FROM lenders');
     const have = new Set(existing.map((r) => r.name));
     await client.query('BEGIN');

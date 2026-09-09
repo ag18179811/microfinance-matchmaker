@@ -19,23 +19,26 @@ const MODEL = 'gpt-4.1-mini';
 const MAX_RESULTS = 8;
 
 const SEARCH_SYSTEM_PROMPT =
-  'You are researching real, currently-operating small business funding programs FOR A FOR-PROFIT SMALL ' +
-  'BUSINESS OWNER — every program you report must be one a for-profit business (sole proprietorship, LLC, ' +
-  'corporation, partnership) can actually apply to and receive funds from. Include BOTH:\n' +
-  '  - loans: CDFIs, SBA microloan intermediaries, city/state small business loan programs, nonprofit lenders\n' +
-  '  - grants: business grants a for-profit can actually win (e.g. Amber Grant, Comcast RISE, city/state ' +
-  'economic-development or storefront grants, industry-specific grants, minority/women/veteran business grants)\n' +
+  'You are researching real, currently-operating small business funding programs FOR ONE SPECIFIC FOR-PROFIT ' +
+  'SMALL BUSINESS OWNER whose full situation is given below. Every program you report must be one this ' +
+  'particular business can actually apply to and receive funds from. Include BOTH:\n' +
+  '  - loans: CDFIs, SBA microloan intermediaries, city/state/county small business loan programs, nonprofit lenders\n' +
+  '  - grants: business grants a for-profit can win — and here you MUST go beyond the obvious national ones. ' +
+  'Search specifically for grants that fit THIS owner: their city and county (municipal storefront/facade, ' +
+  'economic-development, main-street, and small-business-relief grants are common and hyper-local), their ' +
+  "industry (industry-association and trade grants), their stated use of funds (e.g. energy-efficiency, " +
+  'equipment, hiring, technology-adoption, exporting grants), their business stage, and — ONLY when the owner ' +
+  'has explicitly stated it — their ownership background (woman-, veteran-, Black-, Latino-, Native-, ' +
+  'immigrant-, disability-owned grant programs). Do NOT return a demographic-restricted program unless the ' +
+  "owner's stated background actually qualifies them for it.\n" +
   'Explicitly EXCLUDE anything restricted to 501(c)(3) nonprofits, arts councils, government agencies, or ' +
-  'individual artists/creators only — those cannot be used by this audience even if they turn up in search ' +
-  'results. Use web search to find programs that actually serve the given state and are relevant to the given ' +
-  'industry. Only describe programs you actually found via search results — never describe a program from ' +
-  'memory without a search result backing it up, and never estimate or guess amounts, eligibility rules, or ' +
-  'URLs. For each program found, state: its exact name, WHETHER IT IS A LOAN OR A GRANT, what states/regions ' +
-  'it serves, its funding amount range if stated, any industry restrictions, key eligibility requirements ' +
-  '(time in business, revenue minimums, ownership requirements, and explicitly note if it requires ' +
-  'nonprofit/501(c)(3) status), and the exact URL of the page describing the program. If you find nothing ' +
-  'genuinely relevant and usable by a for-profit business after searching, say so plainly instead of ' +
-  'describing something tangential.';
+  'individual artists/creators only. Only describe programs you actually found via search results — never from ' +
+  'memory without a citation, and never estimate or guess amounts, eligibility rules, or URLs. For each ' +
+  'program, state: its exact name, WHETHER IT IS A LOAN OR A GRANT, what states/regions/cities it serves, its ' +
+  'funding amount range if stated, any industry or ownership restrictions, key eligibility requirements (time ' +
+  'in business, revenue minimums, ownership requirements, whether it needs 501(c)(3) status), and the exact ' +
+  'URL of the page describing it. Prioritize the programs that fit this specific owner most tightly. If after ' +
+  'searching you find nothing genuinely usable by this business, say so plainly rather than list something tangential.';
 
 const EXTRACTION_SYSTEM_PROMPT =
   'You will be given research notes about small business funding programs, each grounded in specific cited ' +
@@ -119,14 +122,52 @@ function coerceEntries(raw, citedUrls) {
     .slice(0, MAX_RESULTS);
 }
 
-// Returns an array of lender records (possibly empty) — never throws.
-// Callers should treat this as a non-blocking enhancement: if it fails or
-// no key is configured, matching just proceeds on the static table alone.
-export async function searchLiveLenders({ state, industry }) {
+// Builds the plain-language "who this owner is" brief the search runs
+// against — every signal the interview captured that could change which
+// programs (especially grants) this specific business qualifies for.
+function ownerBrief({
+  state,
+  industry,
+  city,
+  ownershipDemographics,
+  timeInBusinessMonths,
+  annualRevenue,
+  requestedAmount,
+  useOfFunds,
+  businessStructure,
+  notes,
+}) {
+  const lines = [];
+  lines.push(`Location: ${[city, state].filter(Boolean).join(', ') || state}`);
+  if (industry) lines.push(`Industry: ${industry}`);
+  if (Number.isFinite(timeInBusinessMonths)) {
+    const stage =
+      timeInBusinessMonths < 12 ? 'startup / under a year' : timeInBusinessMonths < 24 ? 'early-stage (1–2 years)' : `established (${Math.floor(timeInBusinessMonths / 12)}+ years)`;
+    lines.push(`Time in business: ${timeInBusinessMonths} months (${stage})`);
+  }
+  if (Number.isFinite(annualRevenue)) lines.push(`Annual revenue: about $${Math.round(annualRevenue).toLocaleString()}`);
+  if (Number.isFinite(requestedAmount)) lines.push(`Amount they're trying to raise: about $${Math.round(requestedAmount).toLocaleString()}`);
+  if (businessStructure) lines.push(`Legal structure: ${businessStructure}`);
+  if (useOfFunds) lines.push(`What the money is for: ${useOfFunds}`);
+  if (ownershipDemographics) lines.push(`Owner background (self-reported): ${ownershipDemographics}`);
+  const noteLines = (Array.isArray(notes) ? notes : [])
+    .map((n) => (typeof n === 'string' ? n : n?.detail || n?.topic))
+    .filter(Boolean)
+    .slice(0, 6);
+  if (noteLines.length) lines.push(`Other specifics from the interview:\n- ${noteLines.join('\n- ')}`);
+  return lines.join('\n');
+}
+
+// Returns an array of program records (possibly empty) — never throws.
+// Callers treat this as a non-blocking enhancement: on failure or with no
+// key, matching proceeds on the verified catalog alone. `state` is the only
+// required field; everything else sharpens the search, especially for grants.
+export async function searchLiveLenders(context) {
+  const { state, industry } = context;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey || !state) return [];
 
-  console.log(`[openai-lender-search] live search: state=${state} industry=${industry || '(any)'}`);
+  console.log(`[openai-lender-search] live search: state=${state} industry=${industry || '(any)'} city=${context.city || '(any)'} owner=${context.ownershipDemographics ? 'stated' : 'n/a'}`);
 
   const searchResult = await callOpenAIResponses({
     apiKey,
@@ -136,7 +177,10 @@ export async function searchLiveLenders({ state, industry }) {
         { role: 'system', content: SEARCH_SYSTEM_PROMPT },
         {
           role: 'user',
-          content: `Find real small business funding programs serving businesses in the state of ${state}${industry ? `, particularly relevant to the "${industry}" industry` : ''}.`,
+          content:
+            'Find every real, currently-open loan and grant program this specific business could apply to. ' +
+            'Search for hyper-local (city/county), industry, use-of-funds, and — where they qualify — ownership-' +
+            `specific grants, not just national ones.\n\n${ownerBrief(context)}`,
         },
       ],
       tools: [{ type: 'web_search' }],

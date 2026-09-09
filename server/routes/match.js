@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createHash } from 'node:crypto';
 import pool from '../db/connection.js';
 import { computeReadiness, matchLenders } from '../services/matching-engine.js';
 import { generateCoachingSummary } from '../services/groq-coach.js';
@@ -11,75 +12,133 @@ import { deriveProfile } from '../services/lender-application-profiles.js';
 
 const router = Router();
 
-const DISCOVERED_CACHE_DAYS = 30;
 const DISCOVERED_LENDER_COLUMNS =
   'id, name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type';
 
-// Cache-only read of previously discovered lenders for this (state,
-// industry). Split out from getDiscoveredLenders so the what-if simulator
-// can reuse whatever's already been found without ever triggering a fresh
-// (billed) web search on every slider move.
-async function getCachedDiscoveredLenders(state, industry) {
-  if (!state) return [];
+// The signals that change which programs — especially grants — a specific
+// business qualifies for. If none of these have changed since the last
+// search AND that search is under a day old, the previous result set is
+// reused; otherwise a fresh live search runs. `requested_amount` and
+// `annual_revenue` are bucketed so a $100 tweak doesn't force a re-search.
+function bucket(n, size) {
+  return Number.isFinite(Number(n)) ? Math.round(Number(n) / size) : null;
+}
+function profileFingerprint(application) {
+  const parts = {
+    state: application.state || '',
+    city: (application.city || '').trim().toLowerCase(),
+    industry: application.industry || '',
+    ownership: (application.ownership_demographics || '').trim().toLowerCase(),
+    useOfFunds: (application.use_of_funds_detail || '').trim().toLowerCase().slice(0, 300),
+    structure: application.business_structure || '',
+    tenureYears: bucket(application.time_in_business_months, 12),
+    revenueBand: bucket(application.annual_revenue, 25000),
+    askBand: bucket(application.requested_amount, 10000),
+  };
+  return createHash('sha1').update(JSON.stringify(parts)).digest('hex');
+}
+
+function discoveryContext(application) {
+  return {
+    state: application.state,
+    industry: application.industry,
+    city: application.city,
+    ownershipDemographics: application.ownership_demographics,
+    timeInBusinessMonths: Number(application.time_in_business_months),
+    annualRevenue: Number(application.annual_revenue),
+    requestedAmount: Number(application.requested_amount),
+    useOfFunds: application.use_of_funds_detail,
+    businessStructure: application.business_structure,
+    notes: parseNotes(application),
+  };
+}
+
+// Read-only: the programs already discovered for THIS application. Used by
+// the what-if simulator so a slider move never triggers a billed search.
+async function getDiscoveredForApplication(applicationId) {
+  if (!applicationId) return [];
   try {
     const { rows } = await pool.query(
-      `SELECT ${DISCOVERED_LENDER_COLUMNS} FROM discovered_lenders
-       WHERE search_state = $1 AND search_industry IS NOT DISTINCT FROM $2
-         AND discovered_at > now() - interval '${DISCOVERED_CACHE_DAYS} days'`,
-      [state, industry || null]
+      `SELECT ${DISCOVERED_LENDER_COLUMNS} FROM discovered_lenders WHERE application_id = $1`,
+      [applicationId]
     );
     return rows;
   } catch (err) {
-    console.error('[match] cached discovered-lender read failed:', err.message);
+    console.error('[match] discovered-program read failed:', err.message);
     return [];
   }
 }
 
-// Live-searched lenders (server/services/openai-lender-search.js), cached by
-// (state, industry) so the same combo isn't re-searched for every applicant
-// that shares it. Never blocks the match response — a search failure just
-// means this request runs on the static table alone, same as if no
-// OPENAI_API_KEY were configured at all.
-async function getDiscoveredLenders(state, industry) {
-  if (!state) return [];
+// A per-application live search (server/services/openai-lender-search.js),
+// built from the owner's full profile so grants are matched to their
+// specific situation — city, industry, use of funds, stage, and stated
+// ownership background — not a shared (state, industry) list. Re-runs on
+// every match/recompute unless an identical-profile search ran in the last
+// day (tracked by applications.discovery_fingerprint / discovery_at, so an
+// empty result is remembered too). Never blocks the match response: a
+// failure falls back to the verified catalog alone, same as with no
+// OPENAI_API_KEY.
+async function discoverPrograms(application) {
+  if (!application.state) return [];
+  const fingerprint = profileFingerprint(application);
 
   try {
-    const cached = await getCachedDiscoveredLenders(state, industry);
-    if (cached.length > 0) return cached;
+    const recent =
+      application.discovery_fingerprint === fingerprint &&
+      application.discovery_at &&
+      Date.now() - new Date(application.discovery_at).getTime() < 24 * 60 * 60 * 1000;
+    if (recent) return getDiscoveredForApplication(application.id);
 
-    const found = await searchLiveLenders({ state, industry });
-    if (found.length === 0) return [];
+    const found = await searchLiveLenders(discoveryContext(application));
 
-    const inserted = [];
-    for (const lender of found) {
-      const { rows } = await pool.query(
-        `INSERT INTO discovered_lenders
-           (name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url,
-            min_months_in_business, min_months_in_business_type, search_state, search_industry)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-         RETURNING ${DISCOVERED_LENDER_COLUMNS}`,
-        [
-          lender.name,
-          lender.type,
-          lender.funding_type || 'loan',
-          lender.geography,
-          lender.min_loan,
-          lender.max_loan,
-          lender.industries,
-          lender.eligibility_notes,
-          lender.source_url,
-          lender.min_months_in_business,
-          lender.min_months_in_business_type,
-          state,
-          industry || null,
-        ]
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM discovered_lenders WHERE application_id = $1', [application.id]);
+      const inserted = [];
+      for (const lender of found) {
+        const { rows } = await client.query(
+          `INSERT INTO discovered_lenders
+             (name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url,
+              min_months_in_business, min_months_in_business_type, search_state, search_industry,
+              application_id, profile_fingerprint)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+           RETURNING ${DISCOVERED_LENDER_COLUMNS}`,
+          [
+            lender.name,
+            lender.type,
+            lender.funding_type || 'loan',
+            lender.geography,
+            lender.min_loan,
+            lender.max_loan,
+            lender.industries,
+            lender.eligibility_notes,
+            lender.source_url,
+            lender.min_months_in_business,
+            lender.min_months_in_business_type,
+            application.state,
+            application.industry || null,
+            application.id,
+            fingerprint,
+          ]
+        );
+        inserted.push(rows[0]);
+      }
+      await client.query(
+        'UPDATE applications SET discovery_fingerprint = $1, discovery_at = now() WHERE id = $2',
+        [fingerprint, application.id]
       );
-      inserted.push(rows[0]);
+      await client.query('COMMIT');
+      return inserted;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-    return inserted;
   } catch (err) {
-    console.error('[match] discovered-lender lookup/insert failed, continuing on static table only:', err.message);
-    return [];
+    console.error('[match] program discovery failed, continuing on the verified catalog only:', err.message);
+    return getDiscoveredForApplication(application.id);
   }
 }
 
@@ -158,7 +217,7 @@ async function loadOwnedApplication(applicationId, userId) {
 async function runMatchPipeline(application) {
   const [{ rows: staticLenders }, discoveredLenders, contentQuality] = await Promise.all([
     pool.query('SELECT * FROM lenders'),
-    getDiscoveredLenders(application.state, application.industry),
+    discoverPrograms(application),
     assessAnswerQuality(application),
   ]);
   const { readinessScore, subScores: rawSubScores } = computeReadiness(application, contentQuality);
@@ -416,7 +475,7 @@ router.post('/:applicationId/simulate', async (req, res) => {
 
   const [{ rows: staticLenders }, discoveredLenders] = await Promise.all([
     pool.query('SELECT * FROM lenders'),
-    getCachedDiscoveredLenders(application.state, application.industry),
+    getDiscoveredForApplication(application.id),
   ]);
   const taggedLenders = [
     ...staticLenders.map((l) => ({ ...l, provenance: 'verified' })),

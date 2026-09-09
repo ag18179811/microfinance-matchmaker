@@ -186,6 +186,37 @@ test('skips the network call entirely when no state is provided', async () => {
   assert.deepEqual(result, []);
 });
 
+test('the search prompt carries the full owner profile (city, use of funds, ownership)', async () => {
+  let sentBody = null;
+  global.fetch = async (_url, opts) => {
+    if (!sentBody) {
+      sentBody = JSON.parse(opts.body);
+      return { ok: true, json: async () => searchResponsePayload({ text: 'nothing', urls: [] }) };
+    }
+    return { ok: true, json: async () => extractionResponsePayload([]) };
+  };
+
+  await searchLiveLenders({
+    state: 'OH',
+    industry: 'Food & Beverage',
+    city: 'Cleveland',
+    ownershipDemographics: 'woman-owned, first-generation immigrant',
+    timeInBusinessMonths: 8,
+    annualRevenue: 40000,
+    requestedAmount: 15000,
+    useOfFunds: 'a walk-in cooler and a delivery bike',
+    businessStructure: 'llc',
+    notes: [{ topic: 'location', detail: 'in a designated opportunity zone' }],
+  });
+
+  const userMsg = sentBody.input.find((m) => m.role === 'user').content;
+  assert.match(userMsg, /Cleveland/);
+  assert.match(userMsg, /woman-owned, first-generation immigrant/);
+  assert.match(userMsg, /walk-in cooler/);
+  assert.match(userMsg, /opportunity zone/);
+  assert.match(userMsg, /startup|under a year/i);
+});
+
 test('caps results at 8 entries even if the model returns more', async () => {
   const many = Array.from({ length: 12 }, (_, i) => ({
     name: `Fund ${i}`,
