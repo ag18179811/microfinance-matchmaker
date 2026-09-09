@@ -8,14 +8,14 @@ The product is the **full-stack app** in [`/server`](server/) and [`/client`](cl
 
 ## The app (`/server` + `/client`)
 
-- **`/server`** — Node/Express API on Supabase Postgres. Deterministic, rules-based lender matching and readiness scoring (`services/matching-engine.js`, no LLM), a Groq free-text extraction step (`services/groq-extract.js`) that seeds structured fields from the opening description, an adaptive interview, and a set of AI layers that only ever generate explanatory or narrative text — never eligibility decisions.
+- **`/server`** — Node/Express API on Supabase Postgres. A per-applicant live program search (`services/openai-lender-search.js`) is the only source of programs — there is no preset catalog. Deterministic, rules-based fit and readiness scoring on top (`services/matching-engine.js`, no LLM), a Groq free-text extraction step (`services/groq-extract.js`) that seeds structured fields from the opening description, an adaptive interview, and a set of AI layers that only ever generate explanatory or narrative text — never eligibility decisions.
 - **`/client`** — Vite + React app: a no-account preview, a "describe your business" box, the adaptive chat interview, and a results page with the full application-prep layer.
 
 ### How intake works
 
 1. The user describes their business in one free-text box (`POST /api/interview/start`).
 2. Groq (JSON mode, temperature 0) extracts only what's explicitly or unambiguously stated — business name, industry (matched against a fixed list), city/state, time in business, revenue, requested amount, purpose, and the description's language. Every field is re-validated server-side (industry must match the fixed enum, state is normalized against a real US-states table, dollar/month figures are coerced or dropped) so a bad or missing value always becomes `null` rather than a guess.
-3. The adaptive interview then fills the rest through conversation, asking only what's genuinely useful for *this* business, and the completed profile flows into `POST /api/applications` → `POST /api/match/:id`.
+3. The adaptive interview then fills the rest through conversation, asking only what's genuinely useful for *this* business, and the completed profile flows into `POST /api/applications` → `POST /api/match/:id`, which runs the per-applicant program search and scores what it finds.
 4. If `GROQ_API_KEY` isn't set, extraction returns everything as `null` and the deterministic fallback interview (`services/interview-fallback.js`) walks a fixed question list — the app degrades gracefully rather than fabricating data.
 
 ### Setup
@@ -40,11 +40,7 @@ npm run server:dev           # http://localhost:3001
 npm run client:dev           # http://localhost:5173 (proxies /api to the server)
 ```
 
-The server connects to Supabase Postgres via `DATABASE_URL`. On boot it runs the idempotent migrations in `server/db/migrate.js` and reconciles the verified lender catalog (`server/db/seed-lenders.js`) — it inserts any program not already in the table (matched by name) and leaves existing rows alone, so catalog additions ship on a plain redeploy without a manual reseed. For a brand-new Supabase project, run `server/db/schema.sql` once in the SQL editor first (it creates the `auth.users` trigger, which needs privileges the pooled connection doesn't have). To force a clean reseed (drop + insert):
-
-```bash
-npm run seed
-```
+The server connects to Supabase Postgres via `DATABASE_URL`. On boot it runs the idempotent migrations in `server/db/migrate.js`. There is **no lender seeding** — the app has no preset catalog; every program a business matches with comes from a per-application live web search (`services/openai-lender-search.js`). For a brand-new Supabase project, run `server/db/schema.sql` once in the SQL editor first (it creates the `auth.users` trigger, which needs privileges the pooled connection doesn't have).
 
 ### Test the matching engine and extraction logic
 
@@ -56,7 +52,7 @@ npm test
 
 ### What makes it different
 
-Most tools are a lender lookup — match you, hand off. This one sits with the owner *after* the match and carries their specific, real story through to the person who will actually read it, as a conversation, never a form.
+Most tools are a lookup against a preset list — match you, hand off. This one has no preset list: it searches for programs against each owner's specific situation, then sits with them *after* the match and carries their real story through to the person who will actually read it — as a conversation, never a form.
 
 **Before the match**
 - **Adaptive interview** — a real underwriting-style conversation (two-step reason-then-structure pipeline: `openai-interview-reason.js` does the thinking, with live web search; `groq-interview.js` structures it). A visible progress bar (`services/interview-progress.js`) estimates how far the interview is from matches. Half-finished interviews resume from history.
@@ -64,8 +60,8 @@ Most tools are a lender lookup — match you, hand off. This one sits with the o
 - **Language** — the opening description's language is detected and threaded into every AI prompt (`services/language.js`); a Spanish description yields a Spanish interview, coaching, funding story, and reviewer.
 
 **At the match**
-- **Deterministic engine** — `services/matching-engine.js` (no LLM) scores readiness on five factors and matches against the verified loan catalog + per-application discovered programs. **Grants** are a first-class `funding_type`: never disqualified for an amount outside the award range, scored and prepared for differently.
-- **Per-application program discovery** — `services/openai-lender-search.js` runs a live web search on every match/recompute, built from the owner's *whole* profile: city and county, industry, use of funds, business stage, and — only where the owner qualifies — their stated ownership background. Grants especially are never a shared list; a woman-owned bakery in Cleveland and a man-owned one get different results. Cached per application for a day (by a profile fingerprint) so a slider move or an unchanged re-match doesn't re-bill. Marked `verified: false` in the UI — confirm details on the official site.
+- **No preset catalog — every program is found live per applicant.** `services/openai-lender-search.js` runs a web search on every match/recompute, built from the owner's *whole* profile: city and county, industry, use of funds, business stage, and — only where the owner qualifies — their stated ownership background. A woman-owned bakery in Cleveland and a man-owned one in the same city get different results. Cached per application for a day (by a profile fingerprint) so a slider move or an unchanged re-match doesn't re-bill; a real profile change re-searches. Two-step (grounded search → schema extraction), and any program without a real cited URL is dropped.
+- **Deterministic scoring on top** — once programs are found, `services/matching-engine.js` (no LLM) scores readiness on five factors and scores each program's fit (geography, industry, amount, tenure) with explainable reasons and cautions. **Grants** are a first-class `funding_type`: never disqualified for an amount outside the award range, scored and prepared for differently.
 - **Help mode** — the application is classified (`services/help-mode.js`) as *organizer* / *demystifier* / *rebuilder* / *strategist* from deterministic signals, tuning the tone of every AI surface and a banner on the results page.
 - **"Your next step"** — one synthesized directive from the score, help mode, and tracker (deadline pressure → stale application → practice the top match → finish and submit).
 - **Improvement plan** — `services/improvement-plan.js` returns prioritized levers, each with a *real* projected impact (the scoring engine re-run with that one change applied).
@@ -102,10 +98,10 @@ Every route requires a `Bearer` access token (`middleware/auth.js`) and is scope
 
 ### Notes for production
 
-- The seeded catalog in `server/db/seed-lenders.js` is a small set of **real, individually verified loan programs** (11 at last count) — each checked against the org's own site, with the date noted. Grants are deliberately *not* in it: they're the most case-specific funding type, so they come only from the per-application live search. Expanding the loan catalog should keep the verification discipline, ideally from the [CDFI Fund Awards Database](https://www.cdfifund.gov/awards/state-awards) — never bulk-generate entries from a model's knowledge (that is exactly how an earlier fake dataset happened).
+- **No preset list of programs, anywhere.** Every loan and grant a business sees is found by the per-application live search. The one hand-curated dataset that remains is `services/lender-application-profiles.js` — *not* a catalog to match against, but the verified "how does this program actually take an application" breakdown (Kiva's 15-day private fundraising, an SBA intermediary's training requirement, etc.) that enriches a discovered result when it's one of a handful of well-known programs. Everything else discovered gets a model guess marked `verified: false`.
 - Auth is Google sign-in via Supabase; the datastore is Supabase Postgres. App tables added after launch are created idempotently on boot by `server/db/migrate.js` (with transient-error retries), so a deploy needs no manual SQL-editor step; `server/db/schema.sql` stays the canonical definition for a fresh project.
 - No payments. External calls: Groq (interview structuring, coaching, business case, underwriter, improvement-plan polish, pack), OpenAI (interview web-search reasoning, per-application loan/grant discovery), and Resend (deadline-reminder emails). Everything degrades gracefully when a key is missing.
-- Cost note: the per-application program discovery is a billed OpenAI web-search on every match/recompute (cached a day per profile). It's the deliberate cost of matching grants to each person's specific case rather than showing a shared list. The Results page's other billed calls are gated — the funding-story draft is opt-in, the two narrated plans are cached, and the underwriter sim / pack / what-if sim are user-initiated.
+- Cost note: the per-application program discovery is a billed OpenAI web-search on every match/recompute (cached a day per profile). It's the deliberate cost of matching each person's specific case rather than shipping a shared list. The Results page's other billed calls are gated — the funding-story draft is opt-in, the two narrated plans are cached, and the underwriter sim / pack / what-if sim are user-initiated.
 
 ### Deploying (Render + Vercel)
 
