@@ -55,7 +55,7 @@ export default function FundingPlan({ applicationId }) {
                 <div className="fp-piece-top">
                   <span className="fp-piece-name">{p.name}</span>
                   <span className="fp-piece-amount">
-                    {p.speculative ? `up to ${money(p.amount)}` : money(p.amount)}
+                    {p.speculative ? (p.amount ? `up to ${money(p.amount)}` : 'amount varies') : money(p.amount)}
                     {p.speculative && <span className="fp-if"> if awarded</span>}
                   </span>
                 </div>

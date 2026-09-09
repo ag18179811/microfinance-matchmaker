@@ -68,11 +68,13 @@ export function computeFundingPlan({ application, matches, profileFor, verdicts 
   const stack = [];
   for (const p of ranked) {
     if (p.fundingType !== 'grant' && covered >= need) break;
-    const cap = p.max || (need - covered) || need;
     if (p.fundingType === 'grant') {
-      stack.push({ ...p, amount: Math.min(cap, need), speculative: true });
+      // Only state a grant amount when the program publishes an award
+      // ceiling — otherwise it's "amount varies".
+      stack.push({ ...p, amount: p.max ? Math.min(p.max, need) : null, speculative: true });
       continue;
     }
+    const cap = p.max || (need - covered) || need;
     const amount = Math.max(0, Math.min(cap, need - covered));
     if (amount < (p.min || 0) && p.min > 0) {
       // ask is below this program's floor — still worth listing as a full
