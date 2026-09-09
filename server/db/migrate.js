@@ -89,6 +89,10 @@ const STATEMENTS = [
   `ALTER TABLE tracked_applications ADD COLUMN IF NOT EXISTS last_reminded_at TIMESTAMPTZ`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS revisit_reminded_at TIMESTAMPTZ`,
   `ALTER TABLE match_results ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now()`,
+
+  // Read-only shareable report link (for an advisor / partner / co-signer).
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS share_token TEXT`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_share_token ON applications (share_token) WHERE share_token IS NOT NULL`,
   // Language the interview was conducted in (BCP-47-ish, e.g. 'en', 'es').
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,

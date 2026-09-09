@@ -6,6 +6,7 @@ import PreviewFlow from './pages/PreviewFlow.jsx';
 import DescribeBusiness from './pages/DescribeBusiness.jsx';
 import Chat from './pages/Chat.jsx';
 import Results from './pages/Results.jsx';
+import SharedReport from './pages/SharedReport.jsx';
 import { useAuth } from './hooks/useAuth.js';
 import { authedFetch } from './api.js';
 
@@ -27,6 +28,14 @@ async function submitApplication(fields, conversationId, onProgress) {
 }
 
 export default function App() {
+  // Public shared report — no auth, no app chrome.
+  const sharedMatch = typeof window !== 'undefined' && window.location.pathname.match(/^\/shared\/([a-f0-9]+)\/?$/);
+  if (sharedMatch) return <SharedReport token={sharedMatch[1]} />;
+
+  return <AuthedApp />;
+}
+
+function AuthedApp() {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
   const [stage, setStage] = useState('describe'); // 'describe' | 'chat' | 'results'
   const [initialDescription, setInitialDescription] = useState('');

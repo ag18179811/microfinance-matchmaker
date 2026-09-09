@@ -19,6 +19,7 @@ const { default: trackerRouter } = await import('./routes/tracker.js');
 const { default: documentsRouter } = await import('./routes/documents.js');
 const { default: cronRouter } = await import('./routes/cron.js');
 const { default: meRouter } = await import('./routes/me.js');
+const { default: shareRouter } = await import('./routes/share.js');
 const { default: pool } = await import('./db/connection.js');
 const { requireAuth } = await import('./middleware/auth.js');
 
@@ -62,6 +63,9 @@ app.use('/api/tracker', requireAuth, trackerRouter);
 app.use('/api/documents', requireAuth, documentsRouter);
 app.use('/api/me', requireAuth, meRouter);
 app.use('/api/cron', cronRouter);
+// share.js mixes owner-only routes (requireAuth applied per-route) and one
+// public GET /shared/:token, so it's mounted without a blanket requireAuth.
+app.use('/api', shareRouter);
 
 // Public, token-based reminder opt-out (from an email link).
 app.get('/api/unsubscribe', async (req, res) => {

@@ -95,6 +95,27 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
 
   const [tracked, setTracked] = useState([]);
   const [docsVersion, setDocsVersion] = useState(0);
+  const [shareState, setShareState] = useState('idle'); // idle | working | copied
+
+  async function shareReport() {
+    setShareState('working');
+    try {
+      const res = await authedFetch(`/api/applications/${applicationId}/share`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error();
+      const url = `${window.location.origin}${data.path}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        setShareState('copied');
+        setTimeout(() => setShareState('idle'), 2500);
+      } catch {
+        window.prompt('Copy this link to share your report:', url);
+        setShareState('idle');
+      }
+    } catch {
+      setShareState('idle');
+    }
+  }
   const refreshTracked = useCallback(() => {
     if (!applicationId) return;
     authedFetch(`/api/tracker/${applicationId}`)
@@ -131,12 +152,19 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
           <h1>Your funding readiness</h1>
           <p>Based on what you told us, here's where you stand and who's likely to fund you.</p>
         </div>
-        <button type="button" className="btn btn-secondary btn-sm results-print-btn" onClick={() => window.print()}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M4 6V2h8v4M4 12H2V7h12v5h-2M4 10h8v4H4z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Save as PDF
-        </button>
+        <div className="results-header-actions">
+          {applicationId && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={shareReport} disabled={shareState === 'working'}>
+              {shareState === 'copied' ? '✓ Link copied' : shareState === 'working' ? '…' : 'Share report'}
+            </button>
+          )}
+          <button type="button" className="btn btn-secondary btn-sm results-print-btn" onClick={() => window.print()}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6V2h8v4M4 12H2V7h12v5h-2M4 10h8v4H4z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Save as PDF
+          </button>
+        </div>
       </div>
       <p className="print-only print-tagline">
         Microfinance Matchmaker — funding readiness report. Not a lender; does not guarantee approval. Confirm

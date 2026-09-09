@@ -298,6 +298,10 @@ ALTER TABLE applications ADD COLUMN IF NOT EXISTS help_mode TEXT;
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
 
+-- Read-only shareable report link (for an advisor / partner / co-signer).
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS share_token TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_share_token ON applications (share_token) WHERE share_token IS NOT NULL;
+
 -- lender_id used to be a hard FK into `lenders` only; it now also needs to
 -- point into `discovered_lenders` when lender_source = 'discovered', which
 -- a single FK constraint can't express (see the column comment above). Drop
