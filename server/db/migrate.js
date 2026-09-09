@@ -47,6 +47,9 @@ const STATEMENTS = [
   // use-of-funds, etc.) — cached on the review it's built from.
   `ALTER TABLE underwriter_reviews ADD COLUMN IF NOT EXISTS pack JSONB`,
 
+  // The 12-month cash-flow projection scaffold, edited by the owner.
+  `ALTER TABLE business_cases ADD COLUMN IF NOT EXISTS projection JSONB`,
+
   // Funding type — most programs are loans, but grants (money that isn't
   // repaid) and other non-debt capital are matched and prepared for
   // differently. 'loan' | 'grant' | 'other'.
@@ -92,39 +95,49 @@ const STATEMENTS = [
   `CREATE POLICY "own tracked applications" ON tracked_applications FOR ALL USING (auth.uid() = user_id)`,
 ];
 
+const TRANSIENT = /EPROTO|ECONNRESET|ETIMEDOUT|Connection terminated|socket hang up|SSL alert|read ECONN/i;
+
 export async function runMigrations(pool) {
-  // Warm up the pool first — a brand-new connection to Supabase's pooler
-  // occasionally drops the first TLS handshake, and we'd rather absorb that
-  // here than on the first migration statement.
-  for (let i = 0; i < 4; i++) {
+  // Run every statement on ONE dedicated client rather than borrowing a
+  // fresh pooled connection per query. Supabase's transaction pooler
+  // occasionally drops the first TLS handshake on a brand-new connection;
+  // establishing a single client up front (with retries) and reusing it
+  // avoids re-triggering that on each of ~30 idempotent statements.
+  let client = null;
+  for (let attempt = 1; attempt <= 5 && !client; attempt++) {
     try {
-      await pool.query('SELECT 1');
-      break;
-    } catch {
-      await new Promise((r) => setTimeout(r, 600));
+      const c = await pool.connect();
+      await c.query('SELECT 1');
+      client = c;
+    } catch (err) {
+      if (attempt === 5) {
+        console.error('[db] could not establish a migration connection:', err.message);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 500 * attempt));
     }
   }
 
-  for (const sql of STATEMENTS) {
-    // Every statement is idempotent, so a transient network/SSL blip on the
-    // pooled Supabase connection is worth retrying — otherwise a deploy
-    // boot could silently skip a column.
-    for (let attempt = 1; attempt <= 4; attempt++) {
-      try {
-        await pool.query(sql);
-        break;
-      } catch (err) {
-        const transient = /EPROTO|ECONNRESET|ETIMEDOUT|Connection terminated|socket hang up|SSL alert/i.test(err.message);
-        if (transient && attempt < 4) {
-          await new Promise((r) => setTimeout(r, 400 * attempt));
-          continue;
+  try {
+    for (const sql of STATEMENTS) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await client.query(sql);
+          break;
+        } catch (err) {
+          if (TRANSIENT.test(err.message) && attempt < 3) {
+            await new Promise((r) => setTimeout(r, 400 * attempt));
+            continue;
+          }
+          // A migration failure shouldn't take the whole server down on
+          // boot — log it and let the features that need the table fail
+          // their own requests with a clear error instead.
+          console.error('[db] migration statement failed:', err.message, '\n  ', sql.split('\n')[0]);
+          break;
         }
-        // A migration failure shouldn't take the whole server down on boot —
-        // log it loudly and let the features that need the table fail their
-        // own requests with a clear error instead.
-        console.error('[db] migration statement failed:', err.message, '\n  ', sql.split('\n')[0]);
-        break;
       }
     }
+  } finally {
+    client.release();
   }
 }

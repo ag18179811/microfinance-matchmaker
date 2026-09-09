@@ -7,6 +7,7 @@ import ImprovementPlan from '../components/ImprovementPlan.jsx';
 import AdvisorBridge from '../components/AdvisorBridge.jsx';
 import Tracker from '../components/Tracker.jsx';
 import FundingPlan from '../components/FundingPlan.jsx';
+import CashflowProjection from '../components/CashflowProjection.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { authedFetch } from '../api.js';
 
@@ -234,6 +235,8 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       {applicationId && <Tracker applicationId={applicationId} tracked={tracked} onChange={refreshTracked} />}
 
       {applicationId && <BusinessCase applicationId={applicationId} onProfileSynced={onResultsUpdate} />}
+
+      {applicationId && <CashflowProjection applicationId={applicationId} />}
 
       {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} />}
 

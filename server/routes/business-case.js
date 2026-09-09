@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/connection.js';
 import { draftBusinessCase, reviseBusinessCase, emptyCase, extractProfileFromNarrative } from '../services/business-case.js';
+import { seedProjection, recalcProjection } from '../services/cashflow-projection.js';
 
 const router = Router();
 
@@ -196,6 +197,44 @@ router.post('/:applicationId/sync-check', async (req, res) => {
     }
   }
   res.json({ changes });
+});
+
+// GET /:applicationId/projection — the saved 12-month cash-flow scaffold,
+// or a fresh seed from the application's numbers if none saved yet.
+router.get('/:applicationId/projection', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const row = await loadCase(application.id);
+  if (row?.projection?.months?.length) return res.json(row.projection);
+  res.json(seedProjection(application));
+});
+
+// PUT /:applicationId/projection — save the owner's edited grid. Derived
+// columns are recomputed server-side so they can't drift.
+router.put('/:applicationId/projection', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const startingCash = Math.round(Number(req.body?.startingCash) || 0);
+  const months = recalcProjection(startingCash, req.body?.months);
+  if (months.length === 0) return res.status(400).json({ error: 'months is required' });
+
+  const projection = {
+    startingCash,
+    estimatedLoanPayment: Math.round(Number(req.body?.estimatedLoanPayment) || 0),
+    months,
+    edited: true,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await pool.query(
+    `INSERT INTO business_cases (application_id, user_id, projection)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (application_id) DO UPDATE SET projection = EXCLUDED.projection, updated_at = now()`,
+    [application.id, req.userId, JSON.stringify(projection)]
+  );
+  res.json(projection);
 });
 
 export default router;

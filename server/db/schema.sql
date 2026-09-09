@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS business_cases (
   assumptions JSONB NOT NULL DEFAULT '[]'::jsonb,  -- [{ id, text, resolved }]
   meta JSONB NOT NULL DEFAULT '{}'::jsonb,
   history JSONB NOT NULL DEFAULT '[]'::jsonb,       -- [{ at, summary }]
+  projection JSONB,                                 -- 12-month cash-flow scaffold, owner-edited
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
