@@ -4,13 +4,12 @@
 // per-user opt-out. A no-op end to end when no email provider is
 // configured (services/email.js reports skipped).
 
-import pool from '../db/connection.js';
 import { sendEmail, wrapHtml, appUrl, emailConfigured } from './email.js';
 import { randomUUID } from 'node:crypto';
 
 const DECIDED = ['approved', 'declined', 'funded'];
 
-async function ensureUnsubToken(userId) {
+async function ensureUnsubToken(pool, userId) {
   const { rows } = await pool.query('SELECT unsubscribe_token FROM profiles WHERE id = $1', [userId]);
   if (rows[0]?.unsubscribe_token) return rows[0].unsubscribe_token;
   const token = randomUUID().replace(/-/g, '');
@@ -46,6 +45,7 @@ export function reminderForTracked(t, now = new Date()) {
 
 // Returns { candidates: [{ userId, email, items: [...] }], sent, skipped, errors }.
 export async function runReminders({ dryRun = false } = {}) {
+  const { default: pool } = await import('../db/connection.js');
   const now = new Date();
   const byUser = new Map();
   const add = (userId, email, item) => {
@@ -111,7 +111,7 @@ export async function runReminders({ dryRun = false } = {}) {
   if (dryRun) return result;
 
   for (const { userId, email, items } of byUser.values()) {
-    const token = await ensureUnsubToken(userId);
+    const token = await ensureUnsubToken(pool, userId);
     const unsubUrl = appUrl(`/api/unsubscribe?token=${token}`);
     const list = items.map((i) => `<li style="margin-bottom:10px">${i.text}</li>`).join('');
     const html = wrapHtml(

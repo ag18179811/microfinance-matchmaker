@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { daysBetween, reminderForTracked } from './reminders.js';
 
-const NOW = new Date('2026-06-15T12:00:00Z');
+const NOW = new Date('2026-06-15T00:00:00Z');
 const daysAgo = (n) => new Date(NOW.getTime() - n * 86400000).toISOString();
 const daysAhead = (n) => new Date(NOW.getTime() + n * 86400000).toISOString().slice(0, 10);
 
