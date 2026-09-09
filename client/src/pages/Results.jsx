@@ -85,8 +85,18 @@ const HELP_MODE_ICON = {
   strategist: '🔄',
 };
 
+// Stable per-program key for tracking. Name-derived (not a row id) so a
+// tracked program stays tracked across a re-search. Kept identical to the
+// server copy `programKey` in server/routes/match.js.
 function lenderKeyOf(m) {
-  return `${m.provenance || 'discovered'}:${m.id}`;
+  return (
+    String(m.name || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-+|-+$)/g, '')
+      .slice(0, 80) || 'program'
+  );
 }
 
 export default function Results({ results, conversationId, onResultsUpdate }) {

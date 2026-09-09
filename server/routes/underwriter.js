@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/connection.js';
 import { loadResults, loadSubScores } from './match.js';
+import { programKey } from '../services/program-key.js';
 import { deriveProfile, modelInfo } from '../services/lender-application-profiles.js';
 import { startReview, continueReview } from '../services/underwriter-sim.js';
 import { buildPack } from '../services/application-pack.js';
@@ -24,9 +25,7 @@ function parseNotes(application) {
   }
 }
 
-function lenderKeyFor(m) {
-  return `${m.provenance || 'discovered'}:${m.id}`;
-}
+const lenderKeyFor = (m) => programKey(m.name);
 
 async function findMatchedLender(applicationId, lenderKey) {
   const matches = await loadResults(applicationId);

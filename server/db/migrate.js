@@ -115,6 +115,12 @@ const STATEMENTS = [
   // per-application rows — drop the un-attached ones once.
   `DELETE FROM discovered_lenders WHERE application_id IS NULL`,
 
+  // Tracker / underwriter-review keys moved from "<provenance>:<row id>" to
+  // a name-derived slug (survives a re-search). Old-format rows point at
+  // ids that no longer exist and can't be remapped — drop them.
+  `DELETE FROM tracked_applications WHERE lender_key ~ '^(discovered|verified|static):[0-9]+$'`,
+  `DELETE FROM underwriter_reviews WHERE lender_key ~ '^(discovered|verified|static):[0-9]+$'`,
+
   // There is no preset list of loans or grants. The `lenders` table (a
   // hand-kept catalog every applicant matched against) is retired — every
   // program now comes from the per-application live search. match_results
