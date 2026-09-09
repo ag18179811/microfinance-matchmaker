@@ -143,7 +143,7 @@ test('when the search finds nothing citable, extraction is skipped and a broaden
   assert.equal(getCallCount(), 2, 'two search calls (targeted + broadened), no extraction calls');
 });
 
-test('a broadened fallback pass runs only when the first pass succeeded but was empty', async () => {
+test('the broadened pass recovers when the targeted pass runs but finds nothing', async () => {
   // targeted pass: search ok, no citations -> empty. broadened pass: finds one.
   let call = 0;
   global.fetch = async () => {
@@ -163,7 +163,7 @@ test('a broadened fallback pass runs only when the first pass succeeded but was 
   assert.equal(result[0].name, 'Statewide CDFI');
 });
 
-test('a hard search-API failure is not followed by a broadened pass', async () => {
+test('a hard search-API failure triggers exactly one broadened retry, then gives up', async () => {
   let calls = 0;
   global.fetch = async () => {
     calls += 1;
@@ -171,7 +171,26 @@ test('a hard search-API failure is not followed by a broadened pass', async () =
   };
   const result = await searchLiveLenders({ state: 'OH', industry: 'Retail' });
   assert.deepEqual(result, []);
-  assert.equal(calls, 1, 'one search call, no broadened retry after a hard failure');
+  assert.equal(calls, 2, 'targeted pass + one broadened pass, both failed');
+});
+
+test('the broadened retry can recover after the targeted pass hard-fails', async () => {
+  let call = 0;
+  global.fetch = async () => {
+    call += 1;
+    if (call === 1) return { ok: false, status: 500, text: async () => 'stalled' };
+    if (call === 2) return { ok: true, json: async () => searchResponsePayload({ text: 'found one', urls: [CITED_URL] }) };
+    return {
+      ok: true,
+      json: async () =>
+        extractionResponsePayload([
+          { name: 'State Loan Fund', type: 'state_program', geography: 'OH', min_loan: 10000, max_loan: 100000, industries: '', eligibility_notes: '', source_url: CITED_URL, min_months_in_business: null, min_months_in_business_type: null },
+        ]),
+    };
+  };
+  const result = await searchLiveLenders({ state: 'OH', industry: 'Retail', city: 'Somewhere' });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].name, 'State Loan Fund');
 });
 
 test('a program whose geography is a different state is dropped', async () => {

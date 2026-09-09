@@ -4,10 +4,11 @@
 
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 
-// web_search calls are legitimately slow, but they must not hang a user's
-// match request forever — the OpenAI endpoint occasionally stalls. This is
-// the hard ceiling; on timeout the caller degrades gracefully.
-const REQUEST_TIMEOUT_MS = 90_000;
+// web_search calls are legitimately slow (60–120s is normal for a
+// multi-part research query), but they must not hang a user's match
+// request forever — the OpenAI endpoint occasionally stalls outright. This
+// is the hard ceiling; on timeout the caller degrades gracefully.
+const REQUEST_TIMEOUT_MS = 120_000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

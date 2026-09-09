@@ -239,11 +239,12 @@ async function oneSearchPass(apiKey, userContent, state) {
 // field; everything else sharpens the search, especially for grants.
 //
 // The first pass is tightly targeted to this owner's full situation
-// (hyper-local, use-of-funds, ownership). If it runs but surfaces nothing —
-// a real business in a thin area or an unusual niche — a second, broadened
-// pass drops the narrow filters and asks for the state and national
-// programs the business qualifies for, so the owner is never left with
-// nothing when something real exists. A hard API failure is not retried.
+// (hyper-local, use-of-funds, ownership). If it surfaces nothing, or the
+// call itself fails/times out (the complex query occasionally stalls), a
+// second, simpler broadened pass runs — it drops the narrow filters and
+// asks for the state and national programs the business qualifies for, so
+// the owner is never left with nothing when something real exists. At most
+// one retry.
 export async function searchLiveLenders(context) {
   const { state, industry } = context;
   const apiKey = process.env.OPENAI_API_KEY;
@@ -261,10 +262,11 @@ export async function searchLiveLenders(context) {
       `national programs this business clearly qualifies for.\n\n${ownerBrief(context)}`,
     state
   );
-  if (!targeted.ok) return [];
-  if (targeted.entries.length > 0) return targeted.entries;
+  if (targeted.ok && targeted.entries.length > 0) return targeted.entries;
 
-  console.log('[openai-lender-search] targeted pass empty — running a broadened fallback pass');
+  console.log(
+    `[openai-lender-search] targeted pass ${targeted.ok ? 'empty' : 'failed'} — running a broadened fallback pass`
+  );
   const broad = await oneSearchPass(
     apiKey,
     'The narrow search found nothing. Cast wider: find the CDFIs, SBA microloan intermediaries, ' +
