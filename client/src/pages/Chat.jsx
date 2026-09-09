@@ -373,7 +373,7 @@ export default function Chat({ initialDescription, resumeConversationId, onCompl
 
   return (
     <div className="chat-page">
-      <div className="chat-messages">
+      <div className="chat-messages" role="log" aria-live="polite" aria-label="Conversation">
         {messages.map((m) => {
           if (m.role === 'system') {
             return (

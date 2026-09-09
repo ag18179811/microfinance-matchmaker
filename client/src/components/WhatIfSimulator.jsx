@@ -143,6 +143,7 @@ export default function WhatIfSimulator({ applicationId }) {
         className="whatif-toggle"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-controls="whatif-panel"
       >
         <span className="whatif-toggle-text">
           <span className="whatif-toggle-title">What if you adjusted your plan?</span>
@@ -158,7 +159,7 @@ export default function WhatIfSimulator({ applicationId }) {
       </button>
 
       {open && (
-        <div className="whatif-body">
+        <div className="whatif-body" id="whatif-panel" role="region" aria-label="What-if simulator">
           <div className="whatif-levers">
             {LEVERS.map(({ key, label, kind }) => {
               const rng = rangeFor(kind, snapshot[key]);
@@ -191,7 +192,7 @@ export default function WhatIfSimulator({ applicationId }) {
             })}
           </div>
 
-          <div className={`whatif-result ${pending ? 'is-pending' : ''}`}>
+          <div className={`whatif-result ${pending ? 'is-pending' : ''}`} aria-live="polite" aria-busy={pending}>
             <div className="whatif-result-score">
               <ScoreGauge value={sim.readinessScore} size={78} />
               <div>

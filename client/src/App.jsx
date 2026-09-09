@@ -99,8 +99,9 @@ export default function App() {
   if (!user) {
     return (
       <>
+        <a href="#main" className="skip-link">Skip to main content</a>
         <Header stage="describe" />
-        <main className="main">
+        <main className="main" id="main">
           <PreviewFlow onSignIn={signInWithGoogle} />
         </main>
         <Footer />
@@ -110,6 +111,7 @@ export default function App() {
 
   return (
     <>
+      <a href="#main" className="skip-link">Skip to main content</a>
       <Header
         stage={stage}
         onLogoClick={stage !== 'describe' ? startOver : undefined}
@@ -128,7 +130,7 @@ export default function App() {
           <div className="alert alert-danger">{historyError}</div>
         </div>
       )}
-      <main className="main">
+      <main className="main" id="main">
         <div className="stage-transition" key={stage}>
           {stage === 'describe' && <DescribeBusiness onStart={handleStart} />}
           {stage === 'chat' && (

@@ -96,7 +96,7 @@ export default function DocumentVault({ applicationId, onChange }) {
 
   return (
     <div className="dv-card">
-      <button type="button" className="cf-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+      <button type="button" className="cf-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="dv-panel">
         <span>
           <span className="cf-toggle-title">Document vault{docs.length > 0 ? ` (${docs.length})` : ''}</span>
           <span className="cf-toggle-sub">
@@ -111,7 +111,7 @@ export default function DocumentVault({ applicationId, onChange }) {
       </button>
 
       {open && (
-        <div className="cf-body">
+        <div className="cf-body" id="dv-panel" role="region" aria-label="Document vault">
           <div className="dv-upload">
             <select value={kind} onChange={(e) => setKind(e.target.value)}>
               {sortedKinds.map((k) => (

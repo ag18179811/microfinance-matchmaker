@@ -103,7 +103,13 @@ export default function CashflowProjection({ applicationId }) {
 
   return (
     <div className="cf-card">
-      <button type="button" className="cf-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+      <button
+        type="button"
+        className="cf-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="cf-panel"
+      >
         <span>
           <span className="cf-toggle-title">12-month cash-flow projection</span>
           <span className="cf-toggle-sub">
@@ -118,19 +124,19 @@ export default function CashflowProjection({ applicationId }) {
       </button>
 
       {open && state === 'loading' && (
-        <div className="cf-body">
-          <div className="lp-loading"><span className="status-spinner" /> <span>Building your starting projection…</span></div>
+        <div className="cf-body" id="cf-panel" role="region" aria-label="12-month cash-flow projection">
+          <div className="lp-loading" aria-live="polite"><span className="status-spinner" /> <span>Building your starting projection…</span></div>
         </div>
       )}
 
       {open && state === 'error' && (
-        <div className="cf-body">
+        <div className="cf-body" id="cf-panel" role="region" aria-label="12-month cash-flow projection">
           <p className="bc-error">Couldn't load the projection. <button type="button" className="btn btn-secondary btn-sm" onClick={load}>Try again</button></p>
         </div>
       )}
 
       {open && state === 'ready' && data && (
-        <div className="cf-body">
+        <div className="cf-body" id="cf-panel" role="region" aria-label="12-month cash-flow projection">
           <p className="cf-disclaimer">
             Every number here is an estimate built from your revenue, revenue pattern, and requested amount.
             Replace each with your real figures before you submit — this is a scaffold, not a forecast.
@@ -139,25 +145,26 @@ export default function CashflowProjection({ applicationId }) {
           <div className="cf-starting">
             <label>
               Cash on hand today
-              <input inputMode="numeric" value={data.startingCash} onChange={(e) => editStart(e.target.value)} />
+              <input inputMode="numeric" value={data.startingCash} onChange={(e) => editStart(e.target.value)} aria-label="Cash on hand today" />
             </label>
-            <span className="cf-save">{saved ? 'Saved' : 'Saving…'}</span>
+            <span className="cf-save" aria-live="polite">{saved ? 'Saved' : 'Saving…'}</span>
           </div>
 
           <div className="cf-scroll">
             <table className="cf-table">
+              <caption className="sr-only">Monthly revenue, expenses, loan payment, net, and ending cash for 12 months</caption>
               <thead>
                 <tr>
-                  <th className="cf-rowhead" />
+                  <th className="cf-rowhead" scope="col"><span className="sr-only">Line item</span></th>
                   {data.months.map((m) => (
-                    <th key={m.label}>{m.label}</th>
+                    <th key={m.label} scope="col">{m.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {ROWS.map((row) => (
                   <tr key={row.key} className={row.editable ? '' : 'cf-derived'}>
-                    <th className="cf-rowhead">{row.label}</th>
+                    <th className="cf-rowhead" scope="row">{row.label}</th>
                     {data.months.map((m, i) => (
                       <td key={i} className={row.key === 'endingCash' && m.endingCash < 0 ? 'cf-neg' : ''}>
                         {row.editable ? (
@@ -165,6 +172,7 @@ export default function CashflowProjection({ applicationId }) {
                             inputMode="numeric"
                             value={m[row.key]}
                             onChange={(e) => edit(i, row.key, e.target.value)}
+                            aria-label={`${row.label}, ${m.label}`}
                           />
                         ) : (
                           fmt(m[row.key])
@@ -178,7 +186,7 @@ export default function CashflowProjection({ applicationId }) {
           </div>
 
           {lowMonth && (
-            <p className="cf-warn">
+            <p className="cf-warn" role="alert">
               As it stands, cash goes negative in {lowMonth.label}. Lenders look hard at this — adjust the
               numbers to reality, and if it's still tight, that's a sign to ask for less or a longer term.
             </p>

@@ -182,6 +182,51 @@ button {
   font-family: inherit;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  transform: translateY(-120%);
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 0 0 var(--radius-sm) 0;
+  transition: transform 0.15s;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid #fff;
+  outline-offset: -4px;
+}
+
+/* Visible keyboard focus everywhere (many resets kill the default). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 a {
   color: var(--color-primary);
 }

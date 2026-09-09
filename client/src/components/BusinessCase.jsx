@@ -265,7 +265,7 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
         </div>
       )}
 
-      {note && <div className="bc-note">{note}</div>}
+      {note && <div className="bc-note" role="status">{note}</div>}
       {errorMsg && state === 'ready' && <div className="bc-error">{errorMsg}</div>}
 
       <form

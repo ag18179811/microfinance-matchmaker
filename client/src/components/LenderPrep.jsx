@@ -358,7 +358,7 @@ function Review({ applicationId, lender }) {
         </div>
       )}
 
-      <div className="lp-thread">
+      <div className="lp-thread" role="log" aria-live="polite" aria-label={`Practice review with ${lender.name}`}>
         {messages.map((m, i) => (
           <div className={`lp-msg lp-msg-${m.role}`} key={i}>
             {m.role === 'underwriter' && <span className="lp-msg-who">{lender.name} reviewer</span>}

@@ -89,7 +89,7 @@ export default function BusinessPlan({ applicationId, hint }) {
 
   return (
     <div className="cf-card">
-      <button type="button" className="cf-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+      <button type="button" className="cf-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="bp-panel">
         <span>
           <span className="cf-toggle-title">Business plan</span>
           <span className="cf-toggle-sub">
@@ -104,7 +104,7 @@ export default function BusinessPlan({ applicationId, hint }) {
       </button>
 
       {open && (
-        <div className="cf-body">
+        <div className="cf-body" id="bp-panel" role="region" aria-label="Business plan">
           {state === 'loading' && (
             <div className="lp-loading"><span className="status-spinner" /> <span>Drafting your plan from your funding story and numbers…</span></div>
           )}
