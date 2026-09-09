@@ -6,6 +6,8 @@ import { assessAnswerQuality } from '../services/groq-quality-check.js';
 import { searchLiveLenders } from '../services/openai-lender-search.js';
 import { computeImprovementPlan, personalizeImprovementPlan } from '../services/improvement-plan.js';
 import { classifyHelpMode, helpModeInfo } from '../services/help-mode.js';
+import { computeFundingPlan, narrateFundingPlan } from '../services/funding-plan.js';
+import { deriveProfile } from '../services/lender-application-profiles.js';
 
 const router = Router();
 
@@ -287,6 +289,35 @@ function parseNotes(application) {
     return [];
   }
 }
+
+// GET /:applicationId/funding-plan — the capital stack + application order
+// to actually raise the amount needed when no single program covers it.
+router.get('/:applicationId/funding-plan', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const matches = await loadResults(application.id);
+  if (matches.length === 0) return res.status(409).json({ error: 'Run matching first.' });
+
+  const { rows: reviewRows } = await pool.query(
+    'SELECT lender_key, verdict FROM underwriter_reviews WHERE application_id = $1 AND verdict IS NOT NULL',
+    [application.id]
+  );
+  const verdicts = Object.fromEntries(reviewRows.map((r) => [r.lender_key, r.verdict]));
+
+  const plan = computeFundingPlan({
+    application,
+    matches,
+    profileFor: (m) => deriveProfile(m),
+    verdicts,
+  });
+  const narrated = await narrateFundingPlan(plan, {
+    application,
+    additionalNotes: parseNotes(application),
+    language: application.language || 'en',
+  });
+  res.json(narrated);
+});
 
 // GET /:applicationId/improvement-plan — prioritized, concrete steps to
 // raise the readiness score, each with a real projected impact computed by

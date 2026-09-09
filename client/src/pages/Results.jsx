@@ -6,6 +6,7 @@ import LenderPrep from '../components/LenderPrep.jsx';
 import ImprovementPlan from '../components/ImprovementPlan.jsx';
 import AdvisorBridge from '../components/AdvisorBridge.jsx';
 import Tracker from '../components/Tracker.jsx';
+import FundingPlan from '../components/FundingPlan.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { authedFetch } from '../api.js';
 
@@ -227,6 +228,8 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
         <span className="results-phase-label">Now prepare to apply</span>
         <span className="results-phase-line" />
       </div>
+
+      {applicationId && matches.length > 1 && <FundingPlan applicationId={applicationId} />}
 
       {applicationId && <Tracker applicationId={applicationId} tracked={tracked} onChange={refreshTracked} />}
 
