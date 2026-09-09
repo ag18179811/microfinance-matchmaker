@@ -4,6 +4,11 @@
 
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 
+// web_search calls are legitimately slow, but they must not hang a user's
+// match request forever — the OpenAI endpoint occasionally stalls. This is
+// the hard ceiling; on timeout the caller degrades gracefully.
+const REQUEST_TIMEOUT_MS = 90_000;
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -24,6 +29,7 @@ export async function callOpenAIResponses({ apiKey, body, maxRetries = 2 }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
 
       if (response.ok) {
@@ -37,7 +43,9 @@ export async function callOpenAIResponses({ apiKey, body, maxRetries = 2 }) {
       }
       return { ok: false, status: response.status, error: errorText };
     } catch (err) {
-      return { ok: false, status: null, error: err.message };
+      // AbortSignal.timeout fires a TimeoutError; treat it like any other
+      // transient failure — the caller falls back.
+      return { ok: false, status: null, error: err.name === 'TimeoutError' ? `request timed out after ${REQUEST_TIMEOUT_MS}ms` : err.message };
     }
   }
 }

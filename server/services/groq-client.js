@@ -9,6 +9,10 @@
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
+// Groq is fast; a request that runs longer than this has stalled and must
+// not hang the caller. On timeout the caller falls back to its static text.
+const REQUEST_TIMEOUT_MS = 45_000;
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -28,6 +32,7 @@ export async function callGroqChat({ apiKey, model, messages, temperature, respo
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model, messages, temperature, response_format }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
 
       if (response.ok) {
@@ -41,7 +46,7 @@ export async function callGroqChat({ apiKey, model, messages, temperature, respo
       }
       return { ok: false, status: response.status, error: errorText };
     } catch (err) {
-      return { ok: false, status: null, error: err.message };
+      return { ok: false, status: null, error: err.name === 'TimeoutError' ? `request timed out after ${REQUEST_TIMEOUT_MS}ms` : err.message };
     }
   }
 }
