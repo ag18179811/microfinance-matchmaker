@@ -17,6 +17,9 @@ const { default: underwriterRouter } = await import('./routes/underwriter.js');
 const { default: previewRouter } = await import('./routes/preview.js');
 const { default: trackerRouter } = await import('./routes/tracker.js');
 const { default: documentsRouter } = await import('./routes/documents.js');
+const { default: cronRouter } = await import('./routes/cron.js');
+const { default: meRouter } = await import('./routes/me.js');
+const { default: pool } = await import('./db/connection.js');
 const { requireAuth } = await import('./middleware/auth.js');
 
 const app = express();
@@ -57,6 +60,25 @@ app.use('/api/business-case', requireAuth, aiWorkLimiter, businessCaseRouter);
 app.use('/api/underwriter', requireAuth, aiWorkLimiter, underwriterRouter);
 app.use('/api/tracker', requireAuth, trackerRouter);
 app.use('/api/documents', requireAuth, documentsRouter);
+app.use('/api/me', requireAuth, meRouter);
+app.use('/api/cron', cronRouter);
+
+// Public, token-based reminder opt-out (from an email link).
+app.get('/api/unsubscribe', async (req, res) => {
+  const token = String(req.query.token || '');
+  if (!/^[a-f0-9]{16,64}$/.test(token)) return res.status(400).type('text/plain').send('Invalid link.');
+  const { rowCount } = await pool.query(
+    'UPDATE profiles SET email_reminders_enabled = false WHERE unsubscribe_token = $1',
+    [token]
+  );
+  res
+    .type('text/html')
+    .send(
+      rowCount
+        ? '<p style="font-family:sans-serif;max-width:420px;margin:60px auto">You won’t get application reminder emails anymore. You can turn them back on in your tracker settings anytime.</p>'
+        : '<p style="font-family:sans-serif;max-width:420px;margin:60px auto">That link didn’t match anything — you may already be unsubscribed.</p>'
+    );
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

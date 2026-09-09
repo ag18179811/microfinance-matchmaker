@@ -10,6 +10,8 @@ services:
     envVars:
       - key: GROQ_API_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: VITE_SUPABASE_URL
@@ -18,3 +20,33 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
+      # Optional — email reminders. Without RESEND_API_KEY + FROM_EMAIL the
+      # reminder job runs but sends nothing.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+
+  # Daily reminder sweep — deadline nudges, stale applications, "revisit
+  # your score". No-op if email isn't configured.
+  - type: cron
+    name: microfinance-matchmaker-reminders
+    runtime: node
+    plan: free
+    rootDir: server
+    schedule: "0 15 * * *"
+    buildCommand: npm install
+    startCommand: >-
+      node -e "fetch(process.env.INTERNAL_API_URL + '/api/cron/reminders', { method:'POST', headers:{ 'x-cron-secret': process.env.CRON_SECRET } }).then(r=>r.text()).then(t=>{console.log(t);process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})"
+    envVars:
+      - key: INTERNAL_API_URL
+        sync: false
+      - key: CRON_SECRET
+        fromService:
+          name: microfinance-matchmaker-api
+          type: web
+          envVarKey: CRON_SECRET

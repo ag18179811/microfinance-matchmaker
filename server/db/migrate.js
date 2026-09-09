@@ -81,6 +81,14 @@ const STATEMENTS = [
   // from the interview — shapes the tone of the post-match features.
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS help_mode TEXT`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS help_mode TEXT`,
+
+  // Email reminders: per-user opt-out + an unguessable unsubscribe token,
+  // and a per-tracked-row "last reminded" stamp to avoid re-sending.
+  `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email_reminders_enabled BOOLEAN NOT NULL DEFAULT true`,
+  `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT`,
+  `ALTER TABLE tracked_applications ADD COLUMN IF NOT EXISTS last_reminded_at TIMESTAMPTZ`,
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS revisit_reminded_at TIMESTAMPTZ`,
+  `ALTER TABLE match_results ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now()`,
   // Language the interview was conducted in (BCP-47-ish, e.g. 'en', 'es').
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { authedFetch } from '../api.js';
 
 const STATUS_OPTIONS = [
@@ -26,6 +27,38 @@ function relativeTime(iso) {
   if (d === 1) return 'yesterday';
   if (d < 30) return `${d} days ago`;
   return `${Math.floor(d / 30)} mo ago`;
+}
+
+function ReminderToggle() {
+  const [prefs, setPrefs] = useState(null);
+  useEffect(() => {
+    authedFetch('/api/me/prefs')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setPrefs)
+      .catch(() => {});
+  }, []);
+  if (!prefs) return null;
+
+  async function toggle() {
+    const next = !prefs.emailRemindersEnabled;
+    setPrefs((p) => ({ ...p, emailRemindersEnabled: next }));
+    try {
+      await authedFetch('/api/me/prefs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailRemindersEnabled: next }),
+      });
+    } catch {
+      setPrefs((p) => ({ ...p, emailRemindersEnabled: !next }));
+    }
+  }
+
+  return (
+    <label className="tracker-reminders">
+      <input type="checkbox" checked={prefs.emailRemindersEnabled} onChange={toggle} />
+      Email me about deadlines and check-ins{prefs.email ? ` (${prefs.email})` : ''}
+    </label>
+  );
 }
 
 export default function Tracker({ applicationId, tracked, onChange }) {
@@ -95,6 +128,8 @@ export default function Tracker({ applicationId, tracked, onChange }) {
           );
         })}
       </div>
+
+      <ReminderToggle />
     </div>
   );
 }
