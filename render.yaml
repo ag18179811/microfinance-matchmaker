@@ -32,7 +32,8 @@ services:
         generateValue: true
 
   # Daily reminder sweep — deadline nudges, stale applications, "revisit
-  # your score". No-op if email isn't configured.
+  # your score". No-op if email isn't configured. The API host and the
+  # shared cron secret are wired from the web service automatically.
   - type: cron
     name: microfinance-matchmaker-reminders
     runtime: node
@@ -41,10 +42,13 @@ services:
     schedule: "0 15 * * *"
     buildCommand: npm install
     startCommand: >-
-      node -e "fetch(process.env.INTERNAL_API_URL + '/api/cron/reminders', { method:'POST', headers:{ 'x-cron-secret': process.env.CRON_SECRET } }).then(r=>r.text()).then(t=>{console.log(t);process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})"
+      node -e "fetch('https://' + process.env.API_HOST + '/api/cron/reminders', { method:'POST', headers:{ 'x-cron-secret': process.env.CRON_SECRET } }).then(r=>r.text()).then(t=>{console.log(t);process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})"
     envVars:
-      - key: INTERNAL_API_URL
-        sync: false
+      - key: API_HOST
+        fromService:
+          name: microfinance-matchmaker-api
+          type: web
+          property: host
       - key: CRON_SECRET
         fromService:
           name: microfinance-matchmaker-api

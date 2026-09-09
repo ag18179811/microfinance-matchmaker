@@ -4,7 +4,7 @@
 // per-user opt-out. A no-op end to end when no email provider is
 // configured (services/email.js reports skipped).
 
-import { sendEmail, wrapHtml, appUrl, emailConfigured } from './email.js';
+import { sendEmail, wrapHtml, appUrl, apiUrl, emailConfigured } from './email.js';
 import { randomUUID } from 'node:crypto';
 
 const DECIDED = ['approved', 'declined', 'funded'];
@@ -112,7 +112,7 @@ export async function runReminders({ dryRun = false } = {}) {
 
   for (const { userId, email, items } of byUser.values()) {
     const token = await ensureUnsubToken(pool, userId);
-    const unsubUrl = appUrl(`/api/unsubscribe?token=${token}`);
+    const unsubUrl = apiUrl(`/api/unsubscribe?token=${token}`);
     const list = items.map((i) => `<li style="margin-bottom:10px">${i.text}</li>`).join('');
     const html = wrapHtml(
       `<h2 style="font-size:18px">Your funding applications</h2><ul style="padding-left:18px">${list}</ul>` +

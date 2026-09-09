@@ -4,7 +4,9 @@
 // without an email provider configured.
 //
 // FROM_EMAIL must be a verified sender/domain in Resend. APP_URL is the
-// public frontend URL, used to build links back into the app.
+// public frontend URL (Vercel), used for "open the app" links. Links that
+// hit the API itself (the unsubscribe endpoint) use apiUrl() instead —
+// Render injects RENDER_EXTERNAL_URL automatically, so that needs no config.
 
 const RESEND_URL = 'https://api.resend.com/emails';
 
@@ -12,8 +14,15 @@ export function emailConfigured() {
   return Boolean(process.env.RESEND_API_KEY && process.env.FROM_EMAIL);
 }
 
+// Frontend links (Vercel).
 export function appUrl(path = '') {
   const base = (process.env.APP_URL || '').replace(/\/$/, '');
+  return base ? `${base}${path}` : path;
+}
+
+// Links served by this API process (e.g. /api/unsubscribe).
+export function apiUrl(path = '') {
+  const base = (process.env.API_URL || process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || '').replace(/\/$/, '');
   return base ? `${base}${path}` : path;
 }
 
