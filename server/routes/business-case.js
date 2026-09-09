@@ -38,14 +38,27 @@ function shapeCase(row) {
   };
 }
 
-// GET — return the case, drafting it lazily on first request. The draft is a
-// single billed Groq call, so it only happens once and is then persisted.
+// GET — return the case if one has been drafted. The draft is a billed Groq
+// call, so it's opt-in: until the owner asks for it (POST /draft), this
+// returns { exists: false } and the UI shows a one-line explainer + button.
 router.get('/:applicationId', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
   if (!application) return res.status(404).json({ error: 'Application not found' });
 
   const existing = await loadCase(application.id);
-  if (existing) return res.json(shapeCase(existing));
+  if (existing) return res.json({ exists: true, ...shapeCase(existing) });
+  res.json({ exists: false });
+});
+
+// POST /draft — the owner explicitly asks for the first draft. Idempotent:
+// if a case already exists, return it untouched rather than spending another
+// Groq call.
+router.post('/:applicationId/draft', async (req, res) => {
+  const application = await loadOwnedApplication(req.params.applicationId, req.userId);
+  if (!application) return res.status(404).json({ error: 'Application not found' });
+
+  const existing = await loadCase(application.id);
+  if (existing) return res.json({ exists: true, ...shapeCase(existing) });
 
   const additionalNotes = parseNotes(application);
   const draft = await draftBusinessCase({ application, additionalNotes, language: application.language || 'en', helpMode: application.help_mode });
@@ -65,7 +78,7 @@ router.get('/:applicationId', async (req, res) => {
     [application.id, req.userId, JSON.stringify(base.sections), JSON.stringify(base.assumptions), JSON.stringify(meta)]
   );
 
-  res.json({ ...shapeCase(rows[0]), draftFailed: !draft.ok, draftError: draft.ok ? undefined : draft.reason });
+  res.json({ exists: true, ...shapeCase(rows[0]), draftFailed: !draft.ok, draftError: draft.ok ? undefined : draft.reason });
 });
 
 // POST /message — the owner says something in plain language; revise the

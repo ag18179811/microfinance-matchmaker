@@ -38,7 +38,7 @@ function money(field, n) {
 }
 
 export default function BusinessCase({ applicationId, onProfileSynced }) {
-  const [state, setState] = useState('loading'); // loading | ready | error
+  const [state, setState] = useState('loading'); // loading | teaser | drafting | ready | error
   const [sections, setSections] = useState([]);
   const [assumptions, setAssumptions] = useState([]);
   const [history, setHistory] = useState([]);
@@ -53,6 +53,14 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
   const inputRef = useRef(null);
   const startedRef = useRef(false);
 
+  function applyCase(data) {
+    setSections(data.sections || []);
+    setAssumptions(data.assumptions || []);
+    setHistory(data.history || []);
+    setMeta(data.meta || {});
+    setState('ready');
+  }
+
   async function load() {
     setState('loading');
     setErrorMsg(null);
@@ -60,14 +68,28 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
       const res = await authedFetch(`/api/business-case/${applicationId}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not load your funding story');
-      setSections(data.sections || []);
-      setAssumptions(data.assumptions || []);
-      setHistory(data.history || []);
-      setMeta(data.meta || {});
-      setState('ready');
+      if (data.exists === false) {
+        setState('teaser');
+        return;
+      }
+      applyCase(data);
     } catch (err) {
       setErrorMsg(err.message);
       setState('error');
+    }
+  }
+
+  async function draft() {
+    setState('drafting');
+    setErrorMsg(null);
+    try {
+      const res = await authedFetch(`/api/business-case/${applicationId}/draft`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not draft your funding story');
+      applyCase(data);
+    } catch (err) {
+      setErrorMsg(err.message);
+      setState('teaser');
     }
   }
 
@@ -177,8 +199,29 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
         </div>
         <div className="bc-loading">
           <span className="status-spinner" />
-          <span>Drafting your story from what you told us…</span>
+          <span>Loading…</span>
         </div>
+      </div>
+    );
+  }
+
+  if (state === 'teaser' || state === 'drafting') {
+    return (
+      <div className="bc-card">
+        <div className="bc-head">
+          <div>
+            <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Your funding story</h2>
+            <p className="bc-sub">
+              A first-person funding narrative — who you are, what your business does, what you need and how you'll
+              repay it — drafted from your interview in your own voice. It's what feeds every lender application.
+              You refine it by talking to it; it never invents a number.
+            </p>
+          </div>
+        </div>
+        {errorMsg && <p className="bc-error">{errorMsg}</p>}
+        <button type="button" className="btn btn-primary" onClick={draft} disabled={state === 'drafting'}>
+          {state === 'drafting' ? 'Drafting your story…' : 'Draft my funding story'}
+        </button>
       </div>
     );
   }
