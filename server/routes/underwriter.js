@@ -25,7 +25,7 @@ function parseNotes(application) {
 }
 
 function lenderKeyFor(m) {
-  return `${m.provenance || 'verified'}:${m.id}`;
+  return `${m.provenance || 'discovered'}:${m.id}`;
 }
 
 async function findMatchedLender(applicationId, lenderKey) {
