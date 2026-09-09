@@ -1,16 +1,16 @@
-// Live discovery of real funding programs, to supplement the small
-// hand-verified static table in db/seed-lenders.js. Two-step design instead
-// of one combined call: OpenAI's web_search tool has a documented higher
-// failure/truncation rate when forced into a complex structured-output
-// schema in the same call, so step 1 does the live search and returns
-// grounded, citation-backed text; step 2 (schema-only, no tool) extracts
-// clean structured fields from that already-grounded text. Same
-// "extract, never invent" discipline as groq-extract.js — anything without
-// a real, actually-cited source_url is dropped, never guessed.
+// The sole source of real funding programs the app matches against — there
+// is no preset catalog. Called per application from routes/match.js with
+// the owner's full profile. Two-step design instead of one combined call:
+// OpenAI's web_search tool has a documented higher failure/truncation rate
+// when forced into a complex structured-output schema in the same call, so
+// step 1 does the live search and returns grounded, citation-backed text;
+// step 2 (schema-only, no tool) extracts clean structured fields from that
+// already-grounded text. Same "extract, never invent" discipline as
+// groq-extract.js — anything without a real, actually-cited source_url is
+// dropped, never guessed.
 //
 // matching-engine.js never calls this and stays fully deterministic; this
-// is called once from routes/match.js and its output is threaded in as
-// plain data, the same way the static lenders table is.
+// function's output is threaded into it as plain data.
 
 import { callOpenAIResponses, findMessageText, collectCitedUrls } from './openai-client.js';
 import { coerceString, coerceNumber } from './field-coercion.js';
@@ -37,8 +37,11 @@ const SEARCH_SYSTEM_PROMPT =
   'program, state: its exact name, WHETHER IT IS A LOAN OR A GRANT, what states/regions/cities it serves, its ' +
   'funding amount range if stated, any industry or ownership restrictions, key eligibility requirements (time ' +
   'in business, revenue minimums, ownership requirements, whether it needs 501(c)(3) status), and the exact ' +
-  'URL of the page describing it. Prioritize the programs that fit this specific owner most tightly. If after ' +
-  'searching you find nothing genuinely usable by this business, say so plainly rather than list something tangential.';
+  'URL of the page describing it. Prioritize the programs that fit this specific owner most tightly.\n' +
+  'BE STRICT ABOUT LOCATION: the business is in the state given below. Many US cities share a name across ' +
+  'states (Columbus OH vs Columbus IN, Portland OR vs Portland ME) — never report a city/county program from ' +
+  'the wrong state. If a program\'s service area does not clearly include this business\'s state, drop it.\n' +
+  'If after searching you find nothing genuinely usable by this business, say so plainly rather than list something tangential.';
 
 const EXTRACTION_SYSTEM_PROMPT =
   'You will be given research notes about small business funding programs, each grounded in specific cited ' +

@@ -74,7 +74,6 @@ const STATEMENTS = [
   // Funding type — most programs are loans, but grants (money that isn't
   // repaid) and other non-debt capital are matched and prepared for
   // differently. 'loan' | 'grant' | 'other'.
-  `ALTER TABLE lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan'`,
   `ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan'`,
 
   // Adaptive follow-through: which kind of help this owner needs, inferred
@@ -115,6 +114,14 @@ const STATEMENTS = [
   // The old shared (state, industry) discovery cache is replaced by
   // per-application rows — drop the un-attached ones once.
   `DELETE FROM discovered_lenders WHERE application_id IS NULL`,
+
+  // There is no preset list of loans or grants. The `lenders` table (a
+  // hand-kept catalog every applicant matched against) is retired — every
+  // program now comes from the per-application live search. match_results
+  // rows that pointed into it are dropped; they rebuild on the next match.
+  `DELETE FROM match_results WHERE lender_source = 'static'`,
+  `DROP TABLE IF EXISTS lenders CASCADE`,
+  `ALTER TABLE match_results ALTER COLUMN lender_source SET DEFAULT 'discovered'`,
   // Language the interview was conducted in (BCP-47-ish, e.g. 'en', 'es').
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
@@ -198,14 +205,14 @@ export async function runMigrations(pool) {
     // actually end up present?
     const REQUIRED = [
       ['business_cases', 'projection'],
-      ['lenders', 'funding_type'],
+      ['discovered_lenders', 'funding_type'],
+      ['discovered_lenders', 'application_id'],
       ['applications', 'language'],
       ['applications', 'help_mode'],
       ['applications', 'discovery_at'],
       ['tracked_applications', 'status'],
       ['documents', 'storage_path'],
       ['underwriter_reviews', 'pack'],
-      ['discovered_lenders', 'application_id'],
     ];
     const { rows } = await client.query(
       `SELECT table_name, column_name FROM information_schema.columns

@@ -1,10 +1,17 @@
-// How each verified lender ACTUALLY intakes an application — the honest data
-// layer under the business-case and underwriter-simulation features. Same
-// discipline as db/seed-lenders.js: every entry was checked against the
-// organization's own pages via live web search (dates noted), and anything
-// not clearly stated there is left out rather than guessed.
+// This is NOT a catalog of programs to match against — the app has none of
+// that; every program a business sees comes from the per-application live
+// search (services/openai-lender-search.js). This file is the "how to apply"
+// layer: when that search surfaces one of a handful of well-known programs,
+// this supplies a verified, dated breakdown of how that program ACTUALLY
+// takes an application (Kiva's 15-day private fundraising, an SBA
+// intermediary's training requirement, etc.) instead of a generic "check
+// their site". Every entry was checked against the org's own pages (dates
+// noted); anything not clearly stated is left out, never guessed. A
+// discovered program with no entry here gets a model guess from its type,
+// marked verified:false — the UI says so and never shows a fabricated
+// checklist.
 //
-// The eight programs fall into five genuinely different application models,
+// The named programs fall into five genuinely different application models,
 // and the help each one needs is shaped by its model, not a shared
 // checklist:
 //
@@ -69,7 +76,7 @@ export const APPLICATION_MODELS = {
 // steps        — ordered, concrete
 // gotchas      — the things that quietly sink applications
 // underwriterFocus — what the person reviewing THIS file weighs most (drives the sim persona)
-// verifiedOn / sources — provenance, same as seed-lenders.js
+// verifiedOn / sources — when this was checked and against which pages
 const PROFILES = [
   {
     slug: 'accion-opportunity-fund',

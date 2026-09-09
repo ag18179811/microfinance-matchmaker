@@ -69,15 +69,16 @@ async function getDiscoveredForApplication(applicationId) {
   }
 }
 
-// A per-application live search (server/services/openai-lender-search.js),
-// built from the owner's full profile so grants are matched to their
-// specific situation — city, industry, use of funds, stage, and stated
-// ownership background — not a shared (state, industry) list. Re-runs on
+// The ONLY source of programs the app matches against: a per-application
+// live web search (server/services/openai-lender-search.js) built from the
+// owner's full profile — city and county, industry, use of funds, stage,
+// and stated ownership background. There is no preset catalog. Re-runs on
 // every match/recompute unless an identical-profile search ran in the last
 // day (tracked by applications.discovery_fingerprint / discovery_at, so an
-// empty result is remembered too). Never blocks the match response: a
-// failure falls back to the verified catalog alone, same as with no
-// OPENAI_API_KEY.
+// empty result is remembered too). Never throws: on a search failure the
+// owner just sees whatever the last successful search found (or nothing,
+// with a clear "we couldn't find programs right now" state), same as with
+// no OPENAI_API_KEY.
 async function discoverPrograms(application) {
   if (!application.state) return [];
   const fingerprint = profileFingerprint(application);
@@ -137,7 +138,7 @@ async function discoverPrograms(application) {
       client.release();
     }
   } catch (err) {
-    console.error('[match] program discovery failed, continuing on the verified catalog only:', err.message);
+    console.error('[match] program discovery failed; falling back to the last successful search for this application:', err.message);
     return getDiscoveredForApplication(application.id);
   }
 }
@@ -145,22 +146,12 @@ async function discoverPrograms(application) {
 export async function loadResults(applicationId) {
   const { rows } = await pool.query(
     `SELECT mr.match_score, mr.readiness_score, mr.ai_summary, mr.match_details, mr.readiness_breakdown,
-            l.id, l.name, l.type, l.funding_type, l.geography, l.min_loan, l.max_loan, l.industries, l.eligibility_notes,
-            l.source_url, l.min_months_in_business, l.min_months_in_business_type, 'verified' AS provenance
-     FROM match_results mr
-     JOIN lenders l ON l.id = mr.lender_id AND mr.lender_source = 'static'
-     WHERE mr.application_id = $1
-
-     UNION ALL
-
-     SELECT mr.match_score, mr.readiness_score, mr.ai_summary, mr.match_details, mr.readiness_breakdown,
             dl.id, dl.name, dl.type, dl.funding_type, dl.geography, dl.min_loan, dl.max_loan, dl.industries, dl.eligibility_notes,
             dl.source_url, dl.min_months_in_business, dl.min_months_in_business_type, 'discovered' AS provenance
      FROM match_results mr
-     JOIN discovered_lenders dl ON dl.id = mr.lender_id AND mr.lender_source = 'discovered'
+     JOIN discovered_lenders dl ON dl.id = mr.lender_id
      WHERE mr.application_id = $1
-
-     ORDER BY match_score DESC`,
+     ORDER BY mr.match_score DESC`,
     [applicationId]
   );
 
@@ -170,14 +161,13 @@ export async function loadResults(applicationId) {
     return { ...rest, ...details };
   });
 
-  return dedupeByName(mapped, (m) => m.name, (m) => m.provenance === 'verified', (m) => m.match_score);
+  return dedupeByName(mapped, (m) => m.name, () => false, (m) => m.match_score);
 }
 
-// A live web search can surface a program that's already in the
-// hand-verified static table (e.g. "SBA Microloan Program"), which would
-// otherwise show up as two near-identical results. Collapse by normalized
-// name, preferring the verified entry on a clash and otherwise the higher
-// score.
+// One live search can surface the same program twice (slight name
+// variations, two cited pages). Collapse by normalized name, keeping the
+// higher-scoring one. `isPreferred` is kept in the signature for callers
+// that still pass it, but every result now has the same provenance.
 export function dedupeByName(items, nameOf, isPreferred, scoreOf) {
   const seen = new Map();
   for (const item of items) {
@@ -211,12 +201,11 @@ async function loadOwnedApplication(applicationId, userId) {
 }
 
 // The full match pipeline for one application — readiness scoring, help-mode
-// classification, lender matching (static + live-discovered), the coaching
-// summary, and persistence of match_results. Used by both the initial
-// POST /:applicationId and the recompute endpoint.
+// classification, program matching against the per-application live search
+// (no preset catalog), the coaching summary, and persistence of
+// match_results. Used by both POST /:applicationId and recompute.
 async function runMatchPipeline(application) {
-  const [{ rows: staticLenders }, discoveredLenders, contentQuality] = await Promise.all([
-    pool.query('SELECT * FROM lenders'),
+  const [discoveredLenders, contentQuality] = await Promise.all([
     discoverPrograms(application),
     assessAnswerQuality(application),
   ]);
@@ -225,10 +214,7 @@ async function runMatchPipeline(application) {
   await pool.query('UPDATE applications SET help_mode = $1, plan_cache = NULL WHERE id = $2', [help.mode, application.id]);
   const subScores = { ...rawSubScores, answerQualityConcerns: contentQuality.concerns };
 
-  const taggedLenders = [
-    ...staticLenders.map((l) => ({ ...l, provenance: 'verified' })),
-    ...discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' })),
-  ];
+  const taggedLenders = discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' }));
   const matches = matchLenders(application, taggedLenders);
 
   const aiSummary = await generateCoachingSummary(
@@ -252,7 +238,7 @@ async function runMatchPipeline(application) {
         [
           application.id,
           match.lender.id,
-          match.lender.provenance === 'discovered' ? 'discovered' : 'static',
+          'discovered',
           match.matchScore,
           readinessScore,
           aiSummary,
@@ -473,18 +459,14 @@ router.post('/:applicationId/simulate', async (req, res) => {
   const heldQuality = { qualityScore: storedSubScores.answerQuality };
   const { readinessScore, subScores } = computeReadiness(simulated, heldQuality);
 
-  const [{ rows: staticLenders }, discoveredLenders] = await Promise.all([
-    pool.query('SELECT * FROM lenders'),
-    getDiscoveredForApplication(application.id),
-  ]);
-  const taggedLenders = [
-    ...staticLenders.map((l) => ({ ...l, provenance: 'verified' })),
-    ...discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' })),
-  ];
+  // The what-if simulator re-scores against the programs already discovered
+  // for this application — it never triggers a fresh (billed) search.
+  const discoveredLenders = await getDiscoveredForApplication(application.id);
+  const taggedLenders = discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' }));
   const simMatches = dedupeByName(
     matchLenders(simulated, taggedLenders),
     (m) => m.lender.name,
-    (m) => m.lender.provenance === 'verified',
+    () => false,
     (m) => m.matchScore
   );
 

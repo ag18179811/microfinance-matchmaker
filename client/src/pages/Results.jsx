@@ -86,7 +86,7 @@ const HELP_MODE_ICON = {
 };
 
 function lenderKeyOf(m) {
-  return `${m.provenance || 'verified'}:${m.id}`;
+  return `${m.provenance || 'discovered'}:${m.id}`;
 }
 
 export default function Results({ results, conversationId, onResultsUpdate }) {
@@ -195,9 +195,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
         </div>
         <div className="stat-card">
           <div className="stat-value">{matches.length}</div>
-          <div className="stat-label">
-            Matched {matches.some((m) => m.funding_type === 'grant') ? 'programs' : 'lenders'}
-          </div>
+          <div className="stat-label">Matched programs</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{matches.length > 0 ? `${topMatch}%` : '—'}</div>
@@ -295,16 +293,20 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       <div id="lenders">
       {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} refreshSignal={docsVersion} />}
 
-      <h2 className="section-title">Matched lenders</h2>
+      <h2 className="section-title">Matched programs</h2>
       {matches.length > 0 && (
         <p className="section-note">
-          Every match below links straight to that program's official application page. Apply to as many as you
-          qualify for — approvals and terms vary, so more applications means better odds.
+          These programs were found by a live web search matched to your specific business — your location, industry,
+          what the funding is for, and your situation. Confirm the current details on each program's official site
+          before applying; approvals and terms vary, so apply to as many as you qualify for.
         </p>
       )}
 
       {matches.length === 0 ? (
-        <div className="empty-state">No lenders matched your current profile — try adjusting your funding amount or location.</div>
+        <div className="empty-state">
+          The live search didn't surface programs for your current profile. Try adjusting your funding amount,
+          location, or what the money is for — or come back and re-run it, since new programs open regularly.
+        </div>
       ) : (
         <div className="lender-list">
           {matches.map((m, i) => {
@@ -313,10 +315,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
               .map((s) => s.trim())
               .filter(Boolean);
             const geo = formatGeography(m.geography);
-            // Static and live-discovered lenders come from separate tables
-            // with independent id sequences, so provenance must be part of
-            // the key to stay unique.
-            const cardKey = `${m.provenance || 'verified'}-${m.id}`;
+            const cardKey = `${m.provenance || 'discovered'}-${m.id}`;
 
             return (
               <div className="lender-card" key={cardKey} style={{ animationDelay: `${Math.min(i, 8) * 0.06}s` }}>
@@ -327,11 +326,6 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
                     {m.funding_type === 'grant' && (
                       <span className="tag tag-grant" title="A grant is money you don't repay — competitive and awarded on a cycle.">
                         Grant
-                      </span>
-                    )}
-                    {m.provenance === 'discovered' && (
-                      <span className="tag tag-discovered" title="Found via live web search rather than our hand-verified list — confirm details on the official site before applying.">
-                        Auto-discovered
                       </span>
                     )}
                   </div>

@@ -1,5 +1,4 @@
 import pg from 'pg';
-import { seedLenders } from './seed-lenders.js';
 import { runMigrations } from './migrate.js';
 
 const { Pool } = pg;
@@ -35,13 +34,10 @@ pool.on('error', (err) => {
 // server/db/schema.sql. runMigrations() applies only the idempotent
 // CREATE TABLE IF NOT EXISTS statements for app tables added after launch,
 // so a deploy doesn't need a manual SQL-editor step for those.
+//
+// There is no lender seeding: every program the app matches is found by a
+// per-application live web search (services/openai-lender-search.js). There
+// is no preset list of loans or grants anywhere in the codebase.
 await runMigrations(pool);
-
-// Reconcile the lender catalog on boot: insert any verified program that
-// isn't in the table yet (matched by name), leaving existing rows alone.
-// This seeds an empty table and also picks up catalog additions on a plain
-// redeploy, without a manual reseed step.
-const seeded = await seedLenders(pool);
-if (seeded > 0) console.log(`[db] added ${seeded} lender(s) from the verified catalog`);
 
 export default pool;

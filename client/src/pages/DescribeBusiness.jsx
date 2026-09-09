@@ -25,11 +25,11 @@ const STEPS = [
   },
   {
     title: 'Get your readiness score',
-    body: 'We score your funding readiness and match you against a database of CDFI, city, and nonprofit lending programs based on your industry, location, and needs.',
+    body: 'We score your funding readiness, then search the web for CDFI, city, county, grant, and nonprofit programs matched to your specific situation — not a preset list.',
   },
   {
     title: 'See ranked matches & next steps',
-    body: 'Review your best-fit lenders with match strength, loan ranges, and eligibility notes — plus AI coaching on how to strengthen your application.',
+    body: 'Review your best-fit programs with match strength, funding ranges, and eligibility notes — plus AI coaching on how to strengthen your application.',
   },
 ];
 
@@ -40,7 +40,7 @@ const TRUST_POINTS = [
   },
   {
     title: 'Deterministic, transparent scoring',
-    body: 'Lender matching and eligibility scoring run on fixed, rules-based logic — not a black-box model — so match reasons are consistent and explainable.',
+    body: 'Once programs are found for you, the eligibility and match scoring runs on fixed, rules-based logic — not a black-box model — so every match reason is explainable.',
   },
   {
     title: 'AI is used for coaching only',

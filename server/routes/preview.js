@@ -4,8 +4,7 @@
 // job is to give someone enough of a taste to be worth signing in.
 
 import { Router } from 'express';
-import pool from '../db/connection.js';
-import { computeReadiness, scoreLenderMatch } from '../services/matching-engine.js';
+import { computeReadiness } from '../services/matching-engine.js';
 import { normalizeState, INDUSTRIES } from '../constants.js';
 
 const router = Router();
@@ -47,16 +46,6 @@ router.post('/', async (req, res) => {
   // Neutral answer-quality (there are no typed answers to judge yet).
   const { readinessScore, subScores } = computeReadiness(application, { qualityScore: 60 });
 
-  // A rough count of static programs this profile could match — no live
-  // discovery, no persistence.
-  let eligibleCount = 0;
-  try {
-    const { rows } = await pool.query('SELECT * FROM lenders');
-    eligibleCount = rows.filter((l) => scoreLenderMatch(l, application) !== null).length;
-  } catch {
-    eligibleCount = 0;
-  }
-
   const weakest = Object.entries(subScores)
     .filter(([k]) => k !== 'answerQuality' && k !== 'completeness')
     .sort((a, b) => a[1] - b[1])[0];
@@ -64,9 +53,8 @@ router.post('/', async (req, res) => {
   res.json({
     readinessScore,
     subScores,
-    eligibleCount,
     weakestFactor: weakest ? FACTOR_LABELS[weakest[0]] : null,
-    note: 'This is a quick estimate from four numbers. The full report runs an adaptive interview, scores answer credibility, searches for live programs, and builds your funding story.',
+    note: 'This is a quick estimate from four numbers. The full report runs an adaptive interview, scores answer credibility, searches the web for funding programs matched to your specific situation, and builds your funding story.',
   });
 });
 

@@ -145,12 +145,6 @@ export default function PreviewFlow({ onSignIn }) {
         <div>
           <div className="preview-score-num">{result.readinessScore}/100</div>
           <div className="preview-score-label">Estimated readiness</div>
-          {result.eligibleCount > 0 && (
-            <p className="preview-eligible">
-              About <strong>{result.eligibleCount}</strong> verified {result.eligibleCount === 1 ? 'program' : 'programs'} in
-              our set could fit this profile — plus more we'd find with a live search.
-            </p>
-          )}
           {result.weakestFactor && (
             <p className="preview-weakest">Biggest thing holding the number down right now: {result.weakestFactor}.</p>
           )}

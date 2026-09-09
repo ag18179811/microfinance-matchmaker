@@ -45,25 +45,12 @@ CREATE TRIGGER on_auth_user_created
 
 -- ---------- App tables ----------
 
-CREATE TABLE IF NOT EXISTS lenders (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  type TEXT, -- 'CDFI' | 'city_program' | 'nonprofit'
-  geography TEXT, -- state or metro served
-  min_loan INTEGER,
-  max_loan INTEGER,
-  industries TEXT, -- comma-separated
-  eligibility_notes TEXT,
-  source_url TEXT,
-  min_months_in_business INTEGER, -- null = no stated tenure threshold
-  min_months_in_business_type TEXT -- 'required' (hard gate) | 'preferred' (soft, scored down) | null
-);
-
--- Live-discovered programs (server/services/openai-lender-search.js): a
--- per-application web search built from the owner's full profile, so grants
--- especially are matched to their specific situation (city, industry, use
--- of funds, stage, stated ownership background) rather than a shared
--- state+industry list. Rows belong to one application; the search itself is
+-- There is NO preset catalog of loans or grants anywhere in this app. Every
+-- program a business is matched with comes from a per-application live web
+-- search (server/services/openai-lender-search.js) built from the owner's
+-- full profile, so grants especially are matched to their specific
+-- situation (city, industry, use of funds, stage, stated ownership
+-- background). Rows below belong to one application; the search itself is
 -- stamped on applications (discovery_fingerprint / discovery_at) so an
 -- empty result is remembered too. Kept separate from `lenders` so the
 -- hand-verified catalog and auto-discovered results stay distinguishable.
@@ -215,11 +202,11 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE TABLE IF NOT EXISTS match_results (
   id SERIAL PRIMARY KEY,
   application_id INTEGER REFERENCES applications(id) ON DELETE CASCADE,
-  -- Points into `lenders` or `discovered_lenders`, per lender_source — a
-  -- single FK can't target either table conditionally, so this is enforced
-  -- at the application layer (routes/match.js) instead of by the schema.
+  -- Points into `discovered_lenders`. Not a hard FK because that table's
+  -- rows are replaced on each fresh search; the join is done in
+  -- routes/match.js and orphans just don't appear.
   lender_id INTEGER NOT NULL,
-  lender_source TEXT NOT NULL DEFAULT 'static', -- 'static' (lenders) | 'discovered' (discovered_lenders)
+  lender_source TEXT NOT NULL DEFAULT 'discovered', -- always 'discovered' now; kept for old rows
   match_score INTEGER,
   readiness_score INTEGER,
   ai_summary TEXT,
@@ -280,7 +267,8 @@ CREATE POLICY "own documents" ON documents FOR ALL USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "own profile" ON profiles;
 CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);
 
--- lenders has no RLS — it's shared reference data, readable by everyone.
+-- discovered_lenders has no RLS — a program record is not user data, and it
+-- is always read joined to a match_result the caller already owns.
 
 -- ---------- Migrations for pre-existing tables ----------
 -- Explicit, idempotent ALTERs for every column added after this file's
@@ -289,12 +277,15 @@ CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);
 
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS additional_notes TEXT;
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS notes TEXT;
-ALTER TABLE match_results ADD COLUMN IF NOT EXISTS lender_source TEXT NOT NULL DEFAULT 'static';
+ALTER TABLE match_results ADD COLUMN IF NOT EXISTS lender_source TEXT NOT NULL DEFAULT 'discovered';
 
 -- Funding type: 'loan' (default) | 'grant' | 'other'. Grants and other
 -- non-debt capital are matched, scored, and prepared for differently.
-ALTER TABLE lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan';
 ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan';
+
+-- The `lenders` table (a preset catalog) is retired — every program now
+-- comes from the per-application live search. Safe to run on an existing DB.
+DROP TABLE IF EXISTS lenders CASCADE;
 
 -- Adaptive follow-through + interview language.
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS help_mode TEXT;
@@ -317,8 +308,11 @@ ALTER TABLE discovered_lenders ALTER COLUMN search_state DROP NOT NULL;
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_fingerprint TEXT;
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_at TIMESTAMPTZ;
 
--- lender_id used to be a hard FK into `lenders` only; it now also needs to
--- point into `discovered_lenders` when lender_source = 'discovered', which
--- a single FK constraint can't express (see the column comment above). Drop
--- it if a pre-existing table still has the old constraint.
+-- match_results.lender_id points into discovered_lenders, whose rows are
+-- replaced on each fresh search — so no hard FK. Drop the old one if a
+-- pre-existing table still carries it.
 ALTER TABLE match_results DROP CONSTRAINT IF EXISTS match_results_lender_id_fkey;
+
+-- Retire the old shared discovery cache rows (pre per-application).
+DELETE FROM discovered_lenders WHERE application_id IS NULL;
+DELETE FROM match_results WHERE lender_source = 'static';

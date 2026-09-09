@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "node --watch index.js",
     "start": "node index.js",
-    "seed": "node db/seed-lenders.js",
     "test": "node --test services/*.test.js middleware/*.test.js"
   },
   "dependencies": {
