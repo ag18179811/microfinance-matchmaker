@@ -1,9 +1,21 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import 'express-async-errors'; // makes async route handlers forward throws to the error middleware
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+
+// A transient Supabase-pooler SSL/connection error thrown from an in-flight
+// query used to take the whole server down (Express 4 doesn't catch async
+// handler rejections without the import above; a bare rejection is fatal).
+// Belt-and-suspenders: log and keep serving rather than exit.
+process.on('unhandledRejection', (reason) => {
+  console.error('[server] unhandled rejection (kept alive):', reason?.message || reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[server] uncaught exception (kept alive):', err?.message || err);
+});
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -82,6 +94,21 @@ app.get('/api/unsubscribe', async (req, res) => {
         ? '<p style="font-family:sans-serif;max-width:420px;margin:60px auto">You won’t get application reminder emails anymore. You can turn them back on in your tracker settings anytime.</p>'
         : '<p style="font-family:sans-serif;max-width:420px;margin:60px auto">That link didn’t match anything — you may already be unsubscribed.</p>'
     );
+});
+
+// Terminal error handler — with the express-async-errors import above, a
+// throw from any async route handler lands here instead of crashing the
+// process. Transient DB/connection blips become a 503 the client can retry.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  const transient = /EPROTO|ECONNRESET|ETIMEDOUT|Connection terminated|socket hang up|SSL alert|read ECONN|timed out/i.test(err?.message || '');
+  console.error(`[server] ${transient ? 'transient ' : ''}error on ${req.method} ${req.path}:`, err?.message || err);
+  if (res.headersSent) return;
+  res.status(transient ? 503 : 500).json({
+    error: transient
+      ? 'A temporary hiccup on our end — please try that again in a moment.'
+      : 'Something went wrong on our end.',
+  });
 });
 
 const PORT = process.env.PORT || 3001;
