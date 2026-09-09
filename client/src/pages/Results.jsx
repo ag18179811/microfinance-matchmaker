@@ -9,6 +9,7 @@ import Tracker from '../components/Tracker.jsx';
 import FundingPlan from '../components/FundingPlan.jsx';
 import CashflowProjection from '../components/CashflowProjection.jsx';
 import DocumentVault from '../components/DocumentVault.jsx';
+import NextStep from '../components/NextStep.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { authedFetch } from '../api.js';
 
@@ -149,6 +150,8 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
           </div>
         </div>
       )}
+
+      <NextStep readinessScore={readinessScore} helpMode={helpMode} matches={matches} tracked={tracked} />
 
       <div className="stat-row">
         <div className="stat-card gauge-card">
