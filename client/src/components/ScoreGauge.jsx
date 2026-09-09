@@ -12,13 +12,19 @@ export default function ScoreGauge({ value, size = 84, strokeWidth = 8 }) {
   const color = colorFor(clamped);
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Readiness score ${clamped} out of 100`}>
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      role="img"
+      aria-label={`Readiness score ${clamped} out of 100`}
+    >
       <circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="#e5e7eb"
+        stroke="var(--color-border, #e5e7eb)"
         strokeWidth={strokeWidth}
       />
       <circle
@@ -39,9 +45,9 @@ export default function ScoreGauge({ value, size = 84, strokeWidth = 8 }) {
         y="50%"
         dominantBaseline="central"
         textAnchor="middle"
-        fontSize={size * 0.28}
+        fontSize={size * 0.3}
         fontWeight="800"
-        fill="#111827"
+        fill="currentColor"
       >
         {clamped}
       </text>
