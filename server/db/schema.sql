@@ -302,6 +302,10 @@ ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS share_token TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_share_token ON applications (share_token) WHERE share_token IS NOT NULL;
 
+-- Cache for the AI-narrated funding plan + personalized improvement plan,
+-- keyed by the match_results timestamp so it auto-invalidates on a rematch.
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS plan_cache JSONB;
+
 -- lender_id used to be a hard FK into `lenders` only; it now also needs to
 -- point into `discovered_lenders` when lender_source = 'discovered', which
 -- a single FK constraint can't express (see the column comment above). Drop

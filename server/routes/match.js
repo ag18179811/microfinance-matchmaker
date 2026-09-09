@@ -163,7 +163,7 @@ async function runMatchPipeline(application) {
   ]);
   const { readinessScore, subScores: rawSubScores } = computeReadiness(application, contentQuality);
   const help = classifyHelpMode(application, rawSubScores, readinessScore);
-  await pool.query('UPDATE applications SET help_mode = $1 WHERE id = $2', [help.mode, application.id]);
+  await pool.query('UPDATE applications SET help_mode = $1, plan_cache = NULL WHERE id = $2', [help.mode, application.id]);
   const subScores = { ...rawSubScores, answerQualityConcerns: contentQuality.concerns };
 
   const taggedLenders = [
@@ -290,6 +290,32 @@ function parseNotes(application) {
   }
 }
 
+// The two Groq-narrated plans below are cached on applications.plan_cache,
+// keyed by the newest match_results timestamp — a rematch or recompute
+// rewrites those rows with a fresh timestamp, which invalidates the cache
+// on its own. Without this the Results page re-bills both calls every view.
+async function matchesStamp(applicationId) {
+  const { rows } = await pool.query(
+    'SELECT max(created_at) AS stamp FROM match_results WHERE application_id = $1',
+    [applicationId]
+  );
+  return rows[0]?.stamp ? new Date(rows[0].stamp).toISOString() : null;
+}
+
+function cachedPlan(application, key, stamp) {
+  const entry = application.plan_cache?.[key];
+  return entry && entry.stamp && entry.stamp === stamp ? entry.data : null;
+}
+
+async function storePlan(applicationId, key, stamp, data) {
+  await pool.query(
+    `UPDATE applications
+       SET plan_cache = jsonb_set(COALESCE(plan_cache, '{}'::jsonb), $2, $3::jsonb, true)
+     WHERE id = $1`,
+    [applicationId, `{${key}}`, JSON.stringify({ stamp, data })]
+  );
+}
+
 // GET /:applicationId/funding-plan — the capital stack + application order
 // to actually raise the amount needed when no single program covers it.
 router.get('/:applicationId/funding-plan', async (req, res) => {
@@ -298,6 +324,10 @@ router.get('/:applicationId/funding-plan', async (req, res) => {
 
   const matches = await loadResults(application.id);
   if (matches.length === 0) return res.status(409).json({ error: 'Run matching first.' });
+
+  const stamp = await matchesStamp(application.id);
+  const cached = cachedPlan(application, 'fundingPlan', stamp);
+  if (cached) return res.json(cached);
 
   const { rows: reviewRows } = await pool.query(
     'SELECT lender_key, verdict FROM underwriter_reviews WHERE application_id = $1 AND verdict IS NOT NULL',
@@ -316,6 +346,7 @@ router.get('/:applicationId/funding-plan', async (req, res) => {
     additionalNotes: parseNotes(application),
     language: application.language || 'en',
   });
+  if (stamp) await storePlan(application.id, 'fundingPlan', stamp, narrated);
   res.json(narrated);
 });
 
@@ -332,9 +363,14 @@ router.get('/:applicationId/improvement-plan', async (req, res) => {
     return res.status(409).json({ error: 'Run matching first, then you can see how to improve.' });
   }
 
+  const stamp = await matchesStamp(application.id);
+  const cached = cachedPlan(application, 'improvementPlan', stamp);
+  if (cached) return res.json(cached);
+
   const readinessScore = baseline[0].readiness_score;
   const plan = computeImprovementPlan(application, subScores, readinessScore, subScores.answerQualityConcerns || []);
   const personalized = await personalizeImprovementPlan(plan, application, parseNotes(application), application.language || 'en');
+  if (stamp) await storePlan(application.id, 'improvementPlan', stamp, personalized);
   res.json(personalized);
 });
 

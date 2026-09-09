@@ -61,12 +61,20 @@ router.get('/shared/:token', async (req, res) => {
 
   const caseRow = (await pool.query('SELECT sections FROM business_cases WHERE application_id = $1', [application.id])).rows[0];
 
-  const fundingPlan = computeFundingPlan({
-    application,
-    matches,
-    profileFor: (m) => deriveProfile(m),
-    verdicts: {},
-  });
+  // Reuse the owner's already-narrated funding plan if it's still current
+  // (same match_results timestamp) — no AI call on a public page view.
+  const stampRow = (await pool.query('SELECT max(created_at) AS stamp FROM match_results WHERE application_id = $1', [application.id])).rows[0];
+  const stamp = stampRow?.stamp ? new Date(stampRow.stamp).toISOString() : null;
+  const cachedPlan = application.plan_cache?.fundingPlan;
+  const fundingPlan =
+    cachedPlan?.stamp && cachedPlan.stamp === stamp
+      ? cachedPlan.data
+      : computeFundingPlan({
+          application,
+          matches,
+          profileFor: (m) => deriveProfile(m),
+          verdicts: {},
+        });
 
   res.json({
     businessName: application.business_name,

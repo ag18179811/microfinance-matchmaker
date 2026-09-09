@@ -93,6 +93,12 @@ const STATEMENTS = [
   // Read-only shareable report link (for an advisor / partner / co-signer).
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS share_token TEXT`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_share_token ON applications (share_token) WHERE share_token IS NOT NULL`,
+
+  // Cache for the AI-narrated funding plan and personalized improvement
+  // plan, keyed by the match_results timestamp so it auto-invalidates on a
+  // rematch/recompute. Stops the Results page re-billing those two Groq
+  // calls on every view.
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS plan_cache JSONB`,
   // Language the interview was conducted in (BCP-47-ish, e.g. 'en', 'es').
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
