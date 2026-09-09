@@ -2243,6 +2243,70 @@ select {
   color: var(--color-text-muted);
 }
 
+/* ---------- Results section nav ---------- */
+
+.results-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-surface-translucent, var(--color-surface));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-border);
+  margin: 0 -1rem 1.5rem;
+}
+
+.results-nav-inner {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding: 0.55rem 1rem;
+  scrollbar-width: none;
+}
+
+.results-nav-inner::-webkit-scrollbar {
+  display: none;
+}
+
+.results-nav a {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.results-nav a:hover {
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.results-nav a.is-active {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* scroll-margin so anchored sections aren't hidden under the sticky bars */
+#standing,
+#raise,
+#fundingplan,
+#applications,
+#story,
+#prep,
+#lenders {
+  scroll-margin-top: 110px;
+}
+
+@media print {
+  .results-nav {
+    display: none;
+  }
+}
+
 /* ---------- Next step ---------- */
 
 .nextstep-card {

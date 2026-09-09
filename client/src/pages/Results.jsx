@@ -11,6 +11,7 @@ import CashflowProjection from '../components/CashflowProjection.jsx';
 import DocumentVault from '../components/DocumentVault.jsx';
 import NextStep from '../components/NextStep.jsx';
 import BusinessPlan from '../components/BusinessPlan.jsx';
+import ResultsNav from '../components/ResultsNav.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { authedFetch } from '../api.js';
 
@@ -154,7 +155,9 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
 
       <NextStep readinessScore={readinessScore} helpMode={helpMode} matches={matches} tracked={tracked} />
 
-      <div className="stat-row">
+      <ResultsNav />
+
+      <div className="stat-row" id="standing">
         <div className="stat-card gauge-card">
           <ScoreGauge value={readinessScore} />
           <div className="gauge-copy">
@@ -224,7 +227,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
         </div>
       )}
 
-      {applicationId && <ImprovementPlan applicationId={applicationId} />}
+      <div id="raise">{applicationId && <ImprovementPlan applicationId={applicationId} />}</div>
 
       {helpMode?.mode === 'rebuilder' && <AdvisorBridge prominent />}
 
@@ -236,12 +239,15 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
         <span className="results-phase-line" />
       </div>
 
-      {applicationId && matches.length > 1 && <FundingPlan applicationId={applicationId} />}
+      <div id="fundingplan">{applicationId && matches.length > 1 && <FundingPlan applicationId={applicationId} />}</div>
 
-      {applicationId && <Tracker applicationId={applicationId} tracked={tracked} onChange={refreshTracked} />}
+      <div id="applications">
+        {applicationId && <Tracker applicationId={applicationId} tracked={tracked} onChange={refreshTracked} />}
+      </div>
 
-      {applicationId && <BusinessCase applicationId={applicationId} onProfileSynced={onResultsUpdate} />}
+      <div id="story">{applicationId && <BusinessCase applicationId={applicationId} onProfileSynced={onResultsUpdate} />}</div>
 
+      <div id="prep">
       {applicationId && <CashflowProjection applicationId={applicationId} />}
 
       {applicationId && (
@@ -256,7 +262,9 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       )}
 
       {applicationId && <DocumentVault applicationId={applicationId} onChange={() => setDocsVersion((v) => v + 1)} />}
+      </div>
 
+      <div id="lenders">
       {applicationId && matches.length > 0 && <LenderPrep applicationId={applicationId} refreshSignal={docsVersion} />}
 
       <h2 className="section-title">Matched lenders</h2>
@@ -414,6 +422,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
           })}
         </div>
       )}
+      </div>
 
       {helpMode?.mode !== 'rebuilder' && <AdvisorBridge />}
 
