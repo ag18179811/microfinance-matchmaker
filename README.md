@@ -109,16 +109,21 @@ Most tools are a lender lookup — match you, hand off. This one sits with the o
 - **Language** — the opening description's language is detected and threaded into every AI prompt (`services/language.js`); a Spanish description yields a Spanish interview, coaching, funding story, and reviewer.
 
 **At the match**
-- **Deterministic engine** — `services/matching-engine.js` (no LLM) scores readiness on five factors and matches against verified lenders + live-discovered programs. **Grants** are a first-class `funding_type`: never disqualified for an amount outside the award range, scored and prepared for differently.
+- **Deterministic engine** — `services/matching-engine.js` (no LLM) scores readiness on five factors and matches against verified lenders + live-discovered programs. **Grants** are a first-class `funding_type` (Amber Grant, Comcast RISE, plus discovered ones): never disqualified for an amount outside the award range, scored and prepared for differently.
 - **Help mode** — the application is classified (`services/help-mode.js`) as *organizer* / *demystifier* / *rebuilder* / *strategist* from deterministic signals, tuning the tone of every AI surface and a banner on the results page.
+- **"Your next step"** — one synthesized directive from the score, help mode, and tracker (deadline pressure → stale application → practice the top match → finish and submit).
 - **Improvement plan** — `services/improvement-plan.js` returns prioritized levers, each with a *real* projected impact (the scoring engine re-run with that one change applied).
 - **What-if simulator** — `POST /api/match/:id/simulate` re-runs readiness + matching on hypothetical numbers without persisting.
+- **Funding plan** — `services/funding-plan.js`: when no single program covers the ask, a capital stack (which programs, how much each, greedy allocation within stated ranges), grants flagged speculative, the gap named, and an order to pursue them.
 
 **After the match**
-- **Living Business Case** (`services/business-case.js`) — a first-person funding narrative drafted from the interview in the owner's voice, refined only by talking to it. Every extrapolation is a correctable assumption; sections carry a `stated`/`inferred`/`thin` confidence; it never invents a number. Refining it can sync the profile and re-run the score (`POST /api/match/:id/recompute`).
-- **Underwriter simulation** (`services/underwriter-sim.js`) — per matched program, a review conversation held as *that program's* reviewer. The persona differs by application model (a Kiva story reviewer vs. a CDFI cash-flow analyst vs. an SBA-intermediary counselor vs. a grants program officer), grounded in the file's specific cautions. Ends with prepared answers in the owner's voice and a now/soon/later timing call.
-- **Verified application profiles** (`services/lender-application-profiles.js`) — dated, cited data on how each of the eight verified programs actually intakes applications (six distinct models). Web-discovered lenders are marked `verified: false` — never a fabricated checklist.
-- **Application pack** (`services/application-pack.js`) — assembles the Business Case + prepared answers into the exact blocks a program's process consumes (Kiva: personal story + private-lender invite; CDFI: use-of-funds + repayment narrative; grant: project description + budget + fit statement).
+- **Living Business Case** (`services/business-case.js`) — a first-person funding narrative drafted from the interview in the owner's voice, refined only by talking to it. Every extrapolation is a correctable assumption; it never invents a number. Refining it can sync the profile and re-run the score (`POST /api/match/:id/recompute`).
+- **Cash-flow projection** (`services/cashflow-projection.js`) — a 12-month scaffold seeded from revenue, pattern, and an estimated loan payment; editable grid, warns when ending cash goes negative.
+- **Business plan** (`services/business-plan.js`) — the eight standard sections drafted from the funding story + interview + projection, edited by conversation; gaps become `[Add: ...]` prompts, never fabricated market data.
+- **Document vault** — upload what lenders ask for once (private Supabase Storage); `services/document-kinds.js` matches each verified checklist so lender prep shows "you have 2 of 7 document types this needs".
+- **Underwriter simulation** (`services/underwriter-sim.js`) — per matched program, a review conversation held as *that program's* reviewer (Kiva story reviewer / CDFI cash-flow analyst / SBA-intermediary counselor / grants program officer), grounded in the file's specific cautions. Ends with prepared answers and a now/soon/later timing call.
+- **Verified application profiles** (`services/lender-application-profiles.js`) — dated, cited data on how each verified program actually intakes applications (six distinct models). Discovered lenders are marked `verified: false` — never a fabricated checklist.
+- **Application pack** (`services/application-pack.js`) — assembles the Business Case + prepared answers into the exact blocks a program's process consumes.
 - **Application tracker** — a status board per program (`/api/tracker`), auto-tracking a program once its pack is built, with passive stale-row nudges.
 - **Advisor bridge** — routes complex cases to the free human advisors (SBDC, SCORE, the lender's own coaching) with a print/PDF of the report to bring.
 
@@ -129,10 +134,11 @@ Every route requires a `Bearer` access token (`middleware/auth.js`) and is scope
 - `POST /api/preview` — no-account deterministic readiness estimate
 - `POST /api/interview/start` · `POST /api/interview/:id/reply` · `GET /api/interview/:id/resume` · `POST /api/interview/:id/attachments`
 - `POST /api/applications` · `GET /api/applications/:id`
-- `POST /api/match/:id` · `GET /api/match/:id` · `POST /api/match/:id/simulate` · `POST /api/match/:id/recompute` · `GET /api/match/:id/improvement-plan`
-- `GET|POST /api/business-case/:id` · `.../message` · `.../regenerate` · `.../sync-check`
+- `POST /api/match/:id` · `GET /api/match/:id` · `POST /api/match/:id/simulate` · `POST /api/match/:id/recompute` · `GET /api/match/:id/improvement-plan` · `GET /api/match/:id/funding-plan`
+- `GET|POST /api/business-case/:id` · `.../message` · `.../regenerate` · `.../sync-check` · `GET|PUT .../projection` · `GET|POST .../plan`
 - `GET /api/underwriter/:id/lenders` · `POST /api/underwriter/:id/:lenderKey/start` · `.../message` · `.../pack`
 - `GET|POST /api/tracker/:id` · `DELETE /api/tracker/:id/:lenderKey`
+- `GET|POST /api/documents/:id` · `GET .../:docId/url` · `DELETE .../:docId`
 - `GET /api/conversations` · `GET /api/conversations/:id`
 
 ### Notes for production
