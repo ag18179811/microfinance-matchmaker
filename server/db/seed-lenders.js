@@ -104,6 +104,32 @@ export const lenders = [
       'Verified via justinepetersen.org (checked Aug 2026). Serves all of Missouri, plus 73 Illinois counties and 28 Kansas counties (not the entire states) — confirm your county is covered before applying. One of the SBA\'s largest microlenders by volume nationally.',
     source_url: 'https://justinepetersen.org/what-we-do/small-business/',
   },
+  {
+    name: 'Amber Grant for Women (WomensNet)',
+    type: 'nonprofit',
+    funding_type: 'grant',
+    geography: 'National',
+    min_loan: 0,
+    max_loan: 10000,
+    industries: '',
+    eligibility_notes:
+      'Verified via ambergrantsforwomen.com (checked Sep 2026). Open to any business at least 50% owned by a woman, based in the U.S. or Canada. One online application per month covers all that month\'s grants ($10,000 monthly, plus a $50,000 year-end grant for monthly winners). Judged 40% business potential, 30% impact, 30% personal story. Applications run the 1st through the last day of each month.',
+    source_url: 'https://ambergrantsforwomen.com/get-an-amber-grant/apply-now/',
+  },
+  {
+    name: 'Comcast RISE Small Business Grant',
+    type: 'nonprofit',
+    funding_type: 'grant',
+    geography: 'National',
+    min_loan: 0,
+    max_loan: 5000,
+    industries: '',
+    eligibility_notes:
+      'Verified via comcastrise.com / risegrants.ey.com (checked Sep 2026). A $5,000 monetary grant plus a support package (coaching, media, technology). Requires 2+ years in business, 100 or fewer employees, independently owned; you do NOT need to be a Comcast customer. IMPORTANT: each application cycle is limited to a rotating set of specific cities/regions — check the site for the current round\'s eligible locations before applying.',
+    source_url: 'https://www.comcastrise.com/',
+    min_months_in_business: 24,
+    min_months_in_business_type: 'required',
+  },
 ];
 
 export async function seedLenders(pool) {
@@ -111,13 +137,14 @@ export async function seedLenders(pool) {
   try {
     await client.query('BEGIN');
     for (const row of lenders) {
-      const full = { min_months_in_business: null, min_months_in_business_type: null, ...row };
+      const full = { min_months_in_business: null, min_months_in_business_type: null, funding_type: 'loan', ...row };
       await client.query(
-        `INSERT INTO lenders (name, type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        `INSERT INTO lenders (name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           full.name,
           full.type,
+          full.funding_type,
           full.geography,
           full.min_loan,
           full.max_loan,
@@ -139,11 +166,21 @@ export async function seedLenders(pool) {
   return lenders.length;
 }
 
-// Allow running directly: `node db/seed-lenders.js`
+// Allow running directly: `node db/seed-lenders.js` — force-reseeds the
+// static lender catalog (drop + insert).
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { default: pool } = await import('./connection.js');
-  await pool.query('DELETE FROM lenders');
-  const count = await seedLenders(pool);
-  console.log(`Seeded ${count} lenders.`);
-  await pool.end();
+  try {
+    await pool.query('DELETE FROM lenders');
+    const count = await seedLenders(pool);
+    console.log(`Seeded ${count} lenders.`);
+  } catch (err) {
+    console.error('Seed failed:', err.message);
+    process.exitCode = 1;
+  } finally {
+    await pool.end();
+    // connection.js starts pool watchers / migration work on import; a hard
+    // exit avoids the "unsettled top-level await" hang after we're done.
+    process.exit(process.exitCode || 0);
+  }
 }

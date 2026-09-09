@@ -297,6 +297,61 @@ const PROFILES = [
     sources: ['https://www.craft3.org/get-started', 'https://www.craft3.org/business-loans/business'],
   },
   {
+    slug: 'amber-grant',
+    matchNames: ['amber grant for women (womensnet)', 'amber grant for women', 'amber grant', 'womensnet'],
+    model: 'grant',
+    applyUrl: 'https://ambergrantsforwomen.com/get-an-amber-grant/apply-now/',
+    timeline: 'Monthly cycles — each runs the 1st through the last day of the month; one application covers that month. Winners are also entered for a $50,000 year-end grant.',
+    howItWorks:
+      'One short online application, submitted any time during a monthly cycle. It is scored 40% on business potential, 30% on impact, and 30% on your personal story — so a specific, genuine story matters as much as the numbers.',
+    need: [
+      { item: 'Proof you own at least 50% of the business (and it is U.S.- or Canada-based)', when: 'always' },
+      { item: 'A clear description of what the $10,000 would fund and the difference it makes', when: 'always' },
+      { item: 'A genuine personal story — who you are and why this business', when: 'always' },
+    ],
+    steps: [
+      'Confirm you own 50%+ of a U.S. or Canada business.',
+      'Write a specific use-of-funds and a real personal story (this is a third of the score).',
+      'Submit before the last day of the current month.',
+    ],
+    gotchas: [
+      'Women-owned only (50%+ ownership).',
+      'A generic application scores poorly — the personal story and impact sections are 60% of the score combined.',
+      'If you have under $10,000 in sales, apply for the Startup Grant track instead.',
+    ],
+    underwriterFocus:
+      "Business potential, the impact of the money, and your personal story — weighted 40/30/30. They are choosing people and stories, not just spreadsheets.",
+    verifiedOn: '2026-09',
+    sources: ['https://ambergrantsforwomen.com/get-an-amber-grant/', 'https://ambergrantsforwomen.com/grant-rules/'],
+  },
+  {
+    slug: 'comcast-rise',
+    matchNames: ['comcast rise small business grant', 'comcast rise'],
+    model: 'grant',
+    applyUrl: 'https://www.comcastrise.com/',
+    timeline: 'Runs in application cycles (often opening in May) limited to specific cities/regions each round — check the site for the current window and eligible locations.',
+    howItWorks:
+      'An online application during an open cycle. Winners receive a $5,000 grant plus a package of coaching, marketing, and technology support. You do not need to be a Comcast customer.',
+    need: [
+      { item: 'Proof of 2+ years in business and 100 or fewer employees', when: 'always' },
+      { item: 'That your business is independently owned and operated', when: 'always' },
+      { item: 'A description of your business and how the support would help', when: 'always' },
+    ],
+    steps: [
+      'Check comcastrise.com for the current cycle and whether your city/region is eligible this round.',
+      'Confirm 2+ years in business and 100 or fewer employees.',
+      'Apply during the open window.',
+    ],
+    gotchas: [
+      'Each cycle only accepts applications from a rotating set of specific cities/regions — being outside the current list means waiting for a future round.',
+      'Requires at least 2 years in business.',
+    ],
+    underwriterFocus:
+      'Fit with the program\'s focus on small, independently owned businesses (often in underserved communities), and a clear sense of how the grant + support package would move the business forward.',
+    verifiedOn: '2026-09',
+    sources: ['https://www.comcastrise.com/', 'https://risegrants.ey.com/RISE/'],
+  },
+  {
     slug: 'justine-petersen',
     matchNames: ['justine petersen', 'justine petersen housing and reinvestment corporation'],
     model: 'cdfi_term_loan',
@@ -347,10 +402,18 @@ function inferModelFromType(type) {
 export function deriveProfile(lender) {
   const name = (lender?.name || '').trim().toLowerCase();
 
-  // A grant is a grant regardless of the issuing org's type or whether it's
-  // in the verified table — the application model is fundamentally different
-  // (a competitive written application, not an underwriter).
+  // A grant is a grant regardless of the issuing org's type — the
+  // application model is fundamentally different (a competitive written
+  // application, not an underwriter). Prefer a hand-verified grant profile
+  // if we have one for this name; otherwise the generic grant model.
   if (lender?.funding_type === 'grant') {
+    const exactGrant = PROFILE_BY_NAME.get(name);
+    if (exactGrant?.model === 'grant') return { ...exactGrant, verified: true };
+    for (const [key, profile] of PROFILE_BY_NAME) {
+      if (profile.model === 'grant' && name && (name.includes(key) || key.includes(name))) {
+        return { ...profile, verified: true };
+      }
+    }
     return {
       slug: `grant-${lender?.id ?? 'unknown'}`,
       matchNames: [name],
