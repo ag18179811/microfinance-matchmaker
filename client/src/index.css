@@ -1686,7 +1686,6 @@ select {
 .coaching-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 1.5rem 1.75rem;
@@ -2209,7 +2208,6 @@ select {
 .fp-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 1.75rem;
@@ -2476,7 +2474,8 @@ select {
 }
 
 .advisor-card-prominent {
-  border-left: 4px solid var(--color-primary);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
 }
 
 .advisor-list {
@@ -3029,7 +3028,6 @@ select {
 .bc-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 1.75rem;
