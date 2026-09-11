@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { authedFetch } from '../api.js';
 
-// "How to raise your score" — the prioritized levers actually dragging this
+// "How to raise your score": the prioritized levers actually dragging this
 // application down, each with a real projected impact (the server re-ran the
 // scoring engine with that one change applied). Hidden when there's nothing
 // meaningful to improve.
@@ -61,7 +61,7 @@ export default function ImprovementPlan({ applicationId }) {
         <h2 className="section-title" style={{ marginBottom: 0 }}>How to raise your score</h2>
         <p className="breakdown-subtitle">
           The levers actually holding you back, most impactful first. Each projection is your score re-run with
-          that one change applied — real math, not a guess.
+          that one change applied: real math, not a guess.
         </p>
       </div>
 

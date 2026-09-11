@@ -8,6 +8,36 @@ const INDUSTRIES = [
   'Child Care', 'Arts and Entertainment', 'Technology', 'Real Estate',
 ];
 
+const LANDING_STEPS = [
+  {
+    title: 'Describe your business',
+    body: 'Tell us about your business in plain English. No forms, no jargon. We only ask follow-up questions for what you didn’t already cover.',
+  },
+  {
+    title: 'Get your readiness score',
+    body: 'We score your funding readiness, then search the web for CDFI, city, county, grant, and nonprofit programs matched to your specific situation, not a preset list.',
+  },
+  {
+    title: 'See ranked matches & next steps',
+    body: 'Review your best-fit programs with match strength, funding ranges, and eligibility notes, plus AI coaching on how to strengthen your application.',
+  },
+];
+
+const LANDING_TRUST = [
+  {
+    title: 'We never sell your data',
+    body: 'Your business details are used only to calculate your readiness score and find matches. Never sold or shared with third parties for marketing.',
+  },
+  {
+    title: 'Deterministic, transparent scoring',
+    body: 'Once programs are found for you, the eligibility and match scoring runs on fixed, rules-based logic, not a black-box model, so every match reason is explainable.',
+  },
+  {
+    title: 'AI is used for coaching only',
+    body: 'Generative AI helps turn your description into structured fields and writes plain-language coaching notes. It never makes eligibility or approval decisions.',
+  },
+];
+
 function GoogleButton({ onClick, label }) {
   return (
     <button type="button" className="google-signin-btn" onClick={onClick}>
@@ -62,37 +92,100 @@ export default function PreviewFlow({ onSignIn }) {
 
   if (mode === 'intro') {
     return (
-      <div className="hero">
-        <span className="hero-eyebrow">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 1l1.4 3 3.3.4-2.4 2.3.6 3.3L6 8.4 3.1 10l.6-3.3L1.3 4.4l3.3-.4L6 1z" fill="currentColor" />
-          </svg>
-          AI-powered funding readiness
-        </span>
-        <h1>See where you stand with lenders</h1>
-        <p className="hero-subtitle">
-          Get a quick readiness estimate from four questions — no account needed. Then sign in for the full
-          report: an adaptive interview, live-matched CDFIs and grants, and a funding story you can hand to a
-          lender.
-        </p>
-        <div className="preview-cta-row">
-          <button type="button" className="btn btn-primary" onClick={() => setMode('form')}>
-            Try the quick estimate
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={onSignIn}>
-            Sign in to start
-          </button>
+      <>
+        <div className="landing-hero">
+          <div className="landing-hero-inner">
+            <div className="landing-copy">
+              <h1>Know where you stand before a lender tells you no</h1>
+              <p className="hero-subtitle">
+                Describe your business in plain English. Get a readiness score, programs matched to your specific
+                situation instead of a preset list, and a funding story you can actually hand to a reviewer.
+              </p>
+              <div className="preview-cta-row">
+                <button type="button" className="btn btn-primary" onClick={() => setMode('form')}>
+                  Try the quick estimate
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={onSignIn}>
+                  Sign in to start
+                </button>
+              </div>
+              <div className="trust-row">
+                <span className="trust-item">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="7" fill="var(--color-success-light)" />
+                    <path d="M4 7.2l2 2 4-4.4" stroke="var(--color-success)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Free · no credit check · nothing saved until you sign in
+                </span>
+              </div>
+            </div>
+
+            <div className="proof-card" aria-hidden="true">
+              <div className="proof-head">
+                <span className="proof-business">Rivera Family Bakery</span>
+                <span className="proof-tag">Sample report</span>
+              </div>
+              <div className="proof-score-row">
+                <ScoreGauge value={75} size={68} strokeWidth={7} />
+                <div>
+                  <div className="proof-score-num">75/100</div>
+                  <div className="proof-score-label">Funding readiness</div>
+                </div>
+              </div>
+              <div className="proof-match">
+                <div className="proof-match-top">
+                  <span className="proof-match-name">Accion Opportunity Fund</span>
+                  <span className="proof-match-pct">92% match</span>
+                </div>
+                <div className="proof-match-track"><div className="proof-match-fill" style={{ width: '92%' }} /></div>
+              </div>
+              <div className="proof-match">
+                <div className="proof-match-top">
+                  <span className="proof-match-name">Community storefront grant</span>
+                  <span className="proof-match-pct">81% match</span>
+                </div>
+                <div className="proof-match-track"><div className="proof-match-fill" style={{ width: '81%' }} /></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="trust-row" style={{ marginTop: '2rem' }}>
-          <span className="trust-item">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="7" fill="var(--color-success-light)" />
-              <path d="M4 7.2l2 2 4-4.4" stroke="var(--color-success)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            The estimate isn't saved anywhere. Sign-in is Google — we never see a password.
-          </span>
-        </div>
-      </div>
+
+        <section id="how-it-works" className="section-band">
+          <div className="section-inner">
+            <div className="section-heading">
+              <div className="card-eyebrow" style={{ textAlign: 'center' }}>How it works</div>
+              <h2 className="section-band-title">From description to matched programs in minutes</h2>
+            </div>
+            <div className="steps-grid">
+              {LANDING_STEPS.map((step, i) => (
+                <div className="step-card" key={step.title}>
+                  <div className="step-number">{String(i + 1).padStart(2, '0')}</div>
+                  <h3 className="step-title">{step.title}</h3>
+                  <p className="step-body">{step.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="trust" className="section-band section-band-alt">
+          <div className="section-inner">
+            <div className="section-heading">
+              <div className="card-eyebrow" style={{ textAlign: 'center' }}>Security &amp; trust</div>
+              <h2 className="section-band-title">Built to be transparent, not another black box</h2>
+            </div>
+            <div className="steps-grid">
+              {LANDING_TRUST.map((point, i) => (
+                <div className="step-card" key={point.title}>
+                  <div className="step-number">{String(i + 1).padStart(2, '0')}</div>
+                  <h3 className="step-title">{point.title}</h3>
+                  <p className="step-body">{point.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </>
     );
   }
 
@@ -154,7 +247,7 @@ export default function PreviewFlow({ onSignIn }) {
       <p className="preview-note">{result.note}</p>
 
       <div className="preview-signin-block">
-        <p>Sign in to get the real report — your matches, your funding story, and a plan to raise the number.</p>
+        <p>Sign in to get the real report: your matches, your funding story, and a plan to raise the number.</p>
         <GoogleButton onClick={onSignIn} label="Sign in with Google to continue" />
         <button type="button" className="bc-linkbtn" onClick={() => setMode('form')}>
           ← Adjust my numbers

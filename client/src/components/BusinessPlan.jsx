@@ -4,7 +4,7 @@ import { authedFetch } from '../api.js';
 // A drafted business plan in the standard sections a bank, CDFI, or SBA
 // microloan intermediary expects. Drafted from the funding story +
 // interview + projection, then edited by talking to it. Collapsed by
-// default — most owners only need it for the SBA / startup path.
+// default: most owners only need it for the SBA / startup path.
 
 function CopyBtn({ text }) {
   const [done, setDone] = useState(false);
@@ -93,7 +93,7 @@ export default function BusinessPlan({ applicationId, hint }) {
         <span>
           <span className="cf-toggle-title">Business plan</span>
           <span className="cf-toggle-sub">
-            {hint || 'A drafted plan in the standard sections — required by SBA microloan intermediaries and some CDFIs'}
+            {hint || 'A drafted plan in the standard sections, required by SBA microloan intermediaries and some CDFIs'}
           </span>
         </span>
         <span className={`whatif-chevron ${open ? 'is-open' : ''}`} aria-hidden="true">

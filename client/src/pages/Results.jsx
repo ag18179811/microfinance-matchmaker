@@ -23,7 +23,7 @@ const READINESS_FACTORS = [
   {
     key: 'answerQuality',
     label: 'Answer credibility',
-    blurb: 'Whether your answers are specific, consistent, and hold up — independent of how big or established your business is.',
+    blurb: 'Whether your answers are specific, consistent, and hold up, independent of how big or established your business is.',
   },
 ];
 
@@ -34,7 +34,7 @@ function formatGeography(geography) {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (states.length === 0) return { summary: '—', full: null };
+  if (states.length === 0) return { summary: 'n/a', full: null };
   if (states.length === 1 && /national|nationwide/i.test(states[0])) return { summary: 'All 50 states', full: null };
   if (states.length <= 6) return { summary: states.join(', '), full: null };
   const hasDC = states.includes('DC');
@@ -64,7 +64,7 @@ function matchBadgeClass(score) {
 }
 
 function formatCurrency(n) {
-  if (n === null || n === undefined) return '—';
+  if (n === null || n === undefined) return 'n/a';
   return `$${Number(n).toLocaleString()}`;
 }
 
@@ -197,7 +197,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
         </div>
       </div>
       <p className="print-only print-tagline">
-        Microfinance Matchmaker — funding readiness report. Not a lender; does not guarantee approval. Confirm
+        Microfinance Matchmaker funding readiness report. Not a lender; does not guarantee approval. Confirm
         every program's current requirements on its official site.
       </p>
 
@@ -228,7 +228,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
           <div className="stat-label">Matched programs</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{matches.length > 0 ? `${topMatch}%` : '—'}</div>
+          <div className="stat-value">{matches.length > 0 ? `${topMatch}%` : 'n/a'}</div>
           <div className="stat-label">Top match strength</div>
         </div>
       </div>
@@ -249,7 +249,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
             <h2 className="section-title" style={{ marginBottom: 0 }}>
               How your readiness score breaks down
             </h2>
-            <p className="breakdown-subtitle">Five factors, weighted evenly — this is the actual math behind the {readinessScore}/100 above.</p>
+            <p className="breakdown-subtitle">Five factors, weighted evenly. This is the actual math behind the {readinessScore}/100 above.</p>
           </div>
           <div className="breakdown-grid">
             {READINESS_FACTORS.map((factor) => {
@@ -311,7 +311,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
           applicationId={applicationId}
           hint={
             matches.some((m) => /sba microloan/i.test(m.name)) || helpMode?.mode === 'rebuilder'
-              ? 'One of your matches (or your situation) calls for a written business plan — here\'s a draft to build on'
+              ? 'One of your matches (or your situation) calls for a written business plan. Here\'s a draft to build on'
               : undefined
           }
         />
@@ -342,7 +342,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       </div>
       {matches.length > 0 && (
         <p className="section-note">
-          These programs were found by a live web search matched to your specific business — your location, industry,
+          These programs were found by a live web search matched to your specific business: your location, industry,
           what the funding is for, and your situation. A fresh search can turn up different programs (new rounds open
           often), so it's worth running again later. Confirm current details on each program's official site before
           applying; approvals and terms vary, so apply to as many as you qualify for.
@@ -352,8 +352,8 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       {matches.length === 0 ? (
         <div className="empty-state">
           The live search didn't surface programs for your current profile right now. Try{' '}
-          <strong>Search again</strong> above, adjust your funding amount, location, or what the money is for — new
-          programs and rounds open regularly.
+          <strong>Search again</strong> above, or adjust your funding amount, location, or what the money is for.
+          New programs and rounds open regularly.
         </div>
       ) : (
         <div className="lender-list">
@@ -372,7 +372,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
                     <span className="lender-rank">#{i + 1}</span>
                     {m.name}
                     {m.funding_type === 'grant' && (
-                      <span className="tag tag-grant" title="A grant is money you don't repay — competitive and awarded on a cycle.">
+                      <span className="tag tag-grant" title="A grant is money you don't repay. Competitive and awarded on a cycle.">
                         Grant
                       </span>
                     )}
@@ -473,7 +473,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
                           <path d="M5 2h7v7M12 2L2 12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </a>
-                      <span className="lender-apply-host">no official link on file yet — this searches for it</span>
+                      <span className="lender-apply-host">no official link on file yet, this searches for it</span>
                     </>
                   )}
                 </div>

@@ -27,7 +27,7 @@ export default function NextStep({ readinessScore, helpMode, matches, tracked })
   let body;
 
   if (helpMode?.mode === 'rebuilder') {
-    headline = "Don't apply yet — strengthen the file first";
+    headline = "Don't apply yet: strengthen the file first";
     body = 'Work the plan in "How to raise your score" below. When you\'ve done the top item or two, come back and re-run your readiness.';
   } else if (soonDeadline) {
     const d = daysUntil(soonDeadline.deadline);
@@ -51,7 +51,7 @@ export default function NextStep({ readinessScore, helpMode, matches, tracked })
       body = `You're preparing ${preparing.length} application${preparing.length === 1 ? '' : 's'}. Gather the last documents it needs (check "Prepare for a specific lender"), then submit and mark it done here.`;
     } else {
       headline = "You've got applications in motion";
-      body = 'Keep the tracker updated as you hear back. If a decision comes, come back — approved or not, there\'s a next move.';
+      body = 'Keep the tracker updated as you hear back. If a decision comes, come back: approved or not, there\'s a next move.';
     }
   }
 

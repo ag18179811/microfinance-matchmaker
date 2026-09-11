@@ -1,4 +1,4 @@
-// Where a real person beats this tool — a complex or unusual deal, a legal
+// Where a real person beats this tool: a complex or unusual deal, a legal
 // question, a business plan a bank will actually scrutinize, or just being
 // stuck. Routes to the free advisors (SBDC, SCORE, the CDFI's own coaching,
 // SBA local assistance) and offers the readiness report + funding story to
@@ -7,7 +7,7 @@
 const RESOURCES = [
   {
     name: 'Small Business Development Center (SBDC)',
-    what: 'Free, in-depth advising — financials, projections, the business plan a lender wants to see. Every state has centers.',
+    what: 'Free, in-depth advising: financials, projections, the business plan a lender wants to see. Every state has centers.',
     url: 'https://americassbdc.org/find-your-sbdc/',
   },
   {
@@ -51,7 +51,7 @@ export default function AdvisorBridge({ prominent }) {
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => window.print()}>
           Save your report to bring
         </button>
-        <span>Your readiness score, breakdown, and funding story — one document to hand over.</span>
+        <span>Your readiness score, breakdown, and funding story: one document to hand over.</span>
       </div>
     </div>
   );

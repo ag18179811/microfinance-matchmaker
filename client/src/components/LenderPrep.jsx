@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { authedFetch } from '../api.js';
 
-// "Prepare for a specific lender" — for each matched lender: how that
+// "Prepare for a specific lender": for each matched lender, how that
 // program ACTUALLY takes applications (verified, dated), and a practice
 // review conversation held as that lender's own reviewer, which ends with
 // prepared answers in the owner's voice and an honest timing call.
@@ -15,7 +15,7 @@ const WHEN_LABEL = {
 
 const TIMING_META = {
   now: { label: 'Apply now', tone: 'ok' },
-  soon: { label: 'Almost — tighten a few things first', tone: 'check' },
+  soon: { label: 'Almost: tighten a few things first', tone: 'check' },
   later: { label: 'Build up first, then apply', tone: 'thin' },
 };
 
@@ -35,9 +35,9 @@ function HowTheyApply({ lender }) {
       <p className="lp-how-model">
         <strong>{lender.modelLabel}</strong>
         {!lender.verified && lender.model !== 'grant' && (
-          <span className="lp-unverified">process not verified — confirm on their site</span>
+          <span className="lp-unverified">process not verified, confirm on their site</span>
         )}
-        {lender.model === 'grant' && <span className="lp-unverified lp-grant-tag">grant — confirm the current cycle &amp; rules</span>}
+        {lender.model === 'grant' && <span className="lp-unverified lp-grant-tag">grant: confirm the current cycle &amp; rules</span>}
       </p>
       <p className="lp-how-blurb">{lender.howItWorks || lender.modelBlurb}</p>
 
@@ -50,7 +50,7 @@ function HowTheyApply({ lender }) {
                 {items.map((n, i) => (
                   <li key={i}>
                     {n.item}
-                    {n.note && <span className="lp-need-note"> — {n.note}</span>}
+                    {n.note && <span className="lp-need-note"> ({n.note})</span>}
                   </li>
                 ))}
               </ul>
@@ -215,7 +215,7 @@ function Pack({ applicationId, lender }) {
             {pack.checklist.map((c, i) => (
               <li key={i}>
                 {c.item}
-                {c.note && <span className="lp-need-note"> — {c.note}</span>}
+                {c.note && <span className="lp-need-note"> ({c.note})</span>}
               </li>
             ))}
           </ul>
@@ -239,7 +239,7 @@ function Pack({ applicationId, lender }) {
         </a>
       )}
       <p className="whatif-disclaimer" style={{ marginTop: '0.75rem' }}>
-        Drafted from your own words for you to review and edit — not a finished application. Always confirm the
+        Drafted from your own words for you to review and edit, not a finished application. Always confirm the
         current requirements on {lender.name}'s site.
       </p>
     </div>
@@ -259,7 +259,7 @@ function Review({ applicationId, lender }) {
   const bottomRef = useRef(null);
   const resumedRef = useRef(false);
 
-  // A review already exists from a previous visit — /start is idempotent and
+  // A review already exists from a previous visit. /start is idempotent and
   // returns the existing transcript, so just call it to resume.
   useEffect(() => {
     if (lender.review?.started && !resumedRef.current) {
@@ -480,7 +480,7 @@ export default function LenderPrep({ applicationId, refreshSignal }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationId, refreshSignal]);
 
-  if (err) return null; // non-critical section — hide on failure
+  if (err) return null; // non-critical section, hide on failure
   if (!lenders) {
     return (
       <div className="lp-card">
@@ -498,7 +498,7 @@ export default function LenderPrep({ applicationId, refreshSignal }) {
     <div className="lp-card">
       <h2 className="section-title" style={{ marginBottom: '0.35rem' }}>Prepare for a specific lender</h2>
       <p className="bc-sub" style={{ marginBottom: '1rem' }}>
-        Each of these programs takes applications differently. Open one to see exactly how — and to sit down
+        Each of these programs takes applications differently. Open one to see exactly how, and to sit down
         with its reviewer before you apply for real.
       </p>
 

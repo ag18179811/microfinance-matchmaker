@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { authedFetch } from '../api.js';
 
-// "How to actually get to $X" — the capital stack (which programs cover
+// "How to actually get to $X": the capital stack (which programs cover
 // how much) and the order to pursue them. Hidden when there's nothing
 // meaningful to show (e.g. one program covers the whole ask).
 
@@ -42,7 +42,7 @@ export default function FundingPlan({ applicationId }) {
     <div className="fp-card">
       <h2 className="section-title" style={{ marginBottom: '0.35rem' }}>How to get to {money(plan.need)}</h2>
       <p className="bc-sub" style={{ marginBottom: '1.25rem' }}>
-        No single program here covers your whole ask, so this is a combination — and the order to work it.
+        No single program here covers your whole ask, so this is a combination, and the order to work it.
       </p>
 
       <div className="fp-stack">
@@ -74,7 +74,7 @@ export default function FundingPlan({ applicationId }) {
       {plan.gap > 0 && (
         <p className="fp-gap">
           That leaves about <strong>{money(plan.gap)}</strong> to come from savings, a partner, or by trimming
-          the ask — the loan pieces above realistically cover {money(plan.coveredByLoans)}.
+          the ask. The loan pieces above realistically cover {money(plan.coveredByLoans)}.
         </p>
       )}
 

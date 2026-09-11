@@ -113,7 +113,7 @@ export default function CashflowProjection({ applicationId }) {
         <span>
           <span className="cf-toggle-title">12-month cash-flow projection</span>
           <span className="cf-toggle-sub">
-            A starting point from your numbers — most CDFI and grant applications ask for this
+            A starting point from your numbers, most CDFI and grant applications ask for this
           </span>
         </span>
         <span className={`whatif-chevron ${open ? 'is-open' : ''}`} aria-hidden="true">
@@ -139,7 +139,7 @@ export default function CashflowProjection({ applicationId }) {
         <div className="cf-body" id="cf-panel" role="region" aria-label="12-month cash-flow projection">
           <p className="cf-disclaimer">
             Every number here is an estimate built from your revenue, revenue pattern, and requested amount.
-            Replace each with your real figures before you submit — this is a scaffold, not a forecast.
+            Replace each with your real figures before you submit. This is a scaffold, not a forecast.
           </p>
 
           <div className="cf-starting">
@@ -187,7 +187,7 @@ export default function CashflowProjection({ applicationId }) {
 
           {lowMonth && (
             <p className="cf-warn" role="alert">
-              As it stands, cash goes negative in {lowMonth.label}. Lenders look hard at this — adjust the
+              As it stands, cash goes negative in {lowMonth.label}. Lenders look hard at this, so adjust the
               numbers to reality, and if it's still tight, that's a sign to ask for less or a longer term.
             </p>
           )}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { authedFetch } from '../api.js';
 import ScoreGauge from './ScoreGauge.jsx';
 
-// "What if I changed my plan?" — re-runs the readiness + matching engine
+// "What if I changed my plan?": re-runs the readiness + matching engine
 // against a hypothetical version of the application (server: POST
 // /api/match/:id/simulate) without saving anything. Three financial levers
 // only; location/industry aren't simulated because changing them would need
@@ -223,14 +223,14 @@ export default function WhatIfSimulator({ applicationId }) {
                 </p>
               )}
               {changed && sim.newlyMatched?.length === 0 && sim.nowExcluded?.length === 0 && (
-                <p className="whatif-change">Same set of lenders — only the match strength shifts.</p>
+                <p className="whatif-change">Same set of lenders, only the match strength shifts.</p>
               )}
             </div>
           </div>
 
           <div className="whatif-foot">
             <p className="whatif-disclaimer">
-              Hypothetical only — nothing here changes your saved application. Answer credibility is held fixed.
+              Hypothetical only. Nothing here changes your saved application. Answer credibility is held fixed.
             </p>
             {changed && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={reset}>

@@ -49,7 +49,7 @@ export default function ChatHistoryDrawer({ open, onClose, onSelect, onNewChat }
         <div className="history-list">
           {error && <div className="alert alert-danger" style={{ margin: '0 1.25rem' }}>{error}</div>}
           {conversations === null && !error && <p className="history-empty">Loading…</p>}
-          {conversations?.length === 0 && <p className="history-empty">No conversations yet — start one to see it here.</p>}
+          {conversations?.length === 0 && <p className="history-empty">No conversations yet. Start one to see it here.</p>}
           {conversations?.map((c) => (
             <button
               type="button"

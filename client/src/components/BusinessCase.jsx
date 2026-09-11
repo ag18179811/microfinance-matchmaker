@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { authedFetch } from '../api.js';
 
-// The Living Business Case — a first-person funding narrative drafted from
+// The Living Business Case: a first-person funding narrative drafted from
 // the interview, refined only by conversation. No forms, no blank fields:
 // the app always writes first, and the owner reacts.
 
 const CONFIDENCE_META = {
   stated: { label: 'In your words', tone: 'ok' },
-  inferred: { label: 'I filled this in — check it', tone: 'check' },
+  inferred: { label: 'I filled this in, check it', tone: 'check' },
   thin: { label: 'Needs a bit from you', tone: 'thin' },
 };
 
@@ -23,7 +23,7 @@ function CopyButton({ text, small }) {
           setDone(true);
           setTimeout(() => setDone(false), 1500);
         } catch {
-          /* clipboard blocked — no-op */
+          /* clipboard blocked: no-op */
         }
       }}
     >
@@ -159,7 +159,7 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
       if (!res.ok) throw new Error(data.error || 'Re-run failed');
       onProfileSynced?.(data);
       setSyncChanges(null);
-      setNote('Updated your profile and re-ran your readiness — the numbers above reflect it now.');
+      setNote('Updated your profile and re-ran your readiness. The numbers above reflect it now.');
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -185,7 +185,7 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
   }
 
   function useAssumption(text) {
-    setInput(text.replace(/\?+$/, '') + ' — ');
+    setInput(text.replace(/\?+$/, '') + ': ');
     inputRef.current?.focus();
   }
 
@@ -212,8 +212,8 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
           <div>
             <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Your funding story</h2>
             <p className="bc-sub">
-              A first-person funding narrative — who you are, what your business does, what you need and how you'll
-              repay it — drafted from your interview in your own voice. It's what feeds every lender application.
+              A first-person funding narrative: who you are, what your business does, what you need and how you'll
+              repay it. Drafted from your interview in your own voice. It's what feeds every lender application.
               You refine it by talking to it; it never invents a number.
             </p>
           </div>
@@ -243,7 +243,7 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
         <div>
           <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Your funding story</h2>
           <p className="bc-sub">
-            A first draft in your words, written from your interview. Nothing here is a form — just tell me what's
+            A first draft in your words, written from your interview. Nothing here is a form, just tell me what's
             wrong or missing and I'll rewrite it. This is what feeds your lender applications.
           </p>
         </div>
@@ -259,7 +259,7 @@ export default function BusinessCase({ applicationId, onProfileSynced }) {
 
       {assumptions.length > 0 && (
         <div className="bc-assumptions">
-          <p className="bc-assumptions-title">I guessed on a few things — set me straight:</p>
+          <p className="bc-assumptions-title">I guessed on a few things, set me straight:</p>
           <div className="bc-chip-row">
             {assumptions.map((a) => (
               <button type="button" key={a.id} className="bc-chip" onClick={() => useAssumption(a.text)}>

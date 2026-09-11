@@ -7,7 +7,10 @@ function scrollToId(id) {
 
 export default function Header({ stage, onLogoClick, user, onSignOut, onOpenHistory }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isLanding = stage === 'describe';
+  // The marketing nav (how it works / trust / CDFI link) only makes sense on
+  // the logged-out landing. Those anchor sections don't exist once signed
+  // in, where the describe screen goes straight to the composer.
+  const isLanding = stage === 'describe' && !user;
   const avatarUrl = user?.user_metadata?.avatar_url;
   const displayName = user?.user_metadata?.full_name || user?.email || 'Account';
 
@@ -22,7 +25,9 @@ export default function Header({ stage, onLogoClick, user, onSignOut, onOpenHist
         >
           <span className="brand-mark">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 10.5l3-4 2.5 2.5L13 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M8 14V7.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M8 7.6C8 7.6 3.6 7.8 3 3.6C6.9 3.3 8 5.4 8 7.6Z" fill="white" />
+              <path d="M8 7.6C8 7.6 12.4 7.8 13 3.6C9.1 3.3 8 5.4 8 7.6Z" fill="white" />
             </svg>
           </span>
           <span className="brand-name">Microfinance Matchmaker</span>

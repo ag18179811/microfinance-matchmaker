@@ -11,14 +11,17 @@ test('normalizeLanguage accepts a known code and falls back to en otherwise', ()
   assert.equal(normalizeLanguage(''), 'en');
 });
 
-test('English produces an empty directive so English prompts are unchanged', () => {
-  assert.equal(languageDirective('en'), '');
-  assert.equal(languageDirective('xx'), '');
+test('English still gets the writing-style rule (no em dashes), just no translation instruction', () => {
+  const en = languageDirective('en');
+  assert.match(en, /em dash/i);
+  assert.doesNotMatch(en, /LANGUAGE:/);
+  assert.equal(languageDirective('en'), languageDirective('xx'), 'unknown codes fall back to the same as en');
 });
 
-test('a non-English directive names the language and preserves JSON keys', () => {
+test('a non-English directive names the language, preserves JSON keys, and keeps the style rule', () => {
   const d = languageDirective('es');
   assert.match(d, /Spanish/);
   assert.match(d, /JSON keys/i);
+  assert.match(d, /em dash/i);
   assert.equal(languageName('es'), 'Spanish');
 });

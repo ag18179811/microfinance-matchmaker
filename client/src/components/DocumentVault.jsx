@@ -100,7 +100,7 @@ export default function DocumentVault({ applicationId, onChange }) {
         <span>
           <span className="cf-toggle-title">Document vault{docs.length > 0 ? ` (${docs.length})` : ''}</span>
           <span className="cf-toggle-sub">
-            Upload what lenders ask for once — bank statements, tax returns, your plan
+            Upload what lenders ask for once: bank statements, tax returns, your plan
           </span>
         </span>
         <span className={`whatif-chevron ${open ? 'is-open' : ''}`} aria-hidden="true">
@@ -132,7 +132,7 @@ export default function DocumentVault({ applicationId, onChange }) {
           {error && <p className="bc-error">{error}</p>}
 
           {docs.length === 0 ? (
-            <p className="dv-empty">Nothing uploaded yet. Files stay private — only you and this app can open them.</p>
+            <p className="dv-empty">Nothing uploaded yet. Files stay private; only you and this app can open them.</p>
           ) : (
             <ul className="dv-list">
               {docs.map((d) => (

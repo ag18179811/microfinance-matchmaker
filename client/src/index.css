@@ -3,83 +3,92 @@
    once for system preference (guarded so an explicit "light" choice can
    still win) and once for an explicit data-theme="dark" override, so the
    in-app toggle always wins regardless of the OS setting. Every color a
-   component uses should be one of these tokens — never a hardcoded hex —
+   component uses should be one of these tokens, never a hardcoded hex,
    so both themes stay correct automatically. */
 
 :root {
-  --color-bg: #f7f8fa;
-  --color-surface: #ffffff;
-  --color-surface-translucent: rgba(255, 255, 255, 0.85);
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
-  --color-text: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #9ca3af;
+  --color-bg: #f8f5ee;
+  --color-surface: #fffdf9;
+  --color-surface-translucent: rgba(255, 253, 249, 0.86);
+  --color-border: #e4dcc8;
+  --color-border-strong: #cdc2a5;
+  --color-text: #211f19;
+  --color-text-secondary: #5d5847;
+  --color-text-muted: #8b846d;
 
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-  --color-primary-text: #1e40af;
+  --color-primary: #1c5e42;
+  --color-primary-hover: #164a34;
+  --color-primary-light: #e4efe4;
+  --color-primary-text: #164a34;
 
-  --color-success: #16a34a;
-  --color-success-light: #f0fdf4;
-  --color-success-text: #166534;
-  --color-warning: #d97706;
-  --color-warning-light: #fffbeb;
-  --color-warning-text: #92400e;
-  --color-danger: #dc2626;
-  --color-danger-light: #fef2f2;
-  --color-danger-text: #991b1b;
-  --color-danger-border: #fecaca;
+  --color-accent: #c97a2e;
+  --color-accent-light: #f8ead4;
+  --color-accent-text: #8a4f18;
 
-  --color-hero-glow: rgba(37, 99, 235, 0.07);
-  --color-neutral-tag-bg: #f3f4f6;
+  --color-success: #2f7d4f;
+  --color-success-light: #e7f3e9;
+  --color-success-text: #1e5c37;
+  --color-warning: #a9691c;
+  --color-warning-light: #faefd9;
+  --color-warning-text: #7a4a10;
+  --color-danger: #a3352b;
+  --color-danger-light: #f8e9e6;
+  --color-danger-text: #7c261d;
+  --color-danger-border: #e6c3bc;
 
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --color-hero-glow: rgba(28, 94, 66, 0.08);
+  --color-neutral-tag-bg: #efe9d9;
+
+  --radius-sm: 5px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-full: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.08);
-  --shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.14);
+  --shadow-sm: 0 1px 2px rgba(45, 38, 20, 0.07);
+  --shadow-md: 0 4px 16px rgba(45, 38, 20, 0.09);
+  --shadow-lg: 0 16px 40px rgba(45, 38, 20, 0.16);
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
 
   /* A precise, "settled" ease-out used for anything that should feel
-     considered rather than bouncy — page transitions, card lifts, drawers. */
+     considered rather than bouncy: page transitions, card lifts, drawers. */
   --ease-out-precise: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-bg: #0b0d12;
-    --color-surface: #14161c;
-    --color-surface-translucent: rgba(15, 17, 22, 0.85);
-    --color-border: #23262f;
-    --color-border-strong: #343945;
-    --color-text: #f2f3f5;
-    --color-text-secondary: #9aa1ad;
-    --color-text-muted: #6b7280;
+    --color-bg: #16140f;
+    --color-surface: #1e1b15;
+    --color-surface-translucent: rgba(22, 20, 15, 0.86);
+    --color-border: #322d22;
+    --color-border-strong: #453f2f;
+    --color-text: #f2ede0;
+    --color-text-secondary: #b3ab97;
+    --color-text-muted: #7c7563;
 
-    --color-primary: #4b8bf5;
-    --color-primary-hover: #6ea3f7;
-    --color-primary-light: rgba(75, 139, 245, 0.16);
-    --color-primary-text: #93c5fd;
+    --color-primary: #5cb98a;
+    --color-primary-hover: #79c9a0;
+    --color-primary-light: rgba(92, 185, 138, 0.16);
+    --color-primary-text: #8fd6b0;
 
-    --color-success: #22c55e;
-    --color-success-light: rgba(34, 197, 94, 0.14);
-    --color-success-text: #4ade80;
-    --color-warning: #f59e0b;
-    --color-warning-light: rgba(245, 158, 11, 0.14);
-    --color-warning-text: #fbbf24;
-    --color-danger: #f87171;
-    --color-danger-light: rgba(248, 113, 113, 0.14);
-    --color-danger-text: #fca5a5;
-    --color-danger-border: rgba(248, 113, 113, 0.35);
+    --color-accent: #e8a851;
+    --color-accent-light: rgba(232, 168, 81, 0.16);
+    --color-accent-text: #f0be7c;
 
-    --color-hero-glow: rgba(75, 139, 245, 0.1);
-    --color-neutral-tag-bg: #1c1f27;
+    --color-success: #5cb98a;
+    --color-success-light: rgba(92, 185, 138, 0.14);
+    --color-success-text: #8fd6b0;
+    --color-warning: #e0a444;
+    --color-warning-light: rgba(224, 164, 68, 0.14);
+    --color-warning-text: #f0c07f;
+    --color-danger: #e08277;
+    --color-danger-light: rgba(224, 130, 119, 0.14);
+    --color-danger-text: #f0aca3;
+    --color-danger-border: rgba(224, 130, 119, 0.35);
+
+    --color-hero-glow: rgba(92, 185, 138, 0.1);
+    --color-neutral-tag-bg: #262218;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.32);
@@ -88,33 +97,37 @@
 }
 
 :root[data-theme='dark'] {
-  --color-bg: #0b0d12;
-  --color-surface: #14161c;
-  --color-surface-translucent: rgba(15, 17, 22, 0.85);
-  --color-border: #23262f;
-  --color-border-strong: #343945;
-  --color-text: #f2f3f5;
-  --color-text-secondary: #9aa1ad;
-  --color-text-muted: #6b7280;
+  --color-bg: #16140f;
+  --color-surface: #1e1b15;
+  --color-surface-translucent: rgba(22, 20, 15, 0.86);
+  --color-border: #322d22;
+  --color-border-strong: #453f2f;
+  --color-text: #f2ede0;
+  --color-text-secondary: #b3ab97;
+  --color-text-muted: #7c7563;
 
-  --color-primary: #4b8bf5;
-  --color-primary-hover: #6ea3f7;
-  --color-primary-light: rgba(75, 139, 245, 0.16);
-  --color-primary-text: #93c5fd;
+  --color-primary: #5cb98a;
+  --color-primary-hover: #79c9a0;
+  --color-primary-light: rgba(92, 185, 138, 0.16);
+  --color-primary-text: #8fd6b0;
 
-  --color-success: #22c55e;
-  --color-success-light: rgba(34, 197, 94, 0.14);
-  --color-success-text: #4ade80;
-  --color-warning: #f59e0b;
-  --color-warning-light: rgba(245, 158, 11, 0.14);
-  --color-warning-text: #fbbf24;
-  --color-danger: #f87171;
-  --color-danger-light: rgba(248, 113, 113, 0.14);
-  --color-danger-text: #fca5a5;
-  --color-danger-border: rgba(248, 113, 113, 0.35);
+  --color-accent: #e8a851;
+  --color-accent-light: rgba(232, 168, 81, 0.16);
+  --color-accent-text: #f0be7c;
 
-  --color-hero-glow: rgba(75, 139, 245, 0.1);
-  --color-neutral-tag-bg: #1c1f27;
+  --color-success: #5cb98a;
+  --color-success-light: rgba(92, 185, 138, 0.14);
+  --color-success-text: #8fd6b0;
+  --color-warning: #e0a444;
+  --color-warning-light: rgba(224, 164, 68, 0.14);
+  --color-warning-text: #f0c07f;
+  --color-danger: #e08277;
+  --color-danger-light: rgba(224, 130, 119, 0.14);
+  --color-danger-text: #f0aca3;
+  --color-danger-border: rgba(224, 130, 119, 0.35);
+
+  --color-hero-glow: rgba(92, 185, 138, 0.1);
+  --color-neutral-tag-bg: #262218;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.32);
@@ -171,6 +184,13 @@ h4 {
   margin: 0;
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 p {
@@ -237,9 +257,7 @@ a {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--color-surface-translucent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -264,7 +282,7 @@ a {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: linear-gradient(135deg, var(--color-primary), #7c3aed);
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -376,7 +394,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), #7c3aed);
+  background: var(--color-primary);
   color: #fff;
   font-weight: 700;
   font-size: 0.85rem;
@@ -505,6 +523,161 @@ a {
   font-size: 1.05rem;
   max-width: 560px;
   margin-bottom: 2.25rem;
+}
+
+/* ---------- Landing hero (logged-out): two-column, grounded in the
+   actual product rather than an abstract centered pitch. ---------- */
+
+.landing-hero {
+  padding: 3.5rem 1.5rem 4rem;
+}
+
+.landing-hero-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .landing-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+}
+
+.landing-kicker {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-primary-text);
+  margin-bottom: 1rem;
+}
+
+.landing-copy h1 {
+  font-size: clamp(2.1rem, 4.4vw, 3.1rem);
+  line-height: 1.08;
+  margin-bottom: 1rem;
+  max-width: 15ch;
+}
+
+.landing-copy .hero-subtitle {
+  margin-bottom: 2rem;
+}
+
+.landing-copy .preview-cta-row {
+  justify-content: flex-start;
+}
+
+.landing-copy .trust-row {
+  justify-content: flex-start;
+  margin-top: 1.75rem;
+}
+
+/* The proof card: a real (if illustrative) snapshot of the readiness
+   report, so the promise in the copy is grounded in what the product
+   actually produces rather than left abstract. */
+.proof-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 1.5rem;
+  position: relative;
+}
+
+.proof-card::before {
+  content: '';
+  position: absolute;
+  inset: 14px -14px -14px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  z-index: -1;
+  background: var(--color-bg);
+}
+
+.proof-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.1rem;
+}
+
+.proof-business {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.proof-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.proof-score-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.proof-score-num {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.proof-score-label {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.2rem;
+}
+
+.proof-match {
+  margin-bottom: 0.85rem;
+}
+
+.proof-match:last-child {
+  margin-bottom: 0;
+}
+
+.proof-match-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  margin-bottom: 0.35rem;
+}
+
+.proof-match-name {
+  font-weight: 600;
+}
+
+.proof-match-pct {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.proof-match-track {
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-neutral-tag-bg);
+  overflow: hidden;
+}
+
+.proof-match-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
 }
 
 .composer {
@@ -677,39 +850,30 @@ a {
 }
 
 .step-card {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  transition: box-shadow 0.25s var(--ease-out-precise), transform 0.25s var(--ease-out-precise);
-}
-
-.section-band-alt .step-card {
-  background: var(--color-bg);
+  padding: 0 0 0 1.4rem;
+  border-left: 2px solid var(--color-border);
+  transition: border-color 0.25s var(--ease-out-precise);
 }
 
 .step-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  border-left-color: var(--color-primary);
 }
 
 .step-number {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-primary);
+  opacity: 0.45;
+  margin-bottom: 0.6rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .step-title {
   font-size: 1.05rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-weight: 700;
 }
 
 .step-body {
@@ -729,11 +893,11 @@ a {
 }
 
 .card-eyebrow {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   margin-bottom: 0.5rem;
 }
 
@@ -943,7 +1107,7 @@ select {
   height: 26px;
   min-width: 26px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), #7c3aed);
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1126,7 +1290,7 @@ select {
   height: 100%;
   min-width: 7px;
   border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--color-primary), #7c3aed);
+  background: var(--color-primary);
   transition: width 0.55s var(--ease-out-precise);
 }
 
@@ -1350,7 +1514,7 @@ select {
   color: var(--color-primary);
 }
 
-/* The deterministic no-AI safety net — deliberately styled to look like a
+/* The deterministic no-AI safety net: deliberately styled to look like a
    notice, never like the same "real thinking" affordance above, so it's
    never mistaken for genuine analysis. */
 .thinking-chain-fallback summary {
@@ -2368,9 +2532,7 @@ select {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--color-surface-translucent, var(--color-surface));
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   margin: 0 -1rem 1.5rem;
 }

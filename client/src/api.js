@@ -9,7 +9,7 @@ export function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
-// Every API call in this app is authenticated — this attaches the current
+// Every API call in this app is authenticated. This attaches the current
 // Supabase session's access token so the backend can verify who's asking.
 export async function authedFetch(path, options = {}) {
   const { data } = await supabase.auth.getSession();

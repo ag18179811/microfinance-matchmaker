@@ -8,8 +8,8 @@ function nextId() {
 }
 
 // Deliberately starts empty rather than replaying the structured interview
-// transcript — the AI still has full context server-side (this posts into
-// the same conversation thread), this just keeps the results page from
+// transcript. The AI still has full context server-side (this posts into
+// the same conversation thread); this just keeps the results page from
 // feeling cluttered with a Q&A log the user already saw on the chat screen.
 export default function FollowUpChat({ conversationId }) {
   const [messages, setMessages] = useState([]);
@@ -48,7 +48,7 @@ export default function FollowUpChat({ conversationId }) {
     <div className="followup-card">
       <h2 className="section-title">Ask a follow-up</h2>
       <p className="followup-subtitle">
-        Keep talking with the AI about your results — it remembers your full profile and matches from this
+        Keep talking with the AI about your results. It remembers your full profile and matches from this
         conversation, and you can come back to it anytime from your chat history.
       </p>
 

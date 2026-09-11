@@ -28,7 +28,7 @@ async function submitApplication(fields, conversationId, onProgress) {
 }
 
 export default function App() {
-  // Public shared report — no auth, no app chrome.
+  // Public shared report: no auth, no app chrome.
   const sharedMatch = typeof window !== 'undefined' && window.location.pathname.match(/^\/shared\/([a-f0-9]+)\/?$/);
   if (sharedMatch) return <SharedReport token={sharedMatch[1]} />;
 
@@ -83,7 +83,7 @@ function AuthedApp() {
         return;
       }
       if (data.status !== 'complete') {
-        // In-progress interview — resume it in the chat.
+        // In-progress interview: resume it in the chat.
         setInitialDescription('');
         setResumeConversationId(id);
         setConversationId(id);

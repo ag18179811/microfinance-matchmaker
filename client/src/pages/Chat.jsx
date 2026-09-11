@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { authedFetch } from '../api.js';
 
 // All answer validation now happens server-side (services/groq-interview.js
-// and interview-fallback.js) — the client just renders whatever question
+// and interview-fallback.js). The client just renders whatever question
 // comes back and sends whatever the user typed or clicked.
 
 const OPTION_LABELS = {
@@ -58,8 +58,8 @@ function TypingBubble({ label, elapsedSeconds }) {
 }
 
 // Horizontal progress toward "here are your matches". The interview is
-// adaptive so there's no exact question count — the server blends field
-// completeness, facts gathered, and turn count into a single 0–100 value
+// adaptive, so there's no exact question count. The server blends field
+// completeness, facts gathered, and turn count into a single 0-100 value
 // (services/interview-progress.js) that only ever moves forward. This gives
 // the user a read on how much longer the interview will run before the
 // readiness score and lender matches appear.
@@ -92,7 +92,7 @@ function MatchProgress({ percent, phase }) {
 }
 
 // The reasoning chain, collapsed by default but always showing how long it
-// took — click to expand the actual sequence of distinct reasoning steps.
+// took. Click to expand the actual sequence of distinct reasoning steps.
 // Visually distinct when source is 'fallback': that's the deterministic,
 // no-AI safety net, and it must never look like it's the same thing as
 // genuine analysis.
@@ -102,7 +102,7 @@ function ThinkingChain({ reasoningSteps, thinkingSeconds, source }) {
   return (
     <details className={`thinking-chain ${isFallback ? 'thinking-chain-fallback' : ''}`}>
       <summary>
-        {isFallback ? 'AI analysis unavailable — basic mode' : `Thought for ${thinkingSeconds ?? 'a few'}s`}
+        {isFallback ? 'AI analysis unavailable, basic mode' : `Thought for ${thinkingSeconds ?? 'a few'}s`}
       </summary>
       <ol className="thinking-steps">
         {reasoningSteps.map((step, i) => (
@@ -147,8 +147,8 @@ export default function Chat({ initialDescription, resumeConversationId, onCompl
   }
 
   // showStatus can be called more than once in a row for one logical wait
-  // (e.g. "Saving…" then "Checking eligibility…" during finalizeAndMatch) —
-  // the elapsed timer keeps running across those label changes rather than
+  // (e.g. "Saving…" then "Checking eligibility…" during finalizeAndMatch).
+  // The elapsed timer keeps running across those label changes rather than
   // resetting, since it's timing the whole wait, not just the current label.
   function showStatus(label) {
     setStatusLabel(label);
@@ -241,7 +241,7 @@ export default function Chat({ initialDescription, resumeConversationId, onCompl
         }
       }
       if (data.progress) setProgress(data.progress);
-      addMessage('system', 'Resumed — carry on from here.');
+      addMessage('system', 'Resumed. Carry on from here.');
       setActiveMessageId(lastAiId);
       setInputDisabled(false);
     } catch (err) {
@@ -307,14 +307,14 @@ export default function Chat({ initialDescription, resumeConversationId, onCompl
     }
   }
 
-  // The "I'm ready" escape hatch — the owner chooses to stop answering and
+  // The "I'm ready" escape hatch: the owner chooses to stop answering and
   // go to matches with what's been gathered. Shown once the core profile is
   // in (progress is well along and we're waiting on them).
   async function finishEarly() {
     if (!conversationId || inputDisabled) return;
     setInputDisabled(true);
     setActiveMessageId(null);
-    addMessage('ai', "Got it — going with what we have.");
+    addMessage('ai', "Got it. Going with what we have.");
     advanceProgress({ percent: 100, phase: 'Building your matches' });
     try {
       const res = await authedFetch(`/api/interview/${conversationId}/finish`, { method: 'POST' });
@@ -381,8 +381,8 @@ export default function Chat({ initialDescription, resumeConversationId, onCompl
       addMessage(
         'system',
         data.textExtracted
-          ? `📎 ${data.filename} attached — I can read its contents.`
-          : `📎 ${data.filename} attached, though I couldn't pull readable text from it.`
+          ? `${data.filename} attached. I can read its contents.`
+          : `${data.filename} attached, though I couldn't pull readable text from it.`
       );
     } catch (err) {
       hideStatus();

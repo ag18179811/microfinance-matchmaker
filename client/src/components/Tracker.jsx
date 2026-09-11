@@ -12,9 +12,9 @@ const STATUS_OPTIONS = [
 ];
 
 const STALE_NUDGE = {
-  preparing: 'Been preparing this a while — anything blocking you from submitting?',
+  preparing: 'Been preparing this a while. Anything blocking you from submitting?',
   submitted: "It's been a bit since you marked this submitted. Heard anything back?",
-  in_review: 'Still in review — worth a friendly check-in with them.',
+  in_review: 'Still in review. Worth a friendly check-in with them.',
 };
 
 function daysSince(iso) {
@@ -90,7 +90,7 @@ export default function Tracker({ applicationId, tracked, onChange }) {
     <div className="tracker-card">
       <h2 className="section-title" style={{ marginBottom: '0.35rem' }}>Your applications</h2>
       <p className="bc-sub" style={{ marginBottom: '1.1rem' }}>
-        Where each program stands. Update the status as you go — this is just for you.
+        Where each program stands. Update the status as you go. This is just for you.
       </p>
 
       <div className="tracker-list">

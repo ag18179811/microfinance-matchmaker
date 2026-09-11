@@ -11,7 +11,7 @@ const FACTOR_LABELS = {
 };
 
 function money(n) {
-  return n == null ? '—' : `$${Number(n).toLocaleString()}`;
+  return n == null ? 'n/a' : `$${Number(n).toLocaleString()}`;
 }
 
 export default function SharedReport({ token }) {
@@ -51,7 +51,7 @@ export default function SharedReport({ token }) {
     <main className="main" id="main">
       <div className="page-wide">
         <div className="shared-banner">
-          <strong>Shared funding readiness report</strong> — {data.businessName || 'a business'}
+          <strong>Shared funding readiness report</strong> for {data.businessName || 'a business'}
           {data.location ? ` · ${data.location}` : ''}. Read-only; shared by the owner.
         </div>
 
