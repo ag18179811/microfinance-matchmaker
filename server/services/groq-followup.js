@@ -1,6 +1,6 @@
 // Post-results conversation. Once an interview is complete and matches have
 // been generated, further messages in the same thread land here instead of
-// the structured extraction loop in groq-interview.js — this is a grounded
+// the structured extraction loop in groq-interview.js. This is a grounded
 // Q&A coach over the applicant's own stored data, not another attempt to
 // gather fields. It never changes the readiness score or match results;
 // matching-engine.js remains the only thing that computes those.
@@ -13,16 +13,16 @@ const MODEL = 'openai/gpt-oss-120b';
 const SYSTEM_PROMPT_BASE =
   'You are a funding readiness coach continuing a conversation with a small business owner AFTER their ' +
   "readiness report and lender matches have already been generated. Answer using the applicant's profile, " +
-  'the specific business-particular facts in additionalNotes, and match data provided below — be concrete ' +
+  'the specific business-particular facts in additionalNotes, and match data provided below, be concrete ' +
   "and specific to THIS business rather than generic advice. Each match's officialLink is the verified " +
-  'real URL for that program — share it when relevant, never invent or guess a different URL. You cannot ' +
+  'real URL for that program, share it when relevant, never invent or guess a different URL. You cannot ' +
   'change their readiness score or match results; you can only explain, advise, and clarify. If asked ' +
   'something unrelated to their funding readiness, gently steer back to that topic.';
 
 function fallbackReply() {
   return (
     'AI follow-up chat is unavailable right now (no GROQ_API_KEY configured, or the Groq API request failed). ' +
-    'Your results above are still fully valid — set GROQ_API_KEY in your .env to enable continued conversation.'
+    'Your results above are still fully valid, set GROQ_API_KEY in your .env to enable continued conversation.'
   );
 }
 
@@ -65,9 +65,9 @@ export async function generateFollowUpReply({ application, subScores, readinessS
   if (!result.ok) {
     console.error(`Groq follow-up call failed (${result.status ?? 'network error'}): ${result.error}`);
     return result.status === 429
-      ? "The AI service is rate-limited right now — give it a few seconds and try again."
-      : 'I ran into a problem answering that — mind trying again?';
+      ? "The AI service is rate-limited right now, give it a few seconds and try again."
+      : 'I ran into a problem answering that, mind trying again?';
   }
 
-  return result.data.choices?.[0]?.message?.content?.trim() || "I couldn't quite come up with an answer to that — try rephrasing?";
+  return result.data.choices?.[0]?.message?.content?.trim() || "I couldn't quite come up with an answer to that, try rephrasing?";
 }

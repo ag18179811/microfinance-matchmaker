@@ -44,7 +44,7 @@ async function ensureBucket(admin) {
     const { data } = await admin.storage.getBucket(BUCKET);
     if (!data) await admin.storage.createBucket(BUCKET, { public: false, fileSizeLimit: MAX_BYTES });
   } catch {
-    // createBucket throws if it already exists — treat that as fine
+    // createBucket throws if it already exists, treat that as fine
     await admin.storage.createBucket(BUCKET, { public: false }).catch(() => {});
   }
   bucketReady = true;
@@ -89,7 +89,7 @@ router.post('/:applicationId', handleUpload, async (req, res) => {
   });
   if (upErr) {
     console.error('[documents] storage upload failed:', upErr.message);
-    return res.status(502).json({ error: 'Could not store that file — try again.' });
+    return res.status(502).json({ error: 'Could not store that file. Try again.' });
   }
 
   const { rows } = await pool.query(

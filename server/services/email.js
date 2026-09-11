@@ -1,11 +1,11 @@
 // Thin email sender. Uses Resend when RESEND_API_KEY is set; otherwise a
-// no-op that logs and reports skipped — same graceful-degradation
+// no-op that logs and reports skipped, same graceful-degradation
 // discipline as the Groq/OpenAI services, so nothing in the app breaks
 // without an email provider configured.
 //
 // FROM_EMAIL must be a verified sender/domain in Resend. APP_URL is the
 // public frontend URL (Vercel), used for "open the app" links. Links that
-// hit the API itself (the unsubscribe endpoint) use apiUrl() instead —
+// hit the API itself (the unsubscribe endpoint) use apiUrl() instead, 
 // Render injects RENDER_EXTERNAL_URL automatically, so that needs no config.
 
 const RESEND_URL = 'https://api.resend.com/emails';
@@ -62,7 +62,7 @@ export async function sendEmail({ to, subject, html, text }) {
   }
 }
 
-// Minimal, safe HTML wrapper — plain, no external assets.
+// Minimal, safe HTML wrapper, plain, no external assets.
 export function wrapHtml(bodyHtml, unsubscribeUrl) {
   return (
     `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">` +

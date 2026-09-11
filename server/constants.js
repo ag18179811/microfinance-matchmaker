@@ -27,7 +27,7 @@ export const REQUIRED_APPLICATION_FIELDS = [
 ];
 
 // The deeper profile the adaptive interview gathers beyond the core required
-// fields above. None of these are hard-required — they enrich the readiness
+// fields above. None of these are hard-required, they enrich the readiness
 // analysis but the app still functions if any are left null. Order here is
 // the order the deterministic fallback (no GROQ_API_KEY, or a failed call)
 // walks them in, with ownership_demographics deliberately last since it's
@@ -49,12 +49,12 @@ export const DEEP_PROFILE_FIELDS = {
   has_tax_returns: {
     type: 'select',
     options: ['yes_2yr', 'yes_1yr', 'no'],
-    label: 'Do you have business tax returns ready — for the last two years, one year, or none yet?',
+    label: 'Do you have business tax returns ready, for the last two years, one year, or none yet?',
   },
   cash_flow_pattern: {
     type: 'select',
     options: ['steady', 'seasonal', 'growing', 'declining'],
-    label: 'How would you describe your revenue pattern — steady, seasonal, growing, or declining?',
+    label: 'How would you describe your revenue pattern, steady, seasonal, growing, or declining?',
   },
   credit_band: {
     type: 'select',
@@ -73,7 +73,7 @@ export const DEEP_PROFILE_FIELDS = {
     type: 'text',
     optional: true,
     label:
-      "Optional — do you identify as a woman-owned, minority-owned, or veteran-owned business? Answering can unlock a few extra lender matches, but it's entirely up to you.",
+      "Optional, do you identify as a woman-owned, minority-owned, or veteran-owned business? Answering can unlock a few extra lender matches, but it's entirely up to you.",
   },
 };
 

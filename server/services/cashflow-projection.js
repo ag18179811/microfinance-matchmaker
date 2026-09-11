@@ -1,11 +1,11 @@
 // A 12-month cash-flow projection scaffold. Every number is an estimate
 // derived from what the application already states (annual revenue, the
-// revenue pattern, the requested amount) — the owner is expected to
+// revenue pattern, the requested amount), the owner is expected to
 // replace each one with their real figures. It exists because the verified
 // CDFI and grant application profiles all ask for monthly projections, and
 // a blank spreadsheet is where owners get stuck.
 //
-// Deterministic and pure. Never invents a figure it presents as fact — the
+// Deterministic and pure. Never invents a figure it presents as fact, the
 // UI labels the whole thing as a starting point.
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -23,7 +23,7 @@ function estimateLoanPayment(principal) {
 function patternCurve(pattern, monthIndex) {
   switch (pattern) {
     case 'seasonal':
-      // peak mid-year, trough in winter — a gentle cosine
+      // peak mid-year, trough in winter, a gentle cosine
       return 1 + 0.35 * Math.cos(((monthIndex - 6) / 12) * 2 * Math.PI * -1);
     case 'growing':
       return 1 + 0.02 * monthIndex;

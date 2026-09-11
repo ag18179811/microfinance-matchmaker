@@ -1,11 +1,11 @@
 // Judges whether the applicant's own answers are credible, coherent, and
-// substantive — a check the deterministic rules engine cannot do, since it
+// substantive, a check the deterministic rules engine cannot do, since it
 // only sees whether a field is present, not whether the content in it makes
 // sense. Without this, a profile stuffed with joke/nonsense/self-contradictory
 // text scores exactly as well as a genuine one, because "completeness" in
 // matching-engine.js only counts presence.
 //
-// This intentionally judges CREDIBILITY, not business strength — a small,
+// This intentionally judges CREDIBILITY, not business strength, a small,
 // new, financially weak business that answers honestly and specifically
 // must score high here; a large, established business that gives evasive
 // or contradictory answers must score low. Revenue/tenure/loan-fit already
@@ -14,7 +14,7 @@
 // story doesn't hold together," independent of how strong the business is.
 //
 // Like every other Groq call in this app, matching-engine.js itself never
-// calls this — the score it returns is threaded into computeReadiness() as
+// calls this, the score it returns is threaded into computeReadiness() as
 // plain input data, the same way already-extracted fields are, so the
 // scoring formula itself stays deterministic and auditable.
 
@@ -22,7 +22,7 @@ import { callGroqChat } from './groq-client.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
-// Used when the check can't run at all (no key) or fails after retries —
+// Used when the check can't run at all (no key) or fails after retries, 
 // deliberately NOT full credit (100) and NOT zero: an unverified profile is
 // neither vouched for nor accused, so it shouldn't swing the score either way.
 export const UNAVAILABLE_QUALITY_SCORE = 60;
@@ -30,18 +30,18 @@ export const UNAVAILABLE_QUALITY_SCORE = 60;
 const SYSTEM_PROMPT =
   'You are a fraud/credibility reviewer for a small business funding-readiness platform. You will be given ' +
   "a business's structured application fields and the free-text facts (\"notes\") gathered during an " +
-  "interview. Judge ONLY whether the content is credible, internally consistent, and substantive — never " +
+  "interview. Judge ONLY whether the content is credible, internally consistent, and substantive, never " +
   'whether the business itself is strong, big, profitable, or a good loan candidate (that is scored ' +
   'elsewhere). A small, brand-new, financially weak business that answers honestly and specifically must ' +
   'score HIGH here. Score LOW only when the content itself is the problem: answers that are joke/satirical ' +
   '/nonsensical, self-contradictory (e.g. claimed revenue or history that cannot be reconciled with other ' +
   'stated facts), clearly not describing a real business, evasive non-answers, or so generic/thin they ' +
   "carry no real information. Do not penalize brevity alone, imperfect grammar, or a business simply being " +
-  'small or new — those are not credibility problems. Respond with ONLY a single valid JSON object, no ' +
+  'small or new, those are not credibility problems. Respond with ONLY a single valid JSON object, no ' +
   'markdown, no commentary:\n' +
   '{\n' +
   '  "qualityScore": integer 0-100,\n' +
-  '  "concerns": ["short, specific, factual description of each credibility problem found — empty array if none"]\n' +
+  '  "concerns": ["short, specific, factual description of each credibility problem found, empty array if none"]\n' +
   '}';
 
 function coerceResult(raw) {

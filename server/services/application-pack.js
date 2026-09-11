@@ -6,7 +6,7 @@
 // artifacts, so the blocks are chosen by application model.
 //
 // One AI call, grounded strictly in the business case and the owner's own
-// prepared answers — it reformats and organizes, it does not invent. The
+// prepared answers, it reformats and organizes, it does not invent. The
 // document checklist and process steps are copied verbatim from the
 // verified lender profile, never generated.
 
@@ -21,10 +21,10 @@ export const BLOCKS_BY_MODEL = {
   cdfi_term_loan: [
     ['business_summary', 'Business summary', 'One tight paragraph a loan officer can read in 20 seconds: what the business is, how long, how it makes money, where it stands.'],
     ['use_of_funds', 'Use-of-funds statement', 'Exactly what the money buys, with the cost breakdown, AND the business reason for each piece tied to a concrete outcome (more capacity, lower costs, more revenue). This is the piece lenders say is most often too vague.'],
-    ['repayment', 'How repayment works', "A plain, honest paragraph on where the monthly payment comes from — grounded in the owner's actual cash-flow numbers and any seasonality. No invented projections."],
+    ['repayment', 'How repayment works', "A plain, honest paragraph on where the monthly payment comes from, grounded in the owner's actual cash-flow numbers and any seasonality. No invented projections."],
   ],
   crowdfunding: [
-    ['personal_story', 'Your personal story (2 paragraphs)', "First person, specific, and human — who the owner is, why this business, what this moment means. Kiva lenders fund people; this is the piece that does that work. Around 2 paragraphs."],
+    ['personal_story', 'Your personal story (2 paragraphs)', "First person, specific, and human, who the owner is, why this business, what this moment means. Kiva lenders fund people; this is the piece that does that work. Around 2 paragraphs."],
     ['business_description', 'Business description (2 paragraphs)', 'What the business does, who it serves, how it makes money, where it is now. Concrete, not promotional. Around 2 paragraphs.'],
     ['loan_use', 'What the loan pays for', 'A specific, itemized breakdown of how every dollar is used.'],
     ['invite_message', 'A message to invite your private lenders', "A short, warm, personal message the owner can adapt and send to friends, family, customers, and suppliers, asking them to lend during the 15-day private period. First person, in the owner's voice, easy to forward."],
@@ -32,7 +32,7 @@ export const BLOCKS_BY_MODEL = {
   sba_intermediary: [
     ['business_summary', 'Business summary', 'One paragraph: what the business is, how long, how it makes money, where it stands.'],
     ['use_of_funds', 'Use-of-funds statement', 'Exactly what the money buys, the cost breakdown, and the business reason for each piece.'],
-    ['business_plan_outline', 'Business plan outline', 'A section-by-section skeleton (as a bulleted outline, not full prose) the owner can flesh out — most intermediaries require a written plan. Base every bullet on what the owner has actually told us; mark clearly where they still need to add detail.'],
+    ['business_plan_outline', 'Business plan outline', 'A section-by-section skeleton (as a bulleted outline, not full prose) the owner can flesh out, most intermediaries require a written plan. Base every bullet on what the owner has actually told us; mark clearly where they still need to add detail.'],
   ],
   referral_network: [
     ['business_summary', 'Business summary', 'One paragraph the network can use to route the request well: what the business is, how long, how it makes money, the amount and purpose.'],
@@ -40,13 +40,13 @@ export const BLOCKS_BY_MODEL = {
   ],
   group_lending: [
     ['business_summary', 'Business summary', "One short paragraph on the business, in the owner's voice."],
-    ['group_note', 'Forming your group', "A short, practical note to the owner on who in their life could be the other four women entrepreneurs in their lending group, and how to raise it with them — grounded in anyone they've mentioned (customers, other vendors, community)."],
+    ['group_note', 'Forming your group', "A short, practical note to the owner on who in their life could be the other four women entrepreneurs in their lending group, and how to raise it with them, grounded in anyone they've mentioned (customers, other vendors, community)."],
   ],
   grant: [
-    ['project_description', 'Project description', 'A specific, concrete description of exactly what this grant would fund — the purchase, the hire, the improvement — and the outcome it produces. Grant reviewers reward specificity; avoid "general operating support" language.'],
+    ['project_description', 'Project description', 'A specific, concrete description of exactly what this grant would fund, the purchase, the hire, the improvement, and the outcome it produces. Grant reviewers reward specificity; avoid "general operating support" language.'],
     ['budget', 'Grant budget', 'A clean line-item budget: every dollar of the requested amount, what it buys, and the total. Only amounts the owner actually gave.'],
-    ['fit_statement', "Why this business fits the funder", "A short paragraph connecting this specific business and project to the grant's stated mission and priorities — the case for why this application deserves the award over others."],
-    ['impact', 'Expected impact', 'What measurably changes if the grant is awarded — jobs, customers served, revenue, community effect — stated concretely and only from what the owner has said, with a bracketed prompt where a number is missing.'],
+    ['fit_statement', "Why this business fits the funder", "A short paragraph connecting this specific business and project to the grant's stated mission and priorities, the case for why this application deserves the award over others."],
+    ['impact', 'Expected impact', 'What measurably changes if the grant is awarded, jobs, customers served, revenue, community effect, stated concretely and only from what the owner has said, with a bracketed prompt where a number is missing.'],
   ],
 };
 
@@ -60,7 +60,7 @@ function buildSystemPrompt(model, lenderName) {
     'ABSOLUTE RULES:\n' +
     "- Reformat and organize ONLY. Every fact must trace to the narrative or the prepared answers. Never " +
     'invent a number, a projection, a customer, a date, or a plan.\n' +
-    "- Keep the owner's voice — first person, plain, specific. Not marketing copy.\n" +
+    "- Keep the owner's voice, first person, plain, specific. Not marketing copy.\n" +
     '- Where something important is genuinely missing for a block, write one bracketed prompt like ' +
     '"[Add: your exact monthly payment once you know the loan terms]" rather than making it up.\n\n' +
     'Produce these blocks:\n' +
@@ -82,7 +82,7 @@ function coercePack(raw, model) {
   return out;
 }
 
-// Returns { ok, blocks, checklist, steps } — checklist/steps are copied
+// Returns { ok, blocks, checklist, steps }, checklist/steps are copied
 // straight from the verified profile (or empty for unverified lenders).
 export async function buildPack({ businessCase, review, profile, lender, language = 'en' }) {
   const apiKey = process.env.GROQ_API_KEY;

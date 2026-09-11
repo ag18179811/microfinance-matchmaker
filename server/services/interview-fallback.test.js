@@ -35,7 +35,7 @@ test('coerceFallbackAnswer accepts state as either an abbreviation or full name'
 });
 
 // Regression: declining the optional ownership_demographics question must be
-// remembered as resolved, not treated as still-blank — otherwise
+// remembered as resolved, not treated as still-blank, otherwise
 // nextFallbackTurn re-asks it forever since a genuine skip and "never asked"
 // were previously both represented as null.
 test('an optional field, once explicitly skipped, is never asked again', () => {

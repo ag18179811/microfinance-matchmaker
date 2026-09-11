@@ -44,7 +44,7 @@ function shapeReview(row) {
   };
 }
 
-// GET /:applicationId/lenders — the matched lenders, each with its verified
+// GET /:applicationId/lenders, the matched lenders, each with its verified
 // (or clearly-marked unverified) application profile and any review progress.
 router.get('/:applicationId/lenders', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
@@ -99,7 +99,7 @@ router.get('/:applicationId/lenders', async (req, res) => {
   });
 });
 
-// POST /:applicationId/:lenderKey/start — begin (or resume) the review.
+// POST /:applicationId/:lenderKey/start, begin (or resume) the review.
 router.post('/:applicationId/:lenderKey/start', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
   if (!application) return res.status(404).json({ error: 'Application not found' });
@@ -120,7 +120,7 @@ router.post('/:applicationId/:lenderKey/start', async (req, res) => {
   const matchDetail = { reasons: lender.reasons || [], cautions: lender.cautions || [] };
 
   const started = await startReview({ application, additionalNotes, lender, profile, subScores, matchDetail, language: application.language || 'en' });
-  if (!started.ok) return res.status(502).json({ error: `Couldn't start the review right now — ${started.reason}.` });
+  if (!started.ok) return res.status(502).json({ error: `Couldn't start the review right now: ${started.reason}.` });
 
   const messages = [{ role: 'underwriter', content: started.opening }];
   const { rows } = await pool.query(
@@ -134,7 +134,7 @@ router.post('/:applicationId/:lenderKey/start', async (req, res) => {
   res.json({ ...shapeReview(rows[0]), focusPoints: started.focusPoints, hardBlocker: started.hardBlocker });
 });
 
-// POST /:applicationId/:lenderKey/message — the owner answers; the reviewer
+// POST /:applicationId/:lenderKey/message, the owner answers; the reviewer
 // reacts, captures the answer, and either asks the next question or closes.
 router.post('/:applicationId/:lenderKey/message', async (req, res) => {
   const text = String(req.body?.text ?? '').trim();
@@ -169,7 +169,7 @@ router.post('/:applicationId/:lenderKey/message', async (req, res) => {
     userMessage: text,
     language: application.language || 'en',
   });
-  if (!turn.ok) return res.status(502).json({ error: `The reviewer didn't respond — ${turn.reason}. Your progress is saved; try again.` });
+  if (!turn.ok) return res.status(502).json({ error: `The reviewer didn't respond: ${turn.reason}. Your progress is saved; try again.` });
 
   const messages = [
     ...(reviewRow.messages || []),
@@ -192,7 +192,7 @@ router.post('/:applicationId/:lenderKey/message', async (req, res) => {
   res.json({ ...shapeReview(rows[0]), readyToClose: turn.readyToClose });
 });
 
-// POST /:applicationId/:lenderKey/pack — assemble (or return the cached)
+// POST /:applicationId/:lenderKey/pack, assemble (or return the cached)
 // lender-shaped application pack from the business case + prepared answers.
 router.post('/:applicationId/:lenderKey/pack', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
@@ -204,7 +204,7 @@ router.post('/:applicationId/:lenderKey/pack', async (req, res) => {
       req.params.lenderKey,
     ])
   ).rows[0];
-  if (!reviewRow) return res.status(409).json({ error: 'Practice the review first — the pack is built from your prepared answers.' });
+  if (!reviewRow) return res.status(409).json({ error: 'Practice the review first. The pack is built from your prepared answers.' });
 
   if (reviewRow.pack && !req.body?.rebuild) return res.json(reviewRow.pack);
 
@@ -217,7 +217,7 @@ router.post('/:applicationId/:lenderKey/pack', async (req, res) => {
 
   const profile = deriveProfile(lender);
   const pack = await buildPack({ businessCase, review: reviewRow, profile, lender, language: application.language || 'en' });
-  if (!pack.ok) return res.status(502).json({ error: `Couldn't assemble the pack — ${pack.reason}.` });
+  if (!pack.ok) return res.status(502).json({ error: `Couldn't assemble the pack: ${pack.reason}.` });
 
   await pool.query('UPDATE underwriter_reviews SET pack = $1, updated_at = now() WHERE application_id = $2 AND lender_key = $3', [
     JSON.stringify(pack),
@@ -225,7 +225,7 @@ router.post('/:applicationId/:lenderKey/pack', async (req, res) => {
     req.params.lenderKey,
   ]);
 
-  // Building a pack means the owner is actively working this program —
+  // Building a pack means the owner is actively working this program, 
   // start tracking it.
   await autoTrack(application.id, req.userId, req.params.lenderKey, lender.name, lender.funding_type || 'loan');
 

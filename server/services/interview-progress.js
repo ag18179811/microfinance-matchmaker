@@ -1,13 +1,13 @@
 // Estimates how far along a funding-readiness interview is, as a 0–100
 // percentage plus a human phase label, so the chat UI can show a progress
-// bar toward "here are your matches". This is a UX signal ONLY — it never
+// bar toward "here are your matches". This is a UX signal ONLY, it never
 // influences what gets asked or when the interview actually ends (the model
 // owns the done decision, groq-interview.js / interview-fallback.js). The
 // only hard guarantee callers rely on: once `done` is true this returns
 // 100, and until then it never returns 100.
 //
 // The interview is adaptive, so there is no exact "question N of M". This
-// blends three monotonic-by-construction signals — every one of them only
+// blends three monotonic-by-construction signals, every one of them only
 // ever moves up as the conversation continues:
 //   1. how many core required fields are captured (business basics)
 //   2. how many of the deeper profile fields are captured
@@ -27,7 +27,7 @@ const SOFT_TARGET_TURNS = 13;
 const SCORED_DEEP_FIELDS = DEEP_PROFILE_FIELD_ORDER.filter((k) => !DEEP_PROFILE_FIELDS[k].optional);
 
 // Roughly how many distinct business-specific notes a rich interview
-// gathers — past this, extra notes don't move the bar further.
+// gathers, past this, extra notes don't move the bar further.
 const NOTES_TARGET = 10;
 
 const WEIGHTS = { core: 0.34, deep: 0.24, notes: 0.14, turns: 0.28 };

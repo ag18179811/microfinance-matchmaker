@@ -16,7 +16,7 @@ function mockRes() {
   return res;
 }
 
-// Dummy but well-formed values so the Supabase client can be constructed —
+// Dummy but well-formed values so the Supabase client can be constructed, 
 // no network call happens at construction time, only inside auth.getUser,
 // which every test below mocks.
 before(() => {

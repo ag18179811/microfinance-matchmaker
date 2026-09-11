@@ -2,7 +2,7 @@
 // several Groq calls in a row (interview extraction, quality check,
 // coaching summary), which is enough to trip the free tier's per-minute
 // token budget even under normal use. Groq's own 429 response says how
-// long until it clears — that's a transient, near-certain-to-succeed-soon
+// long until it clears, that's a transient, near-certain-to-succeed-soon
 // condition, so it's worth one short retry before a caller falls back to
 // its static message. Other errors (4xx/5xx besides 429, network failure)
 // are not retried and surface immediately.

@@ -10,7 +10,7 @@ afterEach(() => {
   global.setTimeout = originalSetTimeout;
 });
 
-// Skip the real wait so these tests run fast — the delay math itself isn't
+// Skip the real wait so these tests run fast, the delay math itself isn't
 // what's under test here, the retry-then-succeed control flow is.
 function stubTimers() {
   global.setTimeout = (fn) => {

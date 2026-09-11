@@ -1,18 +1,18 @@
 // Step 2 of an interview turn: structures a turn into the fixed shape the
 // app needs (next question, updated fields, notes, reasoningSteps for the
 // UI). When openai-interview-reason.js (step 1) succeeded, this is fed its
-// free-form analysis and structures THAT — the actual reasoning, including
+// free-form analysis and structures THAT, the actual reasoning, including
 // any web research, already happened there. When step 1 is unavailable
 // (no OPENAI_API_KEY, or the call failed), this falls back to doing the
 // reasoning itself from the raw conversation, same single-call behavior as
-// before that step existed — a research step is an enhancement, never a
+// before that step existed, a research step is an enhancement, never a
 // hard dependency.
 //
 // Gathering as much specific, business-particular information as possible
-// IS the job — not filling in a fixed set of fields. The structured fields
+// IS the job, not filling in a fixed set of fields. The structured fields
 // below exist so the deterministic matching engine has something to filter
 // on, but the model is explicitly told they are reference points, never a
-// checklist. Eligibility and match scoring never happen here —
+// checklist. Eligibility and match scoring never happen here:
 // matching-engine.js stays the sole, deterministic source of truth for
 // those. This file only decides what to ask next and extracts structured
 // answers, the same "extract, never invent" discipline as groq-extract.js.
@@ -33,11 +33,11 @@ function fieldSchemaDescription() {
   const deep = DEEP_PROFILE_FIELD_ORDER.map((k) => {
     const meta = DEEP_PROFILE_FIELDS[k];
     const type = meta.type === 'select' ? `one of [${meta.options.map((o) => `"${o}"`).join(', ')}]` : meta.type;
-    return `  "${k}": ${type}${meta.optional ? ' (optional — never required, never lowers readiness if left null)' : ''}`;
+    return `  "${k}": ${type}${meta.optional ? ' (optional, never required, never lowers readiness if left null)' : ''}`;
   }).join('\n');
   return (
     `Core fields (already covered by earlier extraction if the user's opening description mentioned them):\n${core}\n\n` +
-    'Structured reference fields — fill these in via updatedFields ONLY when they come up naturally as part of ' +
+    'Structured reference fields, fill these in via updatedFields ONLY when they come up naturally as part of ' +
     `a genuinely relevant question. They are reference points you may capture along the way, NEVER a checklist ` +
     `to work through for its own sake:\n${deep}`
   );
@@ -46,18 +46,18 @@ function fieldSchemaDescription() {
 function buildSystemPrompt(hasAnalysis, language = 'en') {
   const reasoningSource = hasAnalysis
     ? 'You will be given a research analysis already written by a first-pass reasoning step (which may have ' +
-      'searched the web for a specific detail the user mentioned) — that IS the actual thinking; your job is to ' +
+      'searched the web for a specific detail the user mentioned), that IS the actual thinking; your job is to ' +
       'structure it, not redo it. Ground reasoningSteps, directAnswer, nextQuestion, updatedFields, and newNotes ' +
       'in what that analysis actually says.'
-    : 'No prior analysis was provided this turn — read the conversation yourself and do the reasoning directly.';
+    : 'No prior analysis was provided this turn, read the conversation yourself and do the reasoning directly.';
 
   return (
     'You are conducting a funding-readiness interview for a small business owner. GATHERING AS MUCH SPECIFIC, ' +
-    'RELEVANT, USEFUL INFORMATION AS POSSIBLE ABOUT THIS PARTICULAR BUSINESS IS YOUR PRIMARY JOB — more ' +
+    'RELEVANT, USEFUL INFORMATION AS POSSIBLE ABOUT THIS PARTICULAR BUSINESS IS YOUR PRIMARY JOB, more ' +
     'important than quickly reaching any fixed set of fields. Think like an experienced loan officer running a ' +
     'real underwriting interview, not a form to fill out. Start broad, then go specific based on what THIS ' +
     'business and owner actually tell you. Every business is different, so the substance of what you ask must ' +
-    'genuinely differ by industry and situation — a seasonal ice cream shop, a B2B software consultancy, a ' +
+    'genuinely differ by industry and situation: a seasonal ice cream shop, a B2B software consultancy, a ' +
     'construction contractor, and a home daycare have almost nothing in common in what a real lender would need ' +
     'to know about them. Do not default to the same generic financial checklist for every applicant. Dig into ' +
     'whatever is actually distinctive and material to THIS business: industry-specific licensing or permits, ' +
@@ -67,23 +67,23 @@ function buildSystemPrompt(hasAnalysis, language = 'en') {
     'something already answered. Ask about ownership demographics (if at all) only once, near the end, and ' +
     'always frame it as strictly optional. Only set fileHint when a specific document would meaningfully ' +
     "strengthen THIS question's answer. Declare done:true only once you have a genuinely rich, specific, " +
-    'non-generic picture of this business — not merely once the structured fields happen to be filled in; a ' +
+    'non-generic picture of this business, not merely once the structured fields happen to be filled in; a ' +
     'thorough interview usually takes a meaningful number of turns. You never decide eligibility or lender ' +
-    'matches — only gather and record information. Never invent a value the user did not state or clearly ' +
+    'matches, only gather and record information. Never invent a value the user did not state or clearly ' +
     `imply. ${reasoningSource}\n\n` +
     'CRITICAL: if the user asked you a direct question in their last message (especially one the research ' +
-    'analysis actually answered — a number, a rule, an explanation), you MUST put that answer in directAnswer, ' +
+    'analysis actually answered: a number, a rule, an explanation), you MUST put that answer in directAnswer, ' +
     'as real plain-language sentences with the actual answer in them, not a placeholder. This is separate from ' +
-    'nextQuestion and gets shown to the user first, before the next question — never silently skip a question ' +
+    'nextQuestion and gets shown to the user first, before the next question. Never silently skip a question ' +
     'they asked and just move on to your own next question; that reads as ignoring them, which this interview ' +
     'must never do. If they did not ask a direct question this turn, directAnswer is null.\n\n' +
     `${fieldSchemaDescription()}\n\n` +
     'Respond with ONLY a single valid JSON object, no markdown, no commentary:\n' +
     '{\n' +
-    '  "reasoningSteps": ["short, distinct step 1 of your actual thinking", "step 2", "..."] — 2 to 5 short, ' +
+    '  "reasoningSteps": ["short, distinct step 1 of your actual thinking", "step 2", "..."], 2 to 5 short, ' +
     'concrete steps a reader could follow, e.g. what you just learned, what it implies, anything you looked up ' +
     'and what it told you, why the next question follows from all that. Each step is one clear thought, not a ' +
-    'paragraph. Never generic filler like "analyzing the business" — every step must reference something ' +
+    'paragraph. Never generic filler like "analyzing the business", every step must reference something ' +
     'actually said or found this turn,\n' +
     '  "directAnswer": "string with the actual answer to the user\'s direct question this turn, or null if they didn\'t ask one",\n' +
     '  "done": boolean,\n' +
@@ -93,17 +93,17 @@ function buildSystemPrompt(hasAnalysis, language = 'en') {
     '  "fileHint": "string or null",\n' +
     '  "targetField": "one of the structured field keys above this question is chiefly trying to fill, or null if this is an open-ended/situational question",\n' +
     '  "updatedFields": { any structured field keys above you can now confidently fill in, or {} },\n' +
-    '  "newNotes": [ { "topic": "short label for what this is about", "detail": "the specific, useful fact learned" } ] — any new situational or industry-specific facts learned this turn that do not fit the structured fields, or [] if none\n' +
+    '  "newNotes": [ { "topic": "short label for what this is about", "detail": "the specific, useful fact learned" } ], any new situational or industry-specific facts learned this turn that do not fit the structured fields, or [] if none\n' +
     '}\n\n' +
     'updatedFields should include EVERY structured field you can confidently determine from the full ' +
     'conversation so far, not just ones mentioned in the latest message. newNotes should only include facts ' +
-    'not already captured in an earlier note or structured field — this is where most of what makes this ' +
+    'not already captured in an earlier note or structured field. This is where most of what makes this ' +
     'business unique should end up.' +
     languageDirective(language)
   );
 }
 
-// Never trust the model's structured output blindly — same discipline as
+// Never trust the model's structured output blindly, same discipline as
 // groq-extract.js. Anything malformed or referencing an unknown field is
 // silently dropped rather than propagated.
 function coerceUpdatedFields(raw) {
@@ -132,7 +132,7 @@ function coerceUpdatedFields(raw) {
   return out;
 }
 
-// Free-form facts that don't fit the fixed schema — this is deliberately
+// Free-form facts that don't fit the fixed schema. This is deliberately
 // unbounded in shape (any topic string) since the whole point is to capture
 // whatever is actually specific to this business, not force it into a
 // pre-defined slot. Still defensively validated: must be a real {topic,
@@ -146,7 +146,7 @@ function coerceNotes(raw) {
     .slice(0, MAX_NOTES_PER_TURN);
 }
 
-// Same bounded-array discipline as coerceNotes — a handful of short, real
+// Same bounded-array discipline as coerceNotes, a handful of short, real
 // steps, never an essay and never fabricated filler if the model omits them.
 const MAX_REASONING_STEPS = 6;
 function coerceReasoningSteps(raw) {
@@ -197,7 +197,7 @@ function buildUserContent(currentFields, currentNotes, attachmentTexts, stuckFie
   if (stuckField) {
     parts.push(
       `IMPORTANT: your last two questions both targeted "${stuckField}" and it still isn't resolved. Do NOT ask ` +
-        'about it again this turn, in any phrasing — move to a genuinely different topic instead. It can be ' +
+        'about it again this turn, in any phrasing, move to a genuinely different topic instead. It can be ' +
         'revisited later if it turns out to matter.'
     );
   }
@@ -206,9 +206,9 @@ function buildUserContent(currentFields, currentNotes, attachmentTexts, stuckFie
 
 // history: [{ role: 'user'|'assistant', content: string }] in chronological order.
 // analysisText/citedUrls: optional output from openai-interview-reason.js
-// (step 1) — when present, this call structures that analysis instead of
+// (step 1), when present, this call structures that analysis instead of
 // reasoning from scratch. Returns { ok: true, ...turn } on success, or
-// { ok: false } when there's no key or the call failed — callers should
+// { ok: false } when there's no key or the call failed, callers should
 // fall back to the deterministic fixed-question path rather than surface an
 // error.
 export async function runInterviewTurn({

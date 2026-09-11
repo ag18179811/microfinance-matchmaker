@@ -46,7 +46,7 @@ function extractionResponsePayload(lenders) {
 }
 
 // Odd calls are the grounded-search step, even calls the schema-extract
-// step — so this serves both the targeted pass and, if it's reached, the
+// step, so this serves both the targeted pass and, if it's reached, the
 // broadened fallback pass with the same payloads.
 function mockTwoStepFetch({ searchText, citedUrls, extractedLenders }) {
   let call = 0;

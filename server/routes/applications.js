@@ -7,7 +7,7 @@ import { normalizeLanguage } from '../services/language.js';
 const router = Router();
 
 // Never trust the deep-profile fields from the client body blindly, even
-// though they're optional — same defensive coercion as everywhere else.
+// though they're optional, same defensive coercion as everywhere else.
 function coerceDeepProfile(body) {
   const out = {};
   for (const key of DEEP_PROFILE_FIELD_ORDER) {
@@ -21,7 +21,7 @@ function coerceDeepProfile(body) {
 }
 
 // The open-ended, business-specific facts the interview gathered beyond the
-// fixed fields — this is where most of what makes the analysis genuinely
+// fixed fields. This is where most of what makes the analysis genuinely
 // tailored to this particular business lives.
 function coerceAdditionalNotes(raw) {
   if (!Array.isArray(raw)) return [];
@@ -82,7 +82,7 @@ router.post('/', async (req, res) => {
   // Link this application back to the conversation it came from, so a
   // resumed conversation can find its results and the post-results
   // follow-up chat has something to answer questions about. Scoped to the
-  // caller's own conversations — a conversationId for someone else's thread
+  // caller's own conversations, a conversationId for someone else's thread
   // is silently ignored rather than trusted.
   const conversationId = req.body?.conversationId;
   if (conversationId) {

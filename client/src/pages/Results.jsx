@@ -234,12 +234,7 @@ export default function Results({ results, conversationId, onResultsUpdate }) {
       </div>
 
       <div className="coaching-card">
-        <div className="coaching-header">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1l1.85 4 4.15.5-3 2.9.75 4.1L8 10.5 4.25 12.5 5 8.4l-3-2.9 4.15-.5L8 1z" fill="currentColor" />
-          </svg>
-          AI Coaching Summary
-        </div>
+        <div className="coaching-header">Coaching notes</div>
         <div className="coaching-body">{aiSummary}</div>
       </div>
 

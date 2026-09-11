@@ -1,4 +1,4 @@
-// This is NOT a catalog of programs to match against — the app has none of
+// This is NOT a catalog of programs to match against, the app has none of
 // that; every program a business sees comes from the per-application live
 // search (services/openai-lender-search.js). This file is the "how to apply"
 // layer: when that search surfaces one of a handful of well-known programs,
@@ -8,36 +8,36 @@
 // their site". Every entry was checked against the org's own pages (dates
 // noted); anything not clearly stated is left out, never guessed. A
 // discovered program with no entry here gets a model guess from its type,
-// marked verified:false — the UI says so and never shows a fabricated
+// marked verified:false, the UI says so and never shows a fabricated
 // checklist.
 //
 // The named programs fall into five genuinely different application models,
 // and the help each one needs is shaped by its model, not a shared
 // checklist:
 //
-//   cdfi_term_loan   — an online application + document upload; a real
+//   cdfi_term_loan  , an online application + document upload; a real
 //                      underwriter reads cash flow, debt, and use-of-funds
 //                      (Accion, LiftFund, Craft3, Justine PETERSEN)
-//   crowdfunding      — no credit check; a story, a photo, and a network you
+//   crowdfunding     , no credit check; a story, a photo, and a network you
 //                      must personally activate (Kiva)
-//   sba_intermediary — you don't apply to "the SBA"; you find your local
+//   sba_intermediary, you don't apply to "the SBA"; you find your local
 //                      approved intermediary, who often requires training
 //                      (SBA Microloan Program)
-//   referral_network — applying routes your request to partner lenders
+//   referral_network, applying routes your request to partner lenders
 //                      (Community Reinvestment Fund)
-//   group_lending    — join a peer group, attend weekly meetings; almost no
+//   group_lending   , join a peer group, attend weekly meetings; almost no
 //                      paperwork but a real time commitment (Grameen America)
 //
 // For lenders discovered by live web search we don't have verified intake
 // details, so deriveProfile() returns a model guess from the lender type and
-// marks verified:false — the UI must say so and never show a fabricated
+// marks verified:false, the UI must say so and never show a fabricated
 // checklist.
 
 export const APPLICATION_MODELS = {
   cdfi_term_loan: {
     label: 'Online application, then a real underwriter',
     blurb:
-      'You apply online and upload (or connect) documents. A loan officer then reviews your cash flow, the debt already on your books, and whether the money has a clear path to being repaid. Mission-driven — they want to say yes — but the numbers have to make sense.',
+      'You apply online and upload (or connect) documents. A loan officer then reviews your cash flow, the debt already on your books, and whether the money has a clear path to being repaid. Mission-driven, they want to say yes, but the numbers have to make sense.',
   },
   crowdfunding: {
     label: 'Character-based crowdfunding',
@@ -47,7 +47,7 @@ export const APPLICATION_MODELS = {
   sba_intermediary: {
     label: 'Routed through a local nonprofit intermediary',
     blurb:
-      "There's no single application. You find the SBA-approved intermediary that serves your area and apply to them — each sets its own rules, and many require you to complete a business training or mentorship before funding.",
+      "There's no single application. You find the SBA-approved intermediary that serves your area and apply to them, each sets its own rules, and many require you to complete a business training or mentorship before funding.",
   },
   referral_network: {
     label: 'One application, routed to partner lenders',
@@ -62,21 +62,21 @@ export const APPLICATION_MODELS = {
   grant: {
     label: 'Competitive grant application',
     blurb:
-      'A grant is money you keep — no repayment, no interest. In exchange it is competitive: a written application judged by a review panel or a scoring rubric against the funder\'s priorities, usually on a fixed cycle with a deadline. What wins is a specific, credible project that fits exactly what the funder said they want to support.',
+      'A grant is money you keep, no repayment, no interest. In exchange it is competitive: a written application judged by a review panel or a scoring rubric against the funder\'s priorities, usually on a fixed cycle with a deadline. What wins is a specific, credible project that fits exactly what the funder said they want to support.',
   },
 };
 
-// slug         — stable id
-// matchNames   — lowercased names this profile applies to (matched against lender.name)
-// model        — key of APPLICATION_MODELS
-// applyUrl     — where the real application actually starts
-// timeline     — plain-language, from the org's own pages
-// howItWorks   — 1–2 sentences on the actual mechanics
-// need         — [{ item, when: 'always'|'larger_loans'|'startups'|'established', note? }]
-// steps        — ordered, concrete
-// gotchas      — the things that quietly sink applications
-// underwriterFocus — what the person reviewing THIS file weighs most (drives the sim persona)
-// verifiedOn / sources — when this was checked and against which pages
+// slug        , stable id
+// matchNames  , lowercased names this profile applies to (matched against lender.name)
+// model       , key of APPLICATION_MODELS
+// applyUrl    , where the real application actually starts
+// timeline    , plain-language, from the org's own pages
+// howItWorks  , 1–2 sentences on the actual mechanics
+// need        , [{ item, when: 'always'|'larger_loans'|'startups'|'established', note? }]
+// steps       , ordered, concrete
+// gotchas     , the things that quietly sink applications
+// underwriterFocus, what the person reviewing THIS file weighs most (drives the sim persona)
+// verifiedOn / sources, when this was checked and against which pages
 const PROFILES = [
   {
     slug: 'accion-opportunity-fund',
@@ -101,11 +101,11 @@ const PROFILES = [
       'Check you clear the basics: 12+ months in business and roughly $50,000+ in annual revenue.',
       'Gather ID, a voided check, and your last 3 months of bank statements.',
       'Start the online application and connect your business bank account.',
-      'Respond quickly if a loan officer asks for anything else — review is only 1–3 days.',
+      'Respond quickly if a loan officer asks for anything else. Review is only 1–3 days.',
     ],
     gotchas: [
       'Not available in Montana, North Dakota, South Dakota, Tennessee, or Vermont.',
-      'They read your actual bank transactions — large unexplained transfers or lots of negative-balance days will come up.',
+      'They read your actual bank transactions. Large unexplained transfers or lots of negative-balance days will come up.',
       'An owner must hold at least 20% of the business.',
     ],
     underwriterFocus:
@@ -123,7 +123,7 @@ const PROFILES = [
     applyUrl: 'https://www.liftfund.com/funding/get-funded',
     timeline: 'Application takes ~20 minutes; funding typically in 3–5 business days.',
     howItWorks:
-      'A short online application. LiftFund publishes an "Am I Ready?" page with a downloadable document checklist — pull it before you start.',
+      'A short online application. LiftFund publishes an "Am I Ready?" page with a downloadable document checklist, pull it before you start.',
     need: [
       { item: 'EIN (or SSN if you have no EIN)', when: 'always' },
       { item: 'SSN or ITIN for you and any co-borrowers', when: 'always' },
@@ -131,7 +131,7 @@ const PROFILES = [
       { item: '3 most recent months of personal and/or business bank statements', when: 'always', note: 'which one depends on the loan size' },
       { item: 'A monthly budget: household income, business revenue, business expenses', when: 'always' },
       { item: 'Recent tax returns', when: 'larger_loans' },
-      { item: 'Collateral — usually a lien on business assets and whatever the loan buys', when: 'always' },
+      { item: 'Collateral, usually a lien on business assets and whatever the loan buys', when: 'always' },
     ],
     steps: [
       'Open LiftFund’s "Am I Ready?" page and download their document checklist.',
@@ -142,7 +142,7 @@ const PROFILES = [
     gotchas: [
       'No minimum credit score, but recent credit trouble (last 6 months) is close to disqualifying.',
       'Collateral is required on every loan, even small ones.',
-      'Startups are only eligible in certain industries — check before you invest time.',
+      'Startups are only eligible in certain industries, check before you invest time.',
     ],
     underwriterFocus:
       'Your credit conduct over the last 6 months (clean, not high), then cash flow against the monthly budget you provide, then what collateral secures the loan.',
@@ -160,7 +160,7 @@ const PROFILES = [
     need: [
       { item: 'A PayPal account (how you receive and repay the loan)', when: 'always' },
       { item: 'Proof the business is real: incorporation docs, government registration, permits, or a business tax return', when: 'always' },
-      { item: 'Your real financial numbers — every field filled in, or entered as $0', when: 'always' },
+      { item: 'Your real financial numbers, every field filled in, or entered as $0', when: 'always' },
       { item: 'A clear photo of you with your business', when: 'always' },
       { item: 'A personal story, about 2 paragraphs', when: 'always' },
       { item: 'A business description, about 2 paragraphs', when: 'always' },
@@ -175,13 +175,13 @@ const PROFILES = [
       'When approved, personally invite your list until you hit the private-lender goal.',
     ],
     gotchas: [
-      'The private fundraising period is the real test — if your network doesn’t lend, the loan never goes public.',
+      'The private fundraising period is the real test, if your network doesn’t lend, the loan never goes public.',
       'Not available in Nevada or North Dakota.',
       'Can’t be used to refinance debt or buy stock/equity; several industries are excluded (tobacco, weapons, gambling, crypto, MLM).',
       'A generic or vague story gets far less funding than a specific one.',
     ],
     underwriterFocus:
-      'Is the story real, specific, and engaging? Is there a genuine photo? And — most of all — do you actually have a network of people who will lend? This is "social underwriting": your standing in your community stands in for a credit score.',
+      'Is the story real, specific, and engaging? Is there a genuine photo? And, most of all, do you actually have a network of people who will lend? This is "social underwriting": your standing in your community stands in for a credit score.',
     verifiedOn: '2026-09',
     sources: [
       'https://www.kiva.org/borrow',
@@ -194,11 +194,11 @@ const PROFILES = [
     matchNames: ['sba microloan program', 'sba microloan'],
     model: 'sba_intermediary',
     applyUrl: 'https://www.sba.gov/funding-programs/loans/microloans',
-    timeline: 'Varies by intermediary — often 30–90 days, longer if a training requirement is involved.',
+    timeline: 'Varies by intermediary, often 30–90 days, longer if a training requirement is involved.',
     howItWorks:
       'The SBA funds nonprofit intermediary lenders who actually make the loans. You apply to the intermediary serving your area, and they make every credit decision locally.',
     need: [
-      { item: 'Whatever your local intermediary asks for — usually a business plan', when: 'always' },
+      { item: 'Whatever your local intermediary asks for, usually a business plan', when: 'always' },
       { item: 'Collateral and a personal guarantee (most intermediaries require both)', when: 'always' },
       { item: 'Completion of a business training or mentorship program', when: 'always', note: 'many intermediaries require this before funding' },
     ],
@@ -206,10 +206,10 @@ const PROFILES = [
       'Use the SBA intermediary locator to find the microlender serving your area.',
       'Contact them directly and ask for their specific application and document list.',
       'Ask up front whether they require a training workshop, and how long it takes.',
-      'Prepare a business plan — most intermediaries expect one.',
+      'Prepare a business plan, most intermediaries expect one.',
     ],
     gotchas: [
-      'There is no national application — going to sba.gov alone gets you nowhere without finding your intermediary.',
+      'There is no national application, going to sba.gov alone gets you nowhere without finding your intermediary.',
       'A required training program can add weeks; skipping it usually means no funding.',
       'Average microloan is around $13,000, not the $50,000 maximum.',
     ],
@@ -232,19 +232,19 @@ const PROFILES = [
       { item: 'Proof of address issued within the last 60 days (utility, medical, paystub, or phone bill)', when: 'always' },
     ],
     steps: [
-      'Confirm Grameen operates in your city (they serve select cities within NY, NE, IN, NC, TX, AZ — not statewide).',
+      'Confirm Grameen operates in your city (they serve select cities within NY, NE, IN, NC, TX, AZ, not statewide).',
       'Form or join a group of five women entrepreneurs.',
       'Attend the week-long onboarding training and bring physical copies of your documents.',
       'Host the verification visit, then start weekly meetings.',
     ],
     gotchas: [
       'Women-owned businesses only.',
-      'You cannot get a loan without a group — and the whole group shares the commitment.',
+      'You cannot get a loan without a group, and the whole group shares the commitment.',
       'It is a real ongoing time commitment: a meeting every single week.',
       'First loan is small ($500–$2,500); larger loans come after a repayment track record.',
     ],
     underwriterFocus:
-      'There is no traditional underwriting — no credit check, no collateral. What matters is forming a real group and showing up consistently.',
+      'There is no traditional underwriting, no credit check, no collateral. What matters is forming a real group and showing up consistently.',
     verifiedOn: '2026-09',
     sources: ['https://www.grameenamerica.org/program', 'https://www.grameenamerica.org/request-a-loan'],
   },
@@ -266,7 +266,7 @@ const PROFILES = [
       'Work directly with that lender on their full application and documents.',
     ],
     gotchas: [
-      'CRF itself does not fund you — the match quality depends on their network for your area and industry.',
+      'CRF itself does not fund you, the match quality depends on their network for your area and industry.',
       'You may still go through a full application with the lender you’re routed to.',
     ],
     underwriterFocus:
@@ -284,22 +284,22 @@ const PROFILES = [
       'You fill out a short online intake form. If it looks like a fit, a Craft3 lender calls you to talk through your business plan, use of funds, and collateral before inviting a full application.',
     need: [
       { item: 'A business plan', when: 'startups', note: 'required for startup financing' },
-      { item: 'Monthly financial projections', when: 'always', note: 'helpful but not required — Craft3 will still consider you without them' },
+      { item: 'Monthly financial projections', when: 'always', note: 'helpful but not required. Craft3 will still consider you without them' },
       { item: '2 years of financial statements (P&L and balance sheet) plus year-to-date', when: 'established' },
     ],
     steps: [
       'Confirm you’re in Oregon or Washington.',
       'Fill out the online intake form.',
-      'Take the fit call — be ready to talk through your plan, use of funds, and any collateral.',
+      'Take the fit call, be ready to talk through your plan, use of funds, and any collateral.',
       'If invited, complete the full application with your financials.',
     ],
     gotchas: [
       'Oregon and Washington only.',
-      'It starts with a conversation, not a form — how you talk through the business on that call matters.',
+      'It starts with a conversation, not a form, how you talk through the business on that call matters.',
       'Loan sizes range enormously; a small working-capital request is treated very differently from a large one.',
     ],
     underwriterFocus:
-      'Relationship-based. The first call is a real screen — they’re listening for a coherent plan, a sensible use of funds, and how you think about repayment. Especially open to minority-, women-, and immigrant-owned businesses that banks turned down.',
+      'Relationship-based. The first call is a real screen, they’re listening for a coherent plan, a sensible use of funds, and how you think about repayment. Especially open to minority-, women-, and immigrant-owned businesses that banks turned down.',
     verifiedOn: '2026-09',
     sources: ['https://www.craft3.org/get-started', 'https://www.craft3.org/business-loans/business'],
   },
@@ -308,13 +308,13 @@ const PROFILES = [
     matchNames: ['amber grant for women (womensnet)', 'amber grant for women', 'amber grant', 'womensnet'],
     model: 'grant',
     applyUrl: 'https://ambergrantsforwomen.com/get-an-amber-grant/apply-now/',
-    timeline: 'Monthly cycles — each runs the 1st through the last day of the month; one application covers that month. Winners are also entered for a $50,000 year-end grant.',
+    timeline: 'Monthly cycles, each runs the 1st through the last day of the month; one application covers that month. Winners are also entered for a $50,000 year-end grant.',
     howItWorks:
-      'One short online application, submitted any time during a monthly cycle. It is scored 40% on business potential, 30% on impact, and 30% on your personal story — so a specific, genuine story matters as much as the numbers.',
+      'One short online application, submitted any time during a monthly cycle. It is scored 40% on business potential, 30% on impact, and 30% on your personal story, so a specific, genuine story matters as much as the numbers.',
     need: [
       { item: 'Proof you own at least 50% of the business (and it is U.S.- or Canada-based)', when: 'always' },
       { item: 'A clear description of what the $10,000 would fund and the difference it makes', when: 'always' },
-      { item: 'A genuine personal story — who you are and why this business', when: 'always' },
+      { item: 'A genuine personal story, who you are and why this business', when: 'always' },
     ],
     steps: [
       'Confirm you own 50%+ of a U.S. or Canada business.',
@@ -323,11 +323,11 @@ const PROFILES = [
     ],
     gotchas: [
       'Women-owned only (50%+ ownership).',
-      'A generic application scores poorly — the personal story and impact sections are 60% of the score combined.',
+      'A generic application scores poorly, the personal story and impact sections are 60% of the score combined.',
       'If you have under $10,000 in sales, apply for the Startup Grant track instead.',
     ],
     underwriterFocus:
-      "Business potential, the impact of the money, and your personal story — weighted 40/30/30. They are choosing people and stories, not just spreadsheets.",
+      "Business potential, the impact of the money, and your personal story, weighted 40/30/30. They are choosing people and stories, not just spreadsheets.",
     verifiedOn: '2026-09',
     sources: ['https://ambergrantsforwomen.com/get-an-amber-grant/', 'https://ambergrantsforwomen.com/grant-rules/'],
   },
@@ -336,7 +336,7 @@ const PROFILES = [
     matchNames: ['comcast rise small business grant', 'comcast rise'],
     model: 'grant',
     applyUrl: 'https://www.comcastrise.com/',
-    timeline: 'Runs in application cycles (often opening in May) limited to specific cities/regions each round — check the site for the current window and eligible locations.',
+    timeline: 'Runs in application cycles (often opening in May) limited to specific cities/regions each round, check the site for the current window and eligible locations.',
     howItWorks:
       'An online application during an open cycle. Winners receive a $5,000 grant plus a package of coaching, marketing, and technology support. You do not need to be a Comcast customer.',
     need: [
@@ -350,7 +350,7 @@ const PROFILES = [
       'Apply during the open window.',
     ],
     gotchas: [
-      'Each cycle only accepts applications from a rotating set of specific cities/regions — being outside the current list means waiting for a future round.',
+      'Each cycle only accepts applications from a rotating set of specific cities/regions, being outside the current list means waiting for a future round.',
       'Requires at least 2 years in business.',
     ],
     underwriterFocus:
@@ -365,7 +365,7 @@ const PROFILES = [
     applyUrl: 'https://justinepetersen.org/our-loan-process/',
     timeline: 'Includes one-on-one counseling before the loan; expect several weeks with coaching built in.',
     howItWorks:
-      'An SBA microloan intermediary that builds credit counseling into the application itself. Staff work with you one-on-one on your credit, debt, business plan, and financials — and offer credit-building products if your score needs work.',
+      'An SBA microloan intermediary that builds credit counseling into the application itself. Staff work with you one-on-one on your credit, debt, business plan, and financials, and offer credit-building products if your score needs work.',
     need: [
       { item: 'Willingness to do one-on-one credit and business counseling', when: 'always' },
       { item: 'Business plan and financials (developed with their staff if needed)', when: 'always' },
@@ -378,8 +378,8 @@ const PROFILES = [
       'Complete the application with their support.',
     ],
     gotchas: [
-      'Coverage is county-level in Illinois and Kansas — confirm your county, not just your state.',
-      'This is a slower, coaching-heavy process by design — good if your credit is thin or bruised, slower if you just want fast cash.',
+      'Coverage is county-level in Illinois and Kansas, confirm your county, not just your state.',
+      'This is a slower, coaching-heavy process by design, good if your credit is thin or bruised, slower if you just want fast cash.',
       'The microloan arm tops out around $35,000.',
     ],
     underwriterFocus:
@@ -397,7 +397,7 @@ const PROFILES = [
       'One online application, with the required documents scaled to the loan size. You connect bank statements through Plaid (free) or upload them. Uncollateralized options exist under $20,000 if your credit score is above 650.',
     need: [
       { item: 'Photo ID (driver’s license or government ID) plus a selfie holding it', when: 'always' },
-      { item: '3–6 most recent months of bank statements — personal, plus business if you have a business account', when: 'always', note: 'shared through Plaid or uploaded' },
+      { item: '3–6 most recent months of bank statements, personal, plus business if you have a business account', when: 'always', note: 'shared through Plaid or uploaded' },
       { item: 'Address verification, if your application address doesn’t match your ID or statements', when: 'always' },
       { item: 'A business profit-and-loss statement and your most recent year of personal + business tax returns', when: 'larger_loans', note: 'at $15,000 and up' },
       { item: 'Two years of tax returns, a personal financial statement, and a business balance sheet', when: 'larger_loans', note: 'at $50,000 and up' },
@@ -405,7 +405,7 @@ const PROFILES = [
       { item: 'A business debt schedule, if you carry business debt', when: 'always' },
     ],
     steps: [
-      'Confirm your state is one of the 27 DreamSpring serves, and decide your loan amount — the document list grows in tiers at $15k, $50k, and $100k.',
+      'Confirm your state is one of the 27 DreamSpring serves, and decide your loan amount, the document list grows in tiers at $15k, $50k, and $100k.',
       'Gather your ID and 3–6 months of bank statements; set up Plaid access to your accounts if you can.',
       'If you’re under two years old and asking for $50k+, prepare a business plan with projections.',
       'Complete the 6-step online application and respond quickly to the team’s follow-up requests.',
@@ -447,7 +447,7 @@ const PROFILES = [
     gotchas: [
       'Not available in Vermont.',
       'A bankruptcy must be discharged over a year ago (over two years for loans above $25,000); a completed foreclosure must be 2+ years back.',
-      'Fees are real: $200 application, 5% closing, $80 UCC filing — all after approval.',
+      'Fees are real: $200 application, 5% closing, $80 UCC filing, all after approval.',
     ],
     underwriterFocus:
       'Consistent revenue over the last six months first, then credit history (575+ but treated as one factor among several), then the personal guaranty and any collateral.',
@@ -469,7 +469,7 @@ const PROFILES = [
       { item: 'Most recent 2–3 years of personal and business federal tax returns with all schedules', when: 'always', note: 'fewer years if you’ve been in business less time' },
       { item: 'An interim business financial statement (income statement + balance sheet) dated within 90 days', when: 'always' },
       { item: 'Most recent 3 months of personal and business bank statements', when: 'always' },
-      { item: 'A current business debt schedule — every term loan, line of credit, and card', when: 'always' },
+      { item: 'A current business debt schedule, every term loan, line of credit, and card', when: 'always' },
       { item: 'A personal financial statement for each owner, and a photo ID', when: 'always' },
       { item: 'A written business plan with 24 months of revenue and expense projections and stated assumptions', when: 'always', note: 'required for the FlexLoan and any startup' },
       { item: 'Evidence of at least a 10% equity contribution to the project', when: 'larger_loans', note: 'FlexLoan' },
@@ -477,7 +477,7 @@ const PROFILES = [
     steps: [
       'Confirm you’re in CT, DE, IL, NJ, NY, or PA.',
       'Pull 3 years of tax returns, an interim financial statement dated within 90 days, and your debt schedule.',
-      'Write (or update) a business plan with 24-month projections — needed for the FlexLoan and any startup.',
+      'Write (or update) a business plan with 24-month projections, needed for the FlexLoan and any startup.',
       'Start the single application at pursuitlending.com/apply; expect a 2–4 week evaluation once it’s complete.',
     ],
     gotchas: [
@@ -516,7 +516,7 @@ function inferModelFromType(type) {
 export function deriveProfile(lender) {
   const name = (lender?.name || '').trim().toLowerCase();
 
-  // A grant is a grant regardless of the issuing org's type — the
+  // A grant is a grant regardless of the issuing org's type, the
   // application model is fundamentally different (a competitive written
   // application, not an underwriter). Prefer a hand-verified grant profile
   // if we have one for this name; otherwise the generic grant model.
@@ -534,9 +534,9 @@ export function deriveProfile(lender) {
       model: 'grant',
       verified: false,
       applyUrl: lender?.source_url || null,
-      timeline: 'Grants run on a cycle with a fixed deadline — check the funder\'s site for the current round.',
+      timeline: 'Grants run on a cycle with a fixed deadline, check the funder\'s site for the current round.',
       howItWorks:
-        'A written application scored by a review panel against the funder\'s stated priorities. There is no credit check or collateral — what matters is a specific project that clearly fits what this grant is meant to fund, and evidence you can deliver and report on it.',
+        'A written application scored by a review panel against the funder\'s stated priorities. There is no credit check or collateral, what matters is a specific project that clearly fits what this grant is meant to fund, and evidence you can deliver and report on it.',
       need: [
         { item: "A clear description of the specific project or purchase the grant would fund", when: 'always' },
         { item: 'A simple budget showing how every dollar is used', when: 'always' },
@@ -544,7 +544,7 @@ export function deriveProfile(lender) {
         { item: 'Proof the business is real and operating (registration, EIN, recent activity)', when: 'always' },
       ],
       steps: [
-        "Read the grant's priorities and eligibility on the funder's page — grants reward tight fit, not general need.",
+        "Read the grant's priorities and eligibility on the funder's page, grants reward tight fit, not general need.",
         'Confirm the current cycle is open and note the deadline.',
         'Write a specific project description and a line-item budget.',
         'Submit before the deadline and keep a copy of everything.',

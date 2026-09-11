@@ -1,4 +1,4 @@
-// "How to raise your score" — a prioritized, concrete plan for the levers
+// "How to raise your score": a prioritized, concrete plan for the levers
 // that are actually dragging this application down. The impact numbers are
 // REAL: each item re-runs the deterministic readiness engine
 // (matching-engine.js) with that one improvement applied, so "would move
@@ -44,8 +44,8 @@ export function computeImprovementPlan(application, subScores, readinessScore, q
         key: 'requestToRevenueRatio',
         title: 'Ask for less, relative to your revenue',
         current: subScores.requestToRevenueRatio,
-        detail: `You're asking ${money(requested)} against ${money(revenue)} in revenue. Lenders read that ratio closely — above about half your revenue, it starts working against you.`,
-        action: `Bringing the request to about ${money(target)} — roughly a quarter of your revenue — lands in a range most lenders are comfortable with. If you genuinely need more, split it: apply to two programs for part each.`,
+        detail: `You're asking ${money(requested)} against ${money(revenue)} in revenue. Lenders read that ratio closely: above about half your revenue, it starts working against you.`,
+        action: `Bringing the request to about ${money(target)} (roughly a quarter of your revenue) lands in a range most lenders are comfortable with. If you genuinely need more, split it: apply to two programs for part each.`,
         projectedReadiness: project({ requested_amount: target }),
         timeframe: 'Right now',
       });
@@ -62,7 +62,7 @@ export function computeImprovementPlan(application, subScores, readinessScore, q
         title: `Get past ${tierLabel(nextTier)} in business`,
         current: subScores.timeInBusiness,
         detail: `You're at ${months} month${months === 1 ? '' : 's'}. The next threshold lenders look for is ${nextTier} months.`,
-        action: `That's ${gap} month${gap === 1 ? '' : 's'} away. In the meantime, if you operated earlier in any form — a pop-up, a side operation, a registered DBA, freelance work in the same trade — document it with dates; several lenders will count that toward your history.`,
+        action: `That's ${gap} month${gap === 1 ? '' : 's'} away. In the meantime, if you operated earlier in any form (a pop-up, a side operation, a registered DBA, freelance work in the same trade), document it with dates; several lenders will count that toward your history.`,
         projectedReadiness: project({ time_in_business_months: nextTier }),
         timeframe: `${gap} month${gap === 1 ? '' : 's'}`,
       });
@@ -79,7 +79,7 @@ export function computeImprovementPlan(application, subScores, readinessScore, q
         title: `Grow annual revenue past ${money(nextTier)}`,
         current: subScores.revenueStability,
         detail: `At ${money(revenue)} a year you're in a lower band. Crossing ${money(nextTier)} moves you up a tier in how lenders read repayment ability.`,
-        action: `That's about ${money(perMonth)} more per month. If a recent stretch is already stronger than your trailing 12 months, you don't have to wait — apply with a year-to-date figure and a short note explaining the trend.`,
+        action: `That's about ${money(perMonth)} more per month. If a recent stretch is already stronger than your trailing 12 months, you don't have to wait: apply with a year-to-date figure and a short note explaining the trend.`,
         projectedReadiness: project({ annual_revenue: nextTier }),
         timeframe: 'Ongoing',
       });
@@ -122,7 +122,7 @@ export function computeImprovementPlan(application, subScores, readinessScore, q
       title: 'Firm up a few answers',
       current: subScores.answerQuality,
       detail: `Some answers read as thin, vague, or inconsistent, which caps how much a lender can rely on this profile no matter how strong the business is.`,
-      action: `Specifically: ${qualityConcerns.slice(0, 3).join('; ')}. Come back to the chat and add concrete detail — real numbers, specifics, dates.`,
+      action: `Specifically: ${qualityConcerns.slice(0, 3).join('; ')}. Come back to the chat and add concrete detail: real numbers, specifics, dates.`,
       projectedReadiness: null,
       timeframe: 'A few minutes',
     });

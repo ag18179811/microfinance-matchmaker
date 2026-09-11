@@ -1,5 +1,5 @@
 // A drafted business plan in the standard sections a lender or SBA
-// intermediary expects — assembled from the interview, the Living Business
+// intermediary expects, assembled from the interview, the Living Business
 // Case, and the cash-flow projection, then refined by conversation (same
 // draft-then-talk pattern as business-case.js). Never invents a market
 // figure, a competitor, or a number the owner didn't provide; where a
@@ -27,7 +27,7 @@ const HEADINGS = {
 
 function systemPrompt(hasProjection) {
   return (
-    'You are drafting a business plan for a small business owner applying for funding — the kind an SBA ' +
+    'You are drafting a business plan for a small business owner applying for funding, the kind an SBA ' +
     'microloan intermediary or a CDFI asks for. Use the standard sections below. Write in clear, plain ' +
     'business prose (third person is fine for a plan), 1-2 short paragraphs per section.\n\n' +
     'ABSOLUTE RULES:\n' +
@@ -39,7 +39,7 @@ function systemPrompt(hasProjection) {
     'competitor), write a short bracketed prompt like "[Add: the 2-3 businesses you compete with most ' +
     'directly]" rather than making something up.\n' +
     '- "use_of_funds" must tie each dollar to a concrete outcome. "financials" summarizes current revenue, ' +
-    'existing debt, and how repayment works — grounded in real numbers.\n\n' +
+    'existing debt, and how repayment works, grounded in real numbers.\n\n' +
     'Respond with ONLY valid JSON, no markdown:\n' +
     '{ "sections": [ { "key": "summary|company|market|offering|operations|management|use_of_funds|financials", ' +
     '"body": "prose" } ] }  // all eight keys, in that order'
@@ -48,7 +48,7 @@ function systemPrompt(hasProjection) {
 
 function reviseSystemPrompt() {
   return (
-    'You maintain a small business owner\'s business plan. They just told you something in plain language — a ' +
+    'You maintain a small business owner\'s business plan. They just told you something in plain language, a ' +
     'correction or an addition. Update the affected section(s) and leave every other section byte-for-byte ' +
     'identical. Use only what they have actually told you; never invent specifics. Respond with ONLY valid ' +
     'JSON:\n{ "sections": [ { "key": "...", "body": "..." } ],  // all eight, in order\n' +
@@ -67,7 +67,7 @@ function coerceSections(raw) {
     }
   }
   return PLAN_SECTIONS.map(
-    (key) => byKey.get(key) || { key, heading: HEADINGS[key], body: `[This section still needs your input — tell me about ${HEADINGS[key].toLowerCase()} and I'll write it.]` }
+    (key) => byKey.get(key) || { key, heading: HEADINGS[key], body: `[This section still needs your input, tell me about ${HEADINGS[key].toLowerCase()} and I'll write it.]` }
   );
 }
 

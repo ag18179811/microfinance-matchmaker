@@ -1,5 +1,5 @@
 // The funding plan: how to actually get to the amount the owner needs,
-// given that no single program may cover it — a capital stack (which
+// given that no single program may cover it: a capital stack (which
 // programs, roughly how much from each) plus a sensible order to pursue
 // them in. Deterministic allocation and ordering; one grounded AI call
 // writes the rationale. Never invents a program or an amount outside a
@@ -70,16 +70,16 @@ export function computeFundingPlan({ application, matches, profileFor, verdicts 
     if (p.fundingType !== 'grant' && covered >= need) break;
     if (p.fundingType === 'grant') {
       // Only state a grant amount when the program publishes an award
-      // ceiling — otherwise it's "amount varies".
+      // ceiling. Otherwise it's "amount varies".
       stack.push({ ...p, amount: p.max ? Math.min(p.max, need) : null, speculative: true });
       continue;
     }
     const cap = p.max || (need - covered) || need;
     const amount = Math.max(0, Math.min(cap, need - covered));
     if (amount < (p.min || 0) && p.min > 0) {
-      // ask is below this program's floor — still worth listing as a full
+      // ask is below this program's floor, still worth listing as a full
       // alternative rather than a partial slice
-      stack.push({ ...p, amount: Math.min(p.max || need, need), note: `below this program's ${money(p.min)} minimum for a partial slice — would need to be most of your ask` });
+      stack.push({ ...p, amount: Math.min(p.max || need, need), note: `below this program's ${money(p.min)} minimum for a partial slice, would need to be most of your ask` });
       covered = need;
       continue;
     }
@@ -142,11 +142,11 @@ export async function narrateFundingPlan(plan, { application, additionalNotes, l
         role: 'system',
         content:
           'You are advising a small business owner on how to actually raise the funding they need when no ' +
-          'single program covers it. You are given a proposed capital stack and order (already computed — do ' +
+          'single program covers it. You are given a proposed capital stack and order (already computed, do ' +
           'not change the programs or the amounts). Write 2 short paragraphs of plain, direct rationale:\n' +
-          '1. Why this combination — what each piece does, why grants are a bonus not a plan, and where the ' +
+          '1. Why this combination: what each piece does, why grants are a bonus not a plan, and where the ' +
           'remaining gap (if any) realistically comes from.\n' +
-          '2. Why this order — what to start now and in parallel, what to hold and why, and a realistic sense ' +
+          '2. Why this order: what to start now and in parallel, what to hold and why, and a realistic sense ' +
           'of the total timeline.\n' +
           'Never invent a program, an amount, or an eligibility rule. Be encouraging but honest about the ' +
           'gap and the timeline.' +

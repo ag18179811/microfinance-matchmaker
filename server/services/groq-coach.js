@@ -1,4 +1,4 @@
-// Coaching text generation only. Never used for eligibility decisions —
+// Coaching text generation only. Never used for eligibility decisions, 
 // those come exclusively from matching-engine.js.
 
 import { callGroqChat } from './groq-client.js';
@@ -12,10 +12,10 @@ const SYSTEM_PROMPT =
   "microloan programs. Given the applicant's data, computed sub-scores, and the specific, " +
   'business-particular facts gathered in additionalNotes, write a 2-3 sentence plain-English summary ' +
   'of their readiness and exactly 3 prioritized, concrete action items. Ground this in what is actually ' +
-  'specific to THIS business — reference the concrete facts in additionalNotes rather than writing ' +
-  'generic advice that could apply to any small business. Do not invent eligibility rules — only comment ' +
+  'specific to THIS business, reference the concrete facts in additionalNotes rather than writing ' +
+  'generic advice that could apply to any small business. Do not invent eligibility rules, only comment ' +
   'on the data given. If qualityConcerns is non-empty, the answers themselves were flagged as thin, ' +
-  'inconsistent, or not credible — say so plainly and directly in the summary instead of writing an ' +
+  'inconsistent, or not credible, say so plainly and directly in the summary instead of writing an ' +
   'upbeat readiness summary that ignores it; a low answerQuality score means this report is not yet ' +
   'trustworthy, and the applicant needs to hear that.';
 

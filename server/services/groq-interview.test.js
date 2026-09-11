@@ -210,7 +210,7 @@ test('directAnswer is always null when done:true', async () => {
 
 // Found via live testing: without an explicit nudge, the model can ask a
 // near-identical question 3+ times in a row when an answer doesn't satisfy
-// it. routes/interview.js detects that pattern and passes stuckField in —
+// it. routes/interview.js detects that pattern and passes stuckField in, 
 // this confirms the resulting prompt actually tells the model to move on.
 test('a stuckField is surfaced to the model as an explicit instruction to move on', async () => {
   let capturedBody;
@@ -229,7 +229,7 @@ test('a stuckField is surfaced to the model as an explicit instruction to move o
 });
 
 // This is step 2 of the two-step turn (server/services/openai-interview-reason.js
-// is step 1) — when step 1 succeeded, its analysis must actually reach this
+// is step 1), when step 1 succeeded, its analysis must actually reach this
 // call and change the system prompt's framing, not be silently ignored.
 test('when analysisText is provided, it is included in the request and the prompt reflects it', async () => {
   let capturedBody;

@@ -1,12 +1,12 @@
 // Shared OpenAI Responses API caller. Same retry-on-429 discipline as
-// server/services/groq-client.js — a transient rate limit is worth one
+// server/services/groq-client.js, a transient rate limit is worth one
 // short retry before a caller falls back, other errors surface immediately.
 
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 
 // web_search calls are legitimately slow (60–120s is normal for a
 // multi-part research query), but they must not hang a user's match
-// request forever — the OpenAI endpoint occasionally stalls outright. This
+// request forever, the OpenAI endpoint occasionally stalls outright. This
 // is the hard ceiling; on timeout the caller degrades gracefully.
 const REQUEST_TIMEOUT_MS = 120_000;
 
@@ -45,13 +45,13 @@ export async function callOpenAIResponses({ apiKey, body, maxRetries = 2 }) {
       return { ok: false, status: response.status, error: errorText };
     } catch (err) {
       // AbortSignal.timeout fires a TimeoutError; treat it like any other
-      // transient failure — the caller falls back.
+      // transient failure, the caller falls back.
       return { ok: false, status: null, error: err.name === 'TimeoutError' ? `request timed out after ${REQUEST_TIMEOUT_MS}ms` : err.message };
     }
   }
 }
 
-// Shared Responses API output parsing — the `output` array can contain a
+// Shared Responses API output parsing, the `output` array can contain a
 // tool-call item (e.g. a web_search_call) followed by the actual message
 // item, so this finds the message rather than assuming a fixed index.
 export function findMessageText(output) {

@@ -39,8 +39,8 @@ function loanSizeFit(lender, application) {
   const min = Number(lender.min_loan) || 0;
   const max = Number(lender.max_loan) || Infinity;
 
-  // For a grant, the requested amount isn't a hard ask — you accept
-  // whatever award you're offered — so being outside the award range is
+  // For a grant, the requested amount isn't a hard ask, you accept
+  // whatever award you're offered, so being outside the award range is
   // never disqualifying, just a weaker fit.
   if (lender.funding_type === 'grant') {
     if (max === Infinity && min === 0) return { eligible: true, score: 85, edge: false };
@@ -99,7 +99,7 @@ function timeInBusinessGate(lender, application) {
     eligible: true,
     score,
     reason: null,
-    caution: `Prefers ${years} in business — you're at ${actual} month${actual === 1 ? '' : 's'}, so approval may take extra documentation`,
+    caution: `Prefers ${years} in business. You're at ${actual} month${actual === 1 ? '' : 's'}, so approval may take extra documentation`,
   };
 }
 
@@ -134,18 +134,18 @@ export function scoreLenderMatch(lender, application) {
   const isGrant = lender.funding_type === 'grant';
 
   if (isGrant) {
-    reasons.push('This is a grant — funding you keep, not a loan to repay');
+    reasons.push('This is a grant: funding you keep, not a loan to repay');
     if (Number.isFinite(max) && max > 0) {
       reasons.push(`Awards run up to $${max.toLocaleString()}${min > 0 ? ` (from $${min.toLocaleString()})` : ''}`);
     }
-    cautions.push('Grants are competitive and awarded on a cycle — treat it as a bonus to pursue, not a sure thing');
+    cautions.push('Grants are competitive and awarded on a cycle. Treat it as a bonus to pursue, not a sure thing');
   } else if (loanFit.score === 100 && !loanFit.edge) {
     reasons.push(`Your $${requested.toLocaleString()} request comfortably fits this lender's $${min.toLocaleString()}–$${Number.isFinite(max) ? max.toLocaleString() : 'no max'} range`);
   } else if (loanFit.edge) {
-    cautions.push(`Your request sits near the ${requested <= min * 1.1 ? 'minimum' : 'maximum'} of this lender's loan range — approval may hinge on additional documentation`);
+    cautions.push(`Your request sits near the ${requested <= min * 1.1 ? 'minimum' : 'maximum'} of this lender's loan range. Approval may hinge on additional documentation`);
   }
 
-  reasons.push(isNational ? 'National program — lends in every state' : `Directly serves ${application.state || 'your state'}`);
+  reasons.push(isNational ? 'National program, lends in every state' : `Directly serves ${application.state || 'your state'}`);
   reasons.push(isAllIndustries ? 'Open to all industries' : `Actively lends to ${application.industry || 'your industry'} businesses`);
 
   if (tenureGate.reason) reasons.push(tenureGate.reason);
@@ -213,16 +213,16 @@ function requestToRevenueScore(requestedAmount, annualRevenue) {
   return 15;
 }
 
-// How much of the full profile we actually have — the original 7 core
+// How much of the full profile we actually have, the original 7 core
 // fields plus everything the adaptive interview gathered. Deliberately
 // excludes ownership_demographics: that field is opt-in and must never
 // affect readiness, so skipping it can't lower this score.
 // Blends two signals: how many of the fixed reference fields got filled
-// (still informative — knowing revenue or time-in-business genuinely
+// (still informative, knowing revenue or time-in-business genuinely
 // matters), and how much open-ended, business-specific detail the interview
 // gathered beyond them (additional_notes). Weighting notes at 40% matters
 // because the interview is explicitly told the fixed fields are reference
-// points, not a checklist — a genuinely thorough, tailored interview can
+// points, not a checklist, a genuinely thorough, tailored interview can
 // leave several fixed fields null while gathering plenty of real, specific
 // notes instead, and completeness should reward that, not penalize it.
 function completenessScore(application) {
@@ -256,7 +256,7 @@ function completenessScore(application) {
 
 // contentQuality: { qualityScore: 0-100 } from groq-quality-check.js,
 // judging whether the applicant's own text answers are credible and
-// internally consistent — not whether the business itself is strong (that's
+// internally consistent, not whether the business itself is strong (that's
 // already covered by the three scores above). Passed in as plain data
 // rather than computed here so this function stays synchronous and
 // deterministic; the LLM call happens once in routes/match.js before this

@@ -6,7 +6,7 @@ import { draftBusinessPlan, reviseBusinessPlan } from '../services/business-plan
 
 const router = Router();
 
-// Scoped to req.userId (set by requireAuth) — an application id alone is
+// Scoped to req.userId (set by requireAuth), an application id alone is
 // never enough to read or write its business case.
 async function loadOwnedApplication(applicationId, userId) {
   const { rows } = await pool.query('SELECT * FROM applications WHERE id = $1 AND user_id = $2', [applicationId, userId]);
@@ -38,7 +38,7 @@ function shapeCase(row) {
   };
 }
 
-// GET — return the case if one has been drafted. The draft is a billed Groq
+// GET, return the case if one has been drafted. The draft is a billed Groq
 // call, so it's opt-in: until the owner asks for it (POST /draft), this
 // returns { exists: false } and the UI shows a one-line explainer + button.
 router.get('/:applicationId', async (req, res) => {
@@ -50,7 +50,7 @@ router.get('/:applicationId', async (req, res) => {
   res.json({ exists: false });
 });
 
-// POST /draft — the owner explicitly asks for the first draft. Idempotent:
+// POST /draft, the owner explicitly asks for the first draft. Idempotent:
 // if a case already exists, return it untouched rather than spending another
 // Groq call.
 router.post('/:applicationId/draft', async (req, res) => {
@@ -81,7 +81,7 @@ router.post('/:applicationId/draft', async (req, res) => {
   res.json({ exists: true, ...shapeCase(rows[0]), draftFailed: !draft.ok, draftError: draft.ok ? undefined : draft.reason });
 });
 
-// POST /message — the owner says something in plain language; revise the
+// POST /message, the owner says something in plain language; revise the
 // narrative to match, persist, and return the updated case + a short reply.
 router.post('/:applicationId/message', async (req, res) => {
   const text = String(req.body?.text ?? '').trim();
@@ -92,7 +92,7 @@ router.post('/:applicationId/message', async (req, res) => {
 
   let row = await loadCase(application.id);
   if (!row) {
-    // No case yet — draft one first so there's something to revise.
+    // No case yet, draft one first so there's something to revise.
     const additionalNotes = parseNotes(application);
     const draft = await draftBusinessCase({ application, additionalNotes, language: application.language || 'en', helpMode: application.help_mode });
     const base = draft.ok ? draft : emptyCase();
@@ -117,7 +117,7 @@ router.post('/:applicationId/message', async (req, res) => {
   });
 
   if (!revised.ok) {
-    return res.status(502).json({ error: `Couldn't update the story right now — ${revised.reason}. Your last version is safe; try again in a moment.` });
+    return res.status(502).json({ error: `Couldn't update the story right now: ${revised.reason}. Your last version is safe; try again in a moment.` });
   }
 
   const history = [
@@ -136,7 +136,7 @@ router.post('/:applicationId/message', async (req, res) => {
   res.json({ ...shapeCase(rows[0]), reply: revised.reply, changeSummary: revised.changeSummary });
 });
 
-// POST /regenerate — throw away the current draft and redraft from the
+// POST /regenerate, throw away the current draft and redraft from the
 // interview. Used when the owner wants a fresh start rather than edits.
 router.post('/:applicationId/regenerate', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
@@ -145,7 +145,7 @@ router.post('/:applicationId/regenerate', async (req, res) => {
   const additionalNotes = parseNotes(application);
   const draft = await draftBusinessCase({ application, additionalNotes, language: application.language || 'en', helpMode: application.help_mode });
   if (!draft.ok) {
-    return res.status(502).json({ error: `Couldn't redraft right now — ${draft.reason}. Your current version is unchanged.` });
+    return res.status(502).json({ error: `Couldn't redraft right now: ${draft.reason}. Your current version is unchanged.` });
   }
 
   const { rows } = await pool.query(
@@ -162,7 +162,7 @@ router.post('/:applicationId/regenerate', async (req, res) => {
     ]
   );
   if (rows.length === 0) {
-    // No prior row (shouldn't happen via the normal flow) — insert.
+    // No prior row (shouldn't happen via the normal flow), insert.
     const inserted = await pool.query(
       `INSERT INTO business_cases (application_id, user_id, sections, assumptions, meta, history)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -181,7 +181,7 @@ router.post('/:applicationId/regenerate', async (req, res) => {
   res.json(shapeCase(rows[0]));
 });
 
-// POST /:applicationId/sync-check — after the owner has refined their
+// POST /:applicationId/sync-check, after the owner has refined their
 // funding story, see whether its prose now implies numbers different from
 // what's on the application. Returns proposed changes for the owner to
 // confirm (or not); never mutates anything.
@@ -213,7 +213,7 @@ router.post('/:applicationId/sync-check', async (req, res) => {
   res.json({ changes });
 });
 
-// GET /:applicationId/plan — the drafted business plan, drafted lazily on
+// GET /:applicationId/plan, the drafted business plan, drafted lazily on
 // first request from the interview + funding story + projection.
 router.get('/:applicationId/plan', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
@@ -230,7 +230,7 @@ router.get('/:applicationId/plan', async (req, res) => {
     language: application.language || 'en',
     helpMode: application.help_mode,
   });
-  if (!draft.ok) return res.status(502).json({ error: `Couldn't draft the plan — ${draft.reason}.` });
+  if (!draft.ok) return res.status(502).json({ error: `Couldn't draft the plan: ${draft.reason}.` });
 
   const plan = { sections: draft.sections, draftedAt: new Date().toISOString() };
   await pool.query(
@@ -257,14 +257,14 @@ router.post('/:applicationId/plan/message', async (req, res) => {
     userMessage: text,
     language: application.language || 'en',
   });
-  if (!revised.ok) return res.status(502).json({ error: `Couldn't update the plan — ${revised.reason}. Your last version is safe.` });
+  if (!revised.ok) return res.status(502).json({ error: `Couldn't update the plan: ${revised.reason}. Your last version is safe.` });
 
   const plan = { sections: revised.sections, draftedAt: row.plan.draftedAt, updatedAt: new Date().toISOString() };
   await pool.query('UPDATE business_cases SET plan = $1, updated_at = now() WHERE application_id = $2', [JSON.stringify(plan), application.id]);
   res.json({ ...plan, reply: revised.reply });
 });
 
-// GET /:applicationId/projection — the saved 12-month cash-flow scaffold,
+// GET /:applicationId/projection, the saved 12-month cash-flow scaffold,
 // or a fresh seed from the application's numbers if none saved yet.
 router.get('/:applicationId/projection', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
@@ -275,7 +275,7 @@ router.get('/:applicationId/projection', async (req, res) => {
   res.json(seedProjection(application));
 });
 
-// PUT /:applicationId/projection — save the owner's edited grid. Derived
+// PUT /:applicationId/projection, save the owner's edited grid. Derived
 // columns are recomputed server-side so they can't drift.
 router.put('/:applicationId/projection', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);

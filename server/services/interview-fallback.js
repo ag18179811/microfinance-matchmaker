@@ -1,5 +1,5 @@
 // Deterministic, no-LLM interview path. Used whenever GROQ_API_KEY is unset
-// or a Groq call fails — the adaptive interview must degrade to something
+// or a Groq call fails, the adaptive interview must degrade to something
 // that still works, never break outright. Walks the full field list in a
 // fixed order and asks for whatever isn't filled yet, same idea as the
 // original fixed-checklist intake this replaced, just extended to cover the
@@ -25,7 +25,7 @@ const NUMBER_FIELDS = new Set(['time_in_business_months', 'annual_revenue', 'req
 // coerceSelect only matches the raw enum string exactly ("llc", "s_corp"),
 // which almost never appears verbatim in a normal typed answer ("we're an
 // LLC", "S-corp"). Without this, a perfectly clear answer gets rejected and
-// the fallback re-asks the identical question — this is the fuzzy tier
+// the fallback re-asks the identical question. This is the fuzzy tier
 // tried first, so a real answer given in plain English is actually heard.
 const INDUSTRY_KEYWORD_HINTS = [
   [/bak(e|ery|ing)|caf[eé]|coffee|restaurant|food truck|catering|bar\b|brewery/i, 'Food Service'],
@@ -111,10 +111,10 @@ function metaFor(key) {
 }
 
 // Distinct from "answered with an empty string" (which never actually
-// happens — every coercion path below either returns a real value or drops
+// happens, every coercion path below either returns a real value or drops
 // to null/undefined). null/undefined means "never asked yet"; '' is the
 // explicit-skip sentinel for optional fields, set below, and deliberately
-// does NOT count as still-needing-to-be-asked — otherwise a declined
+// does NOT count as still-needing-to-be-asked, otherwise a declined
 // optional question would loop forever.
 function needsAsking(value) {
   return value === null || value === undefined;
@@ -137,8 +137,8 @@ export function nextFallbackTurn(currentFields) {
 }
 
 // Coerces a raw user answer for the given field. Optional fields (currently
-// just ownership_demographics) accept "skip"/"none"/"" as an explicit pass —
-// stored as '' (the resolved-but-declined sentinel — see needsAsking above),
+// just ownership_demographics) accept "skip"/"none"/"" as an explicit pass, 
+// stored as '' (the resolved-but-declined sentinel, see needsAsking above),
 // not re-asked, and normalized back to null wherever the field is actually
 // used (matching-engine's completeness check, the applications insert).
 export function coerceFallbackAnswer(fieldKey, raw) {

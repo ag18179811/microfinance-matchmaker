@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 
 // Verifies the bearer token against Supabase and attaches req.userId. This
 // is the ONLY source of truth for "who is making this request" anywhere in
-// the app — no route ever trusts a user id supplied in a request body,
+// the app, no route ever trusts a user id supplied in a request body,
 // query string, or URL param.
 export async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';

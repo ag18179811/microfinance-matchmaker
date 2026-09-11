@@ -1,5 +1,5 @@
 // The Living Business Case: one evolving, first-person funding narrative,
-// drafted from the interview and then refined ONLY by conversation — the
+// drafted from the interview and then refined ONLY by conversation, the
 // owner never faces a form or a blank field. This is the piece that carries
 // a business's specific, real story forward to the people who will actually
 // read it.
@@ -12,7 +12,7 @@
 //     correct. "Inferred" content is labelled, not hidden.
 //   - Honest about weak spots. A thin file gets its true story told well,
 //     never papered over.
-// Eligibility and scoring never happen here — matching-engine.js stays the
+// Eligibility and scoring never happen here, matching-engine.js stays the
 // only source of truth for those.
 
 import { callGroqChat } from './groq-client.js';
@@ -22,7 +22,7 @@ import { helpModeDirective } from './help-mode.js';
 
 const MODEL = 'openai/gpt-oss-120b';
 
-// Fixed section skeleton so the UI stays stable — but each body is prose in
+// Fixed section skeleton so the UI stays stable, but each body is prose in
 // the owner's voice, not a filled-in form field.
 export const SECTION_ORDER = ['who', 'business', 'traction', 'situation', 'ask', 'repayment', 'risks'];
 
@@ -33,7 +33,7 @@ const SECTION_HEADINGS = {
   situation: 'The opportunity in front of me',
   ask: 'What I need, and exactly what it pays for',
   repayment: 'How I plan to pay it back',
-  risks: "What could go wrong — and how I've thought about it",
+  risks: "What could go wrong, and how I've thought about it",
 };
 
 const CONFIDENCE = new Set(['stated', 'inferred', 'thin']);
@@ -42,7 +42,7 @@ function buildDraftSystemPrompt() {
   return (
     'You help a small business owner tell the story of their business and their funding need, in their own ' +
     'voice, so lenders and loan reviewers understand who they really are. You are writing a FIRST-PERSON ' +
-    'narrative ("I", "we", "my business") as if the owner wrote it — natural, specific, and honest, never ' +
+    'narrative ("I", "we", "my business") as if the owner wrote it, natural, specific, and honest, never ' +
     'corporate boilerplate.\n\n' +
     'ABSOLUTE RULES:\n' +
     '- Use ONLY what the owner actually told you (their interview answers and the specific facts gathered). ' +
@@ -69,17 +69,17 @@ function buildDraftSystemPrompt() {
 function buildReviseSystemPrompt() {
   return (
     'You are maintaining a small business owner\'s first-person funding narrative. The owner just told you ' +
-    'something in plain conversation — a correction, an addition, or an answer to one of your open ' +
+    'something in plain conversation, a correction, an addition, or an answer to one of your open ' +
     'assumptions. Update the narrative to match.\n\n' +
     'ABSOLUTE RULES:\n' +
-    "- Keep it first-person and in the owner's voice. Change only what their message actually affects — " +
+    "- Keep it first-person and in the owner's voice. Change only what their message actually affects, " +
     'leave every other section byte-for-byte identical.\n' +
     '- Use only what the owner has now told you across the whole conversation. Never invent specifics.\n' +
     '- If their message resolves an open assumption, remove that assumption. If their correction reveals a ' +
     'NEW gap or guess, add a new assumption.\n' +
     '- If a section you update is now fully grounded in what they said, set its confidence to "stated". If it ' +
     'is still partly a guess, keep it "inferred".\n' +
-    '- Be warm and brief in "reply" — acknowledge what changed, like a person would. One or two sentences.\n\n' +
+    '- Be warm and brief in "reply", acknowledge what changed, like a person would. One or two sentences.\n\n' +
     'Respond with ONLY a valid JSON object, no markdown:\n' +
     '{\n' +
     '  "sections": [ { "key": "...", "body": "...", "confidence": "stated|inferred|thin" } ],  // all seven, in order\n' +
@@ -112,7 +112,7 @@ function coerceSections(raw) {
       }
     }
   }
-  // Guarantee all seven exist, in order — a missing one becomes a "thin" prompt.
+  // Guarantee all seven exist, in order, a missing one becomes a "thin" prompt.
   return SECTION_ORDER.map(
     (key) =>
       byKey.get(key) || {
@@ -169,7 +169,7 @@ export async function draftBusinessCase({ application, additionalNotes, language
   return { ok: true, sections: coerceSections(raw.sections), assumptions: coerceAssumptions(raw.assumptions) };
 }
 
-// history: [{ at, summary }] — passed through for the model's awareness; the
+// history: [{ at, summary }], passed through for the model's awareness; the
 // route owns persistence. Returns { ok, sections, assumptions, reply, changeSummary }.
 export async function reviseBusinessCase({ application, additionalNotes, sections, assumptions, userMessage, language = 'en' }) {
   const apiKey = process.env.GROQ_API_KEY;
@@ -214,7 +214,7 @@ export async function reviseBusinessCase({ application, additionalNotes, section
 // numbers that differ from what's stored on the application (revenue,
 // months in business, the ask, monthly debt). This pulls ONLY those four
 // scoring-relevant numbers out of the narrative, and only when the
-// narrative states them plainly — same "extract, never invent" discipline
+// narrative states them plainly, same "extract, never invent" discipline
 // as groq-extract.js. Returns { field: value } for numbers the narrative
 // clearly asserts; the caller diffs against the application and confirms
 // with the owner before applying anything.
@@ -258,7 +258,7 @@ export async function extractProfileFromNarrative(sections) {
     const out = {};
     for (const key of Object.keys(SYNCABLE)) {
       const v = raw[key];
-      // Number(null) is 0 and Number('') is 0 — guard explicitly so a
+      // Number(null) is 0 and Number('') is 0, guard explicitly so a
       // "not stated" field never turns into a spurious "changed to 0".
       if (v === null || v === undefined || v === '') continue;
       const n = Number(v);

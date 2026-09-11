@@ -1,7 +1,7 @@
 // Idempotent schema migrations run on server boot (called from
 // connection.js). schema.sql stays the canonical, hand-run definition for a
-// fresh Supabase project — including the auth.users trigger, which needs
-// privileges this pooled connection doesn't have — but the plain
+// fresh Supabase project, including the auth.users trigger, which needs
+// privileges this pooled connection doesn't have, but the plain
 // CREATE TABLE IF NOT EXISTS / ALTER ... IF NOT EXISTS statements for app
 // tables added after launch are safe to apply automatically here, so a
 // deploy doesn't require a manual trip to the SQL editor. Every statement
@@ -44,17 +44,17 @@ const STATEMENTS = [
    )`,
 
   // The assembled, lender-shaped application pack (business summary,
-  // use-of-funds, etc.) — cached on the review it's built from.
+  // use-of-funds, etc.), cached on the review it's built from.
   `ALTER TABLE underwriter_reviews ADD COLUMN IF NOT EXISTS pack JSONB`,
 
   // The 12-month cash-flow projection scaffold, edited by the owner.
   `ALTER TABLE business_cases ADD COLUMN IF NOT EXISTS projection JSONB`,
 
-  // A drafted business plan (standard sections), edited by conversation —
+  // A drafted business plan (standard sections), edited by conversation, 
   // for SBA intermediaries and lenders that require a written plan.
   `ALTER TABLE business_cases ADD COLUMN IF NOT EXISTS plan JSONB`,
 
-  // Document vault — files stored in Supabase Storage ('documents' bucket),
+  // Document vault, files stored in Supabase Storage ('documents' bucket),
   // this table is the index. storage_path is the object key.
   `CREATE TABLE IF NOT EXISTS documents (
      id SERIAL PRIMARY KEY,
@@ -71,13 +71,13 @@ const STATEMENTS = [
   `DROP POLICY IF EXISTS "own documents" ON documents`,
   `CREATE POLICY "own documents" ON documents FOR ALL USING (auth.uid() = user_id)`,
 
-  // Funding type — most programs are loans, but grants (money that isn't
+  // Funding type, most programs are loans, but grants (money that isn't
   // repaid) and other non-debt capital are matched and prepared for
   // differently. 'loan' | 'grant' | 'other'.
   `ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan'`,
 
   // Adaptive follow-through: which kind of help this owner needs, inferred
-  // from the interview — shapes the tone of the post-match features.
+  // from the interview, shapes the tone of the post-match features.
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS help_mode TEXT`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS help_mode TEXT`,
 
@@ -112,17 +112,17 @@ const STATEMENTS = [
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_at TIMESTAMPTZ`,
 
   // The old shared (state, industry) discovery cache is replaced by
-  // per-application rows — drop the un-attached ones once.
+  // per-application rows, drop the un-attached ones once.
   `DELETE FROM discovered_lenders WHERE application_id IS NULL`,
 
   // Tracker / underwriter-review keys moved from "<provenance>:<row id>" to
   // a name-derived slug (survives a re-search). Old-format rows point at
-  // ids that no longer exist and can't be remapped — drop them.
+  // ids that no longer exist and can't be remapped, drop them.
   `DELETE FROM tracked_applications WHERE lender_key ~ '^(discovered|verified|static):[0-9]+$'`,
   `DELETE FROM underwriter_reviews WHERE lender_key ~ '^(discovered|verified|static):[0-9]+$'`,
 
   // There is no preset list of loans or grants. The `lenders` table (a
-  // hand-kept catalog every applicant matched against) is retired — every
+  // hand-kept catalog every applicant matched against) is retired, every
   // program now comes from the per-application live search. match_results
   // rows that pointed into it are dropped; they rebuild on the next match.
   `DELETE FROM match_results WHERE lender_source = 'static'`,
@@ -132,7 +132,7 @@ const STATEMENTS = [
   `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'`,
 
-  // Application tracker — which programs the owner is pursuing and where
+  // Application tracker, which programs the owner is pursuing and where
   // each one stands. One row per (application, lender).
   `CREATE TABLE IF NOT EXISTS tracked_applications (
      id SERIAL PRIMARY KEY,
@@ -198,7 +198,7 @@ export async function runMigrations(pool) {
             continue;
           }
           // A migration failure shouldn't take the whole server down on
-          // boot — the post-run check below reports anything actually
+          // boot, the post-run check below reports anything actually
           // missing; everything here is idempotent so a stale transient
           // failure on an already-applied statement is harmless.
           console.warn('[db] a migration statement did not apply this boot (may already exist):', err.message.slice(0, 120));
@@ -229,9 +229,9 @@ export async function runMigrations(pool) {
     const missing = REQUIRED.filter(([t, c]) => !present.has(`${t}.${c}`));
     if (missing.length) {
       console.error(
-        '[db] MIGRATION INCOMPLETE — missing:',
+        '[db] MIGRATION INCOMPLETE, missing:',
         missing.map(([t, c]) => `${t}.${c}`).join(', '),
-        '— rerun server/db/schema.sql in the Supabase SQL editor.'
+        ', rerun server/db/schema.sql in the Supabase SQL editor.'
       );
     }
   } finally {

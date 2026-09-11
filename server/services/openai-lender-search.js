@@ -1,4 +1,4 @@
-// The sole source of real funding programs the app matches against — there
+// The sole source of real funding programs the app matches against, there
 // is no preset catalog. Called per application from routes/match.js with
 // the owner's full profile. Two-step design instead of one combined call:
 // OpenAI's web_search tool has a documented higher failure/truncation rate
@@ -6,7 +6,7 @@
 // step 1 does the live search and returns grounded, citation-backed text;
 // step 2 (schema-only, no tool) extracts clean structured fields from that
 // already-grounded text. Same "extract, never invent" discipline as
-// groq-extract.js — anything without a real, actually-cited source_url is
+// groq-extract.js, anything without a real, actually-cited source_url is
 // dropped, never guessed.
 //
 // matching-engine.js never calls this and stays fully deterministic; this
@@ -23,36 +23,36 @@ const SEARCH_SYSTEM_PROMPT =
   'SMALL BUSINESS OWNER whose full situation is given below. Every program you report must be one this ' +
   'particular business can actually apply to and receive funds from. Include BOTH:\n' +
   '  - loans: CDFIs, SBA microloan intermediaries, city/state/county small business loan programs, nonprofit lenders\n' +
-  '  - grants: business grants a for-profit can win — and here you MUST go beyond the obvious national ones. ' +
+  '  - grants: business grants a for-profit can win, and here you MUST go beyond the obvious national ones. ' +
   'Search specifically for grants that fit THIS owner: their city and county (municipal storefront/facade, ' +
   'economic-development, main-street, and small-business-relief grants are common and hyper-local), their ' +
   "industry (industry-association and trade grants), their stated use of funds (e.g. energy-efficiency, " +
-  'equipment, hiring, technology-adoption, exporting grants), their business stage, and — ONLY when the owner ' +
-  'has explicitly stated it — their ownership background (woman-, veteran-, Black-, Latino-, Native-, ' +
+  'equipment, hiring, technology-adoption, exporting grants), their business stage, and. ONLY when the owner ' +
+  'has explicitly stated it, their ownership background (woman-, veteran-, Black-, Latino-, Native-, ' +
   'immigrant-, disability-owned grant programs). Do NOT return a demographic-restricted program unless the ' +
   "owner's stated background actually qualifies them for it.\n" +
   'Explicitly EXCLUDE anything restricted to 501(c)(3) nonprofits, arts councils, government agencies, or ' +
-  'individual artists/creators only. Only describe programs you actually found via search results — never from ' +
+  'individual artists/creators only. Only describe programs you actually found via search results, never from ' +
   'memory without a citation, and never estimate or guess amounts, eligibility rules, or URLs. For each ' +
   'program, state: its exact name, WHETHER IT IS A LOAN OR A GRANT, what states/regions/cities it serves, its ' +
   'funding amount range if stated, any industry or ownership restrictions, key eligibility requirements (time ' +
   'in business, revenue minimums, ownership requirements, whether it needs 501(c)(3) status), and the exact ' +
   'URL of the page describing it. Prioritize the programs that fit this specific owner most tightly.\n' +
   'BE STRICT ABOUT LOCATION: the business is in the state given below. Many US cities share a name across ' +
-  'states (Columbus OH vs Columbus IN, Portland OR vs Portland ME) — never report a city/county program from ' +
+  'states (Columbus OH vs Columbus IN, Portland OR vs Portland ME), never report a city/county program from ' +
   'the wrong state. If a program\'s service area does not clearly include this business\'s state, drop it.\n' +
   'If after searching you find nothing genuinely usable by this business, say so plainly rather than list something tangential.';
 
 const EXTRACTION_SYSTEM_PROMPT =
   'You will be given research notes about small business funding programs, each grounded in specific cited ' +
   'source URLs, plus the list of URLs that were actually cited. Extract each genuinely distinct, real program ' +
-  'into a structured record. Rules: source_url MUST be one of the cited URLs given to you — never invent or ' +
+  'into a structured record. Rules: source_url MUST be one of the cited URLs given to you, never invent or ' +
   'modify a URL. Set funding_type to "grant" if the notes describe it as a grant (money not repaid) and "loan" ' +
   'otherwise. If a field is not clearly stated in the research notes, use null rather than guessing. Skip ' +
   'any program the notes describe as restricted to 501(c)(3) nonprofits, arts councils, government agencies, ' +
-  'or individual artists/creators only — this platform serves for-profit small businesses, so those programs ' +
+  'or individual artists/creators only, this platform serves for-profit small businesses, so those programs ' +
   'are not usable even if the research notes mention them. If the research notes say nothing relevant was ' +
-  'found, or describe no usable program with a real cited URL, return an empty lenders array — do not force an ' +
+  'found, or describe no usable program with a real cited URL, return an empty lenders array, do not force an ' +
   'entry to exist.';
 
 function extractionSchema() {
@@ -111,11 +111,11 @@ function geographyPlausible(geographyStr, state) {
     .split(/[,/;]/)
     .map((s) => s.trim().toUpperCase())
     .filter((s) => /^[A-Z]{2}$/.test(s));
-  if (codes.length === 0) return true; // couldn't parse — let the engine decide
+  if (codes.length === 0) return true; // couldn't parse, let the engine decide
   return codes.includes(String(state || '').toUpperCase());
 }
 
-// Defensive coercion — never trust the model's structured output blindly,
+// Defensive coercion, never trust the model's structured output blindly,
 // same discipline as groq-extract.js. citedUrls is the ground truth list
 // from step 1; any entry whose source_url isn't literally in that list is
 // dropped, since that's the strongest available signal against invention.
@@ -145,7 +145,7 @@ function coerceEntries(raw, citedUrls, state) {
 }
 
 // Builds the plain-language "who this owner is" brief the search runs
-// against — every signal the interview captured that could change which
+// against, every signal the interview captured that could change which
 // programs (especially grants) this specific business qualifies for.
 function ownerBrief({
   state,
@@ -181,11 +181,11 @@ function ownerBrief({
 }
 
 // One grounded-search + schema-extract round.
-//   { ok: false }            — the search API call hard-failed (429, network);
+//   { ok: false }           , the search API call hard-failed (429, network);
 //                              a retry would likely fail too, so don't.
-//   { ok: true, entries: [] } — the search ran but surfaced nothing usable;
+//   { ok: true, entries: [] }, the search ran but surfaced nothing usable;
 //                              a broadened retry is worth trying.
-//   { ok: true, entries }     — usable programs found.
+//   { ok: true, entries }    , usable programs found.
 // Never throws.
 async function oneSearchPass(apiKey, userContent, state) {
   const searchResult = await callOpenAIResponses({
@@ -233,7 +233,7 @@ async function oneSearchPass(apiKey, userContent, state) {
   }
 }
 
-// Returns an array of program records (possibly empty) — never throws.
+// Returns an array of program records (possibly empty), never throws.
 // Callers treat this as a non-blocking enhancement: on failure or with no
 // key, matching just proceeds with nothing. `state` is the only required
 // field; everything else sharpens the search, especially for grants.
@@ -241,7 +241,7 @@ async function oneSearchPass(apiKey, userContent, state) {
 // The first pass is tightly targeted to this owner's full situation
 // (hyper-local, use-of-funds, ownership). If it surfaces nothing, or the
 // call itself fails/times out (the complex query occasionally stalls), a
-// second, simpler broadened pass runs — it drops the narrow filters and
+// second, simpler broadened pass runs, it drops the narrow filters and
 // asks for the state and national programs the business qualifies for, so
 // the owner is never left with nothing when something real exists. At most
 // one retry.
@@ -257,7 +257,7 @@ export async function searchLiveLenders(context) {
   const targeted = await oneSearchPass(
     apiKey,
     'Find every real, currently-open loan and grant program this specific business could apply to. ' +
-      'Search for hyper-local (city/county), industry, use-of-funds, and — where they qualify — ownership-' +
+      'Search for hyper-local (city/county), industry, use-of-funds, and, where they qualify, ownership-' +
       `specific grants, not just national ones. If local options are sparse, also include the state and ` +
       `national programs this business clearly qualifies for.\n\n${ownerBrief(context)}`,
     state
@@ -265,7 +265,7 @@ export async function searchLiveLenders(context) {
   if (targeted.ok && targeted.entries.length > 0) return targeted.entries;
 
   console.log(
-    `[openai-lender-search] targeted pass ${targeted.ok ? 'empty' : 'failed'} — running a broadened fallback pass`
+    `[openai-lender-search] targeted pass ${targeted.ok ? 'empty' : 'failed'}, running a broadened fallback pass`
   );
   const broad = await oneSearchPass(
     apiKey,

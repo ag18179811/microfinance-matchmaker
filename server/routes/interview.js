@@ -24,7 +24,7 @@ function handleUpload(req, res, next) {
 }
 
 // Every conversation lookup here is scoped to req.userId (set by
-// requireAuth) — a conversation id alone is never enough to read or reply
+// requireAuth), a conversation id alone is never enough to read or reply
 // to it. That used to be a real gap: any id was previously readable/writable
 // by anyone.
 async function loadOwnedConversation(conversationId, userId) {
@@ -84,7 +84,7 @@ function isBlank(value) {
 // If the model's last two LLM-sourced questions both targeted the same
 // structured field and it's still unresolved, flag it so the next call is
 // explicitly told to move on. Found via live testing: without this, the
-// model can fixate — re-asking a near-identical question 3+ times in a row
+// model can fixate, re-asking a near-identical question 3+ times in a row
 // when an answer doesn't satisfy it, instead of pivoting to a different
 // topic the way a real interviewer would.
 function computeStuckField(fullHistoryRows) {
@@ -97,24 +97,24 @@ function computeStuckField(fullHistoryRows) {
 
 // Runs one interview turn in two AI steps, falling back to the
 // deterministic field walk only if both are unavailable:
-//   1. openai-interview-reason.js does the actual thinking — reads the full
+//   1. openai-interview-reason.js does the actual thinking, reads the full
 //      conversation and, if it decides it's genuinely useful, searches the
 //      web for something the user mentioned (a permit, a certification, a
 //      program). This is real analysis, not a prompted-for one-liner.
 //   2. groq-interview.js structures that analysis into the turn the app
 //      needs (next question, updated fields, notes, and reasoningSteps for
 //      the UI's thinking-chain). If step 1 didn't run or failed, this still
-//      works — it just reasons from the raw history itself, same as before
+//      works, it just reasons from the raw history itself, same as before
 //      step 1 existed.
-// Only if step 2 ALSO fails does this drop to interview-fallback.js — and
+// Only if step 2 ALSO fails does this drop to interview-fallback.js, and
 // when it does, the turn is explicitly labeled source:'fallback' so the
 // client can say so plainly instead of silently substituting a generic
 // question that looks like the real thing.
 //
 // Persists the resulting fields/notes/turn_count/status and, if not done,
-// the assistant's question — tagged with which field it's chiefly about and
+// the assistant's question, tagged with which field it's chiefly about and
 // where that question came from, so the next reply knows how strictly to
-// validate. `notes` is the free-form, business-specific facts list — this
+// validate. `notes` is the free-form, business-specific facts list, this
 // is where most of what makes a given interview genuinely different from
 // the next one lives, as opposed to the fixed `fields` schema.
 async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnCount, language = 'en') {
@@ -143,7 +143,7 @@ async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnC
     turn = { ...llmTurn, source: 'ai' };
     // Deterministic, not left to the model's discretion inside one field: if
     // the user asked a direct question this turn and directAnswer has a real
-    // answer, it always appears first in what's actually shown/saved — found
+    // answer, it always appears first in what's actually shown/saved, found
     // via live testing that a natural-language instruction to "combine them"
     // was not reliably followed, silently dropping the answer.
     if (turn.directAnswer && !turn.done) {
@@ -158,7 +158,7 @@ async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnC
     turn = {
       done: fb.done,
       source: 'fallback',
-      reasoningSteps: ['AI analysis is temporarily unavailable right now — here are a few direct questions in the meantime.'],
+      reasoningSteps: ['AI analysis is temporarily unavailable right now, here are a few direct questions in the meantime.'],
       nextQuestion: fb.nextQuestion,
       questionType: fb.questionType,
       options: fb.options,
@@ -176,7 +176,7 @@ async function advanceTurn(conversationId, fullHistoryRows, fields, notes, turnC
 }
 
 // Once a conversation is complete, further replies don't re-run the
-// structured interview — they're grounded Q&A about the stored profile and
+// structured interview, they're grounded Q&A about the stored profile and
 // match results. Response shape is deliberately different (mode: 'followup')
 // so the client never mistakes this for another structured turn.
 async function handleFollowUp(req, res, convo) {
@@ -184,7 +184,7 @@ async function handleFollowUp(req, res, convo) {
   if (!text) return res.status(400).json({ error: 'text is required' });
 
   if (!convo.application_id) {
-    return res.status(409).json({ error: 'Still finishing your analysis — try again in a moment.' });
+    return res.status(409).json({ error: 'Still finishing your analysis. Try again in a moment.' });
   }
 
   const { rows: appRows } = await pool.query('SELECT * FROM applications WHERE id = $1 AND user_id = $2', [
@@ -236,14 +236,14 @@ router.post('/start', async (req, res) => {
   res.json({ conversationId, done: false, message: toClientMessage(turn), progress });
 });
 
-// GET /:id/resume — rehydrate an in-progress interview: the full message
+// GET /:id/resume, rehydrate an in-progress interview: the full message
 // thread plus the current progress, so the chat UI can pick up exactly
 // where the owner left off.
 router.get('/:id/resume', async (req, res) => {
   const convo = await loadOwnedConversation(req.params.id, req.userId);
   if (!convo) return res.status(404).json({ error: 'Conversation not found' });
   if (convo.status === 'complete') {
-    return res.status(409).json({ error: 'This interview is already complete — open its results instead.' });
+    return res.status(409).json({ error: 'This interview is already complete. Open its results instead.' });
   }
 
   const { rows } = await pool.query(
@@ -277,7 +277,7 @@ function safeParse(s) {
   }
 }
 
-// POST /:id/finish — the owner chooses to stop the interview early and go
+// POST /:id/finish, the owner chooses to stop the interview early and go
 // straight to matches ("I'm ready" button, shown once the core profile is
 // captured). Completes the conversation with whatever's been gathered so
 // far; the deterministic engine works with partial deep-profile data.
@@ -296,7 +296,7 @@ router.post('/:id/finish', async (req, res) => {
       return res.status(409).json({ error: `A few basics are still needed before matching: ${missingCore.join(', ')}.` });
     }
     await persistConversationState(convo.id, fields, notes, convo.turn_count, true);
-    await saveMessage(convo.id, 'assistant', "Got it — going with what we have. Building your matches now.");
+    await saveMessage(convo.id, 'assistant', "Got it, going with what we have. Building your matches now.");
   }
 
   res.json({
@@ -324,13 +324,13 @@ router.post('/:id/reply', async (req, res) => {
   const lastAssistant = [...fullHistory].reverse().find((m) => m.role === 'assistant');
 
   // The previous question came from the deterministic fallback path (no LLM
-  // available) — there's no model to interpret nuance, so this first tries a
+  // available), there's no model to interpret nuance, so this first tries a
   // fuzzy match (coerceFallbackAnswer now understands plain-English answers,
   // not just the literal enum string). If that still doesn't resolve it, the
   // raw answer is never just thrown away and the same question is never
   // blindly repeated: it's captured as a note (the fallback path's only way
   // to preserve information it can't structure) and the interview moves on
-  // to the next distinct question — found via live testing, where a rich,
+  // to the next distinct question, found via live testing, where a rich,
   // specific answer to an unrelated question was silently discarded and the
   // identical question re-asked, which is exactly the "same questions for
   // every business" failure mode this fixes.
@@ -340,7 +340,7 @@ router.post('/:id/reply', async (req, res) => {
     if (ok) {
       fields[lastAssistant.field_key] = value;
     } else {
-      fields[lastAssistant.field_key] = ''; // resolved-but-unparsed sentinel — never re-asked
+      fields[lastAssistant.field_key] = ''; // resolved-but-unparsed sentinel, never re-asked
       updatedNotes = [...notes, { topic: lastAssistant.content, detail: text }];
     }
 
@@ -353,7 +353,7 @@ router.post('/:id/reply', async (req, res) => {
     if (done) return res.json({ conversationId, done: true, fields, notes: updatedNotes, progress });
 
     const stepReasoning = ok
-      ? ['AI analysis is temporarily unavailable — continuing with a direct question.']
+      ? ['AI analysis is temporarily unavailable, continuing with a direct question.']
       : ["That didn't map to one of the options, so I've saved it as-is and I'll move on."];
     await saveMessage(conversationId, 'assistant', next.nextQuestion, {
       reasoningSteps: stepReasoning,
@@ -392,8 +392,8 @@ router.post('/:id/reply', async (req, res) => {
   // requires the reply to exactly equal one of a handful of known enum
   // strings, which is safe. For number/text fields a stray reply that isn't
   // actually answering the question (the user talking about something else
-  // entirely) can coincidentally "parse" — e.g. "3 employees" silently
-  // becoming a $3 debt payment — so those are left to the model alone rather
+  // entirely) can coincidentally "parse", e.g. "3 employees" silently
+  // becoming a $3 debt payment, so those are left to the model alone rather
   // than risk writing a wrong number into the profile.
   let finalFields = fieldsAfterTurn;
   const targetKey = lastAssistant?.field_key;

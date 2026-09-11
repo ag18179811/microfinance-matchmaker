@@ -1,7 +1,7 @@
 // The Underwriter Simulation: a focused review conversation held as the
 // person who will actually read this file at a specific lender. The persona
-// changes per application model — a Kiva reviewer and a CDFI loan officer
-// are looking for genuinely different things — and every question is
+// changes per application model, a Kiva reviewer and a CDFI loan officer
+// are looking for genuinely different things, and every question is
 // grounded in THIS file's specific friction with THIS lender (the cautions
 // and weak sub-scores the deterministic engine already computed), never a
 // generic checklist.
@@ -25,23 +25,23 @@ const MODEL = 'openai/gpt-oss-120b';
 const PERSONAS = {
   cdfi_term_loan:
     'You are an experienced CDFI loan officer doing a first review of this application. You underwrite on ' +
-    'cash flow and character more than credit score. You are mission-driven — you want to fund good ' +
-    "businesses that banks turn down — but the loan has to make sense and get repaid. You're direct, warm, " +
+    'cash flow and character more than credit score. You are mission-driven, you want to fund good ' +
+    "businesses that banks turn down, but the loan has to make sense and get repaid. You're direct, warm, " +
     'and practical, never intimidating, and you speak plainly.',
   crowdfunding:
     'You are a Kiva U.S. application reviewer. There is NO credit check. You are assessing whether this ' +
     "person's story is real and specific, whether they have a genuine photo of themselves with their " +
-    'business, and — most important — whether they truly have a network of 5–40 people who will lend during ' +
+    'business, and, most important, whether they truly have a network of 5–40 people who will lend during ' +
     'the 15-day private fundraising period. You hold applications to the CARE principle: Complete, Accurate, ' +
     'Realistic, Engaging. You are encouraging but honest about whether their network and story are strong ' +
     'enough to fund.',
   sba_intermediary:
-    'You are an intake counselor at a local SBA microloan intermediary — a nonprofit that coaches the ' +
+    'You are an intake counselor at a local SBA microloan intermediary, a nonprofit that coaches the ' +
     'businesses it funds. You usually require a written business plan, and often a business training ' +
     'workshop before funding. You are supportive and educational, and you set realistic expectations about ' +
     'the timeline and any training requirement.',
   referral_network:
-    "You represent a small-business lending network — applying routes the owner's request to partner " +
+    "You represent a small-business lending network, applying routes the owner's request to partner " +
     "lenders, you don't fund directly. You are screening for basic fit and completeness before routing, and " +
     'you explain clearly what happens after they apply.',
   group_lending:
@@ -51,7 +51,7 @@ const PERSONAS = {
     'the loan. You are warm and community-oriented.',
   grant:
     'You are a grants program officer scoring this application against your program\'s published priorities. ' +
-    'There is no credit check, no collateral, no repayment — a grant is a competitive award. You are judging: ' +
+    'There is no credit check, no collateral, no repayment, a grant is a competitive award. You are judging: ' +
     'does this project fit exactly what our grant is meant to fund, is it specific and credible, and can this ' +
     'person actually deliver it and report back. You are encouraging but candid about whether the fit is ' +
     'strong enough to be competitive this cycle, and you push for specificity over general need.',
@@ -74,7 +74,7 @@ function fileContext({ application, additionalNotes, subScores, matchDetail, pro
             timeline: profile.timeline,
             underwriterFocus: profile.underwriterFocus,
           }
-        : { note: 'application process not verified for this lender — do not assert specifics' },
+        : { note: 'application process not verified for this lender, do not assert specifics' },
     },
     thisBusiness: { ...application, additional_notes: undefined, user_id: undefined },
     specificFactsFromInterview: additionalNotes || [],
@@ -90,10 +90,10 @@ function startPrompt(model) {
     'You are about to walk this owner through what you, specifically, will be thinking when you open their ' +
     'file. Open the conversation:\n' +
     '1. One sentence on who you are and what this is (a practice review, not a decision).\n' +
-    '2. Name the 1–3 things about THIS file you most want to dig into — pulled from the cautions, the weak ' +
+    '2. Name the 1–3 things about THIS file you most want to dig into, pulled from the cautions, the weak ' +
     "sub-scores, and this business's actual situation. Be specific: reference what they told the interview.\n" +
     '3. If a HARD disqualifier is present (wrong state, a hard time-in-business gate, an excluded industry), ' +
-    'say so plainly and recommend they not spend time here — do not pretend.\n' +
+    'say so plainly and recommend they not spend time here, do not pretend.\n' +
     '4. Ask ONE focused opening question.\n\n' +
     'Warm, plain language, no jargon. Respond with ONLY valid JSON, no markdown:\n' +
     '{\n' +
@@ -108,11 +108,11 @@ function turnPrompt(model) {
   return (
     `${PERSONAS[model] || PERSONAS.cdfi_term_loan}\n\n` +
     'Continue the review. You just heard the owner\'s answer to your last question. In order:\n' +
-    '1. React like a real reviewer would — acknowledge what helps, name what still concerns you, briefly.\n' +
+    '1. React like a real reviewer would, acknowledge what helps, name what still concerns you, briefly.\n' +
     "2. Capture their answer in THEIR voice, cleaned up into 1–3 sentences they could paste straight into " +
     'the real application. This goes in "capturedAnswer".\n' +
-    '3. Either ask the next focused question, OR — if you have covered the main friction points (usually ' +
-    'after 4–6 exchanges) — set "readyToClose": true and give your honest closing read in "verdict".\n\n' +
+    '3. Either ask the next focused question, OR, if you have covered the main friction points (usually ' +
+    'after 4–6 exchanges), set "readyToClose": true and give your honest closing read in "verdict".\n\n' +
     'Never promise approval. Never invent an eligibility rule. If their answer reveals a hard disqualifier, ' +
     'say so and close.\n\n' +
     'Respond with ONLY valid JSON, no markdown:\n' +

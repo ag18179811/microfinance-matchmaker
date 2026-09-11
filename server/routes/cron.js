@@ -1,4 +1,4 @@
-// Machine-to-machine endpoints for scheduled jobs. Not behind requireAuth —
+// Machine-to-machine endpoints for scheduled jobs. Not behind requireAuth, 
 // guarded by a shared secret in the x-cron-secret header. If CRON_SECRET
 // isn't set the endpoints are disabled (503) rather than open.
 

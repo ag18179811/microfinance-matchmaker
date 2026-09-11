@@ -15,7 +15,7 @@ const router = Router();
 const DISCOVERED_LENDER_COLUMNS =
   'id, name, type, funding_type, geography, min_loan, max_loan, industries, eligibility_notes, source_url, min_months_in_business, min_months_in_business_type';
 
-// The signals that change which programs — especially grants — a specific
+// The signals that change which programs, especially grants, a specific
 // business qualifies for. If none of these have changed since the last
 // search AND that search is under a day old, the previous result set is
 // reused; otherwise a fresh live search runs. `requested_amount` and
@@ -71,7 +71,7 @@ async function getDiscoveredForApplication(applicationId) {
 
 // The ONLY source of programs the app matches against: a per-application
 // live web search (server/services/openai-lender-search.js) built from the
-// owner's full profile — city and county, industry, use of funds, stage,
+// owner's full profile, city and county, industry, use of funds, stage,
 // and stated ownership background. There is no preset catalog. Re-runs on
 // every match/recompute unless an identical-profile search ran in the last
 // day (tracked by applications.discovery_fingerprint / discovery_at, so an
@@ -87,7 +87,7 @@ async function discoverPrograms(application, { force = false } = {}) {
   try {
     // A forced re-search (the "search again" button) bypasses the daily
     // fingerprint reuse, but still won't fire more than once every 5
-    // minutes for one application — that's the cost/abuse ceiling.
+    // minutes for one application, that's the cost/abuse ceiling.
     const recent = force
       ? lastSearchMs < 5 * 60 * 1000
       : application.discovery_fingerprint === fingerprint && lastSearchMs < 24 * 60 * 60 * 1000;
@@ -196,14 +196,14 @@ export async function loadSubScores(applicationId) {
   return rows[0]?.readiness_breakdown ? JSON.parse(rows[0].readiness_breakdown) : null;
 }
 
-// Every route here is scoped to req.userId (set by requireAuth) — an
+// Every route here is scoped to req.userId (set by requireAuth), an
 // application id alone is never enough to read or match against it.
 async function loadOwnedApplication(applicationId, userId) {
   const { rows } = await pool.query('SELECT * FROM applications WHERE id = $1 AND user_id = $2', [applicationId, userId]);
   return rows[0] || null;
 }
 
-// The full match pipeline for one application — readiness scoring, help-mode
+// The full match pipeline for one application, readiness scoring, help-mode
 // classification, program matching against the per-application live search
 // (no preset catalog), the coaching summary, and persistence of
 // match_results. Used by both POST /:applicationId and recompute.
@@ -271,12 +271,12 @@ async function runMatchPipeline(application, { forceRediscover = false } = {}) {
 router.post('/:applicationId', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
   if (!application) return res.status(404).json({ error: 'Application not found' });
-  // `{ rediscover: true }` — the "search again for programs" button. Forces
+  // `{ rediscover: true }`, the "search again for programs" button. Forces
   // a fresh live search (still capped at once per 5 min per application).
   res.json(await runMatchPipeline(application, { forceRediscover: req.body?.rediscover === true }));
 });
 
-// POST /:applicationId/recompute — apply owner-confirmed numeric changes
+// POST /:applicationId/recompute, apply owner-confirmed numeric changes
 // (from syncing their refined funding story) to the application, then
 // re-run the whole match pipeline so the score and matches reflect them.
 const RECOMPUTABLE_FIELDS = new Set([
@@ -341,7 +341,7 @@ function parseNotes(application) {
 }
 
 // The two Groq-narrated plans below are cached on applications.plan_cache,
-// keyed by the newest match_results timestamp — a rematch or recompute
+// keyed by the newest match_results timestamp, a rematch or recompute
 // rewrites those rows with a fresh timestamp, which invalidates the cache
 // on its own. Without this the Results page re-bills both calls every view.
 async function matchesStamp(applicationId) {
@@ -366,7 +366,7 @@ async function storePlan(applicationId, key, stamp, data) {
   );
 }
 
-// GET /:applicationId/funding-plan — the capital stack + application order
+// GET /:applicationId/funding-plan, the capital stack + application order
 // to actually raise the amount needed when no single program covers it.
 router.get('/:applicationId/funding-plan', async (req, res) => {
   const application = await loadOwnedApplication(req.params.applicationId, req.userId);
@@ -400,7 +400,7 @@ router.get('/:applicationId/funding-plan', async (req, res) => {
   res.json(narrated);
 });
 
-// GET /:applicationId/improvement-plan — prioritized, concrete steps to
+// GET /:applicationId/improvement-plan, prioritized, concrete steps to
 // raise the readiness score, each with a real projected impact computed by
 // re-running the scoring engine.
 router.get('/:applicationId/improvement-plan', async (req, res) => {
@@ -445,7 +445,7 @@ function readOverrides(body) {
 // hypothetical version of the application, WITHOUT persisting anything.
 // Lets the user see "if I asked for less / waited a few months / grew
 // revenue, where would I land and who else would match" directly on the
-// results screen. answerQuality is held at its stored value on purpose — a
+// results screen. answerQuality is held at its stored value on purpose, a
 // hypothetical number can't change how credible the user's typed answers
 // were.
 router.post('/:applicationId/simulate', async (req, res) => {
@@ -465,7 +465,7 @@ router.post('/:applicationId/simulate', async (req, res) => {
   const { readinessScore, subScores } = computeReadiness(simulated, heldQuality);
 
   // The what-if simulator re-scores against the programs already discovered
-  // for this application — it never triggers a fresh (billed) search.
+  // for this application, it never triggers a fresh (billed) search.
   const discoveredLenders = await getDiscoveredForApplication(application.id);
   const taggedLenders = discoveredLenders.map((l) => ({ ...l, provenance: 'discovered' }));
   const simMatches = dedupeByName(

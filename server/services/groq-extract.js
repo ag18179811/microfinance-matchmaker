@@ -1,4 +1,4 @@
-// Free-text -> structured application fields. Extraction only — this file
+// Free-text -> structured application fields. Extraction only, this file
 // never decides eligibility or requiredness, and it is instructed to never
 // guess a value the user didn't actually provide. matching-engine.js remains
 // the sole source of truth for eligibility.
@@ -28,13 +28,13 @@ function buildSystemPrompt() {
     'You are an information-extraction engine for a small business funding readiness platform. ' +
     "Extract only facts that are explicitly stated or unambiguously implied in the user's business " +
     "description. Never guess, estimate, or invent a number, location, or industry that isn't clearly " +
-    `given — if something isn't clearly stated, return null for that field. Today's date is ${today}; ` +
+    `given, if something isn't clearly stated, return null for that field. Today's date is ${today}; ` +
     'convert stated durations ("about 3 years", "since 2019") into an integer number of months for ' +
     'time_in_business_months. If a dollar figure is given as a range, use the midpoint. Strip currency ' +
     'symbols and commas from dollar amounts. For "industry", choose the single closest match from the ' +
-    'fixed list in the schema; if nothing clearly fits, return null — do not invent an industry not in ' +
+    'fixed list in the schema; if nothing clearly fits, return null, do not invent an industry not in ' +
     'the list. Respond with ONLY a single valid JSON object matching exactly this schema, and nothing ' +
-    `else — no markdown, no commentary, no explanation:\n${SCHEMA_DESCRIPTION}`
+    `else, no markdown, no commentary, no explanation:\n${SCHEMA_DESCRIPTION}`
   );
 }
 

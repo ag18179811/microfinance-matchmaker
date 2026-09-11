@@ -13,7 +13,7 @@ function titleFor(conversation, firstUserMessage) {
 }
 
 // List the current user's conversations, newest first, for the history
-// sidebar. Every query here is scoped to req.userId — never trust anything
+// sidebar. Every query here is scoped to req.userId, never trust anything
 // else to decide whose data this is.
 router.get('/', async (req, res) => {
   const { rows } = await pool.query(

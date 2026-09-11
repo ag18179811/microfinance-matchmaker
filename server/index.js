@@ -53,15 +53,15 @@ app.use(
 );
 app.use(express.json());
 
-// Every interview turn is a billed Groq call — this is a lightweight
+// Every interview turn is a billed Groq call. This is a lightweight
 // abuse/cost guard, not a precise quota system.
 const interviewLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
 // The business-case and underwriter features are also billed AI calls per
-// request — same lightweight per-minute abuse/cost guard.
+// request, same lightweight per-minute abuse/cost guard.
 const aiWorkLimiter = rateLimit({ windowMs: 60 * 1000, max: 40, standardHeaders: true, legacyHeaders: false });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-// No-account readiness estimate — the one public, unauthenticated route.
+// No-account readiness estimate, the one public, unauthenticated route.
 // Deterministic and unpersisted; rate-limited harder than the rest.
 const previewLimiter = rateLimit({ windowMs: 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false });
 app.use('/api/preview', previewLimiter, previewRouter);
@@ -92,11 +92,11 @@ app.get('/api/unsubscribe', async (req, res) => {
     .send(
       rowCount
         ? '<p style="font-family:sans-serif;max-width:420px;margin:60px auto">You won’t get application reminder emails anymore. You can turn them back on in your tracker settings anytime.</p>'
-        : '<p style="font-family:sans-serif;max-width:420px;margin:60px auto">That link didn’t match anything — you may already be unsubscribed.</p>'
+        : '<p style="font-family:sans-serif;max-width:420px;margin:60px auto">That link didn’t match anything, you may already be unsubscribed.</p>'
     );
 });
 
-// Terminal error handler — with the express-async-errors import above, a
+// Terminal error handler, with the express-async-errors import above, a
 // throw from any async route handler lands here instead of crashing the
 // process. Transient DB/connection blips become a 503 the client can retry.
 // eslint-disable-next-line no-unused-vars
@@ -106,7 +106,7 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return;
   res.status(transient ? 503 : 500).json({
     error: transient
-      ? 'A temporary hiccup on our end — please try that again in a moment.'
+      ? 'A temporary hiccup on our end, please try that again in a moment.'
       : 'Something went wrong on our end.',
   });
 });

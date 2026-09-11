@@ -1,4 +1,4 @@
-// The application tracker — which programs the owner is pursuing and where
+// The application tracker, which programs the owner is pursuing and where
 // each one stands. Deliberately light: no email, no cron. The "did you
 // submit yet?" nudge is passive (the UI shows how long since a row last
 // changed). Every query is scoped to req.userId.
@@ -76,7 +76,7 @@ router.delete('/:applicationId/:lenderKey', async (req, res) => {
   res.json({ ok: true });
 });
 
-// Called from the underwriter pack route — quietly start tracking a lender
+// Called from the underwriter pack route, quietly start tracking a lender
 // as "preparing" once the owner has built its application pack. Never
 // downgrades an existing status.
 export async function autoTrack(applicationId, userId, lenderKey, lenderName, fundingType = 'loan') {

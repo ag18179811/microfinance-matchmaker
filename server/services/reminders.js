@@ -23,7 +23,7 @@ export function daysBetween(from, to) {
 }
 
 // The single most relevant reminder for one tracked-application row, or
-// null. Pure — the DB query + email sending live in runReminders.
+// null. Pure, the DB query + email sending live in runReminders.
 export function reminderForTracked(t, now = new Date()) {
   if (DECIDED.includes(t.status)) return null;
 
@@ -35,7 +35,7 @@ export function reminderForTracked(t, now = new Date()) {
   }
   const daysStale = daysBetween(t.updated_at, now);
   if (t.status === 'preparing' && daysStale >= 12) {
-    return { kind: 'stale_prep', lender: t.lender_name, text: `You've been preparing your ${t.lender_name} application for ${daysStale} days. If something's blocking you, an SBDC advisor can help — or just submit what you have.` };
+    return { kind: 'stale_prep', lender: t.lender_name, text: `You've been preparing your ${t.lender_name} application for ${daysStale} days. If something's blocking you, an SBDC advisor can help, or just submit what you have.` };
   }
   if (['submitted', 'in_review'].includes(t.status) && daysStale >= 16) {
     return { kind: 'stale_submitted', lender: t.lender_name, text: `It's been ${daysStale} days since you marked ${t.lender_name} ${t.status.replace('_', ' ')}. A short, friendly email asking about timing is completely normal.` };
@@ -75,7 +75,7 @@ export async function runReminders({ dryRun = false } = {}) {
     }
     const daysStale = daysBetween(t.updated_at, now);
     if (!item && t.status === 'preparing' && daysStale >= 12) {
-      item = { kind: 'stale_prep', lender: t.lender_name, text: `You've been preparing your ${t.lender_name} application for ${daysStale} days. If something's blocking you, an SBDC advisor can help — or just submit what you have.` };
+      item = { kind: 'stale_prep', lender: t.lender_name, text: `You've been preparing your ${t.lender_name} application for ${daysStale} days. If something's blocking you, an SBDC advisor can help, or just submit what you have.` };
     }
     if (!item && ['submitted', 'in_review'].includes(t.status) && daysStale >= 16) {
       item = { kind: 'stale_submitted', lender: t.lender_name, text: `It's been ${daysStale} days since you marked ${t.lender_name} ${t.status.replace('_', ' ')}. A short, friendly email asking about timing is completely normal.` };
@@ -102,7 +102,7 @@ export async function runReminders({ dryRun = false } = {}) {
   for (const s of stale) {
     add(s.user_id, s.email, {
       kind: 'revisit',
-      text: `It's been over a month since you ran your funding readiness for ${s.business_name || 'your business'}. If your revenue or time in business has grown, your score and matches may have improved — worth a fresh run.`,
+      text: `It's been over a month since you ran your funding readiness for ${s.business_name || 'your business'}. If your revenue or time in business has grown, your score and matches may have improved, worth a fresh run.`,
     });
     remindedAppIds.push(s.id);
   }

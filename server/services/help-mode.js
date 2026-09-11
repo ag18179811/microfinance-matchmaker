@@ -11,7 +11,7 @@
 
 const MODES = {
   organizer: {
-    headline: "You've got a strong file — let's get it organized fast",
+    headline: "You've got a strong file. Let's get it organized fast",
     blurb:
       "Your fundamentals are solid. The work now is packaging what you already have the way each lender wants to see it. We'll keep this brisk.",
   },
@@ -23,12 +23,12 @@ const MODES = {
   rebuilder: {
     headline: "Let's get you fundable first",
     blurb:
-      "You're early, and a rushed application now would likely be a 'no' that's harder to come back from. Here's a focused plan to strengthen your file — come back and re-run this when you've worked through it.",
+      "You're early, and a rushed application now would likely be a 'no' that's harder to come back from. Here's a focused plan to strengthen your file. Come back and re-run this when you've worked through it.",
   },
   strategist: {
     headline: "Been turned down before? Let's change the approach",
     blurb:
-      "A past 'no' isn't the end of the story — it usually means the file needs to be framed differently, or aimed at a different kind of lender. We'll start from what went wrong last time.",
+      "A past 'no' isn't the end of the story. It usually means the file needs to be framed differently, or aimed at a different kind of lender. We'll start from what went wrong last time.",
   },
 };
 
@@ -40,13 +40,13 @@ export function classifyHelpMode(application, subScores = {}, readinessScore = 5
   const completeness = subScores.completeness ?? 50;
   const answerQuality = subScores.answerQuality ?? 50;
 
-  // Been rejected before — this reframing need outranks everything else.
+  // Been rejected before. This reframing need outranks everything else.
   if (DENIAL_RE.test(priorFunding)) return { mode: 'strategist', ...MODES.strategist };
 
-  // Not fundable yet — a plan beats an application.
+  // Not fundable yet. A plan beats an application.
   if (readinessScore < 45 || months < 6) return { mode: 'rebuilder', ...MODES.rebuilder };
 
-  // Strong, complete, credible file — move fast.
+  // Strong, complete, credible file. Move fast.
   if (readinessScore >= 68 && completeness >= 65 && answerQuality >= 60) {
     return { mode: 'organizer', ...MODES.organizer };
   }
@@ -63,9 +63,9 @@ export function helpModeInfo(mode) {
 export function helpModeDirective(mode) {
   switch (mode) {
     case 'organizer':
-      return '\n\nTONE: This owner is experienced and confident — be brisk and direct, skip the hand-holding, respect that they know their business.';
+      return '\n\nTONE: This owner is experienced and confident. Be brisk and direct, skip the hand-holding, respect that they know their business.';
     case 'demystifier':
-      return '\n\nTONE: This owner is new to business funding and may be anxious — define any term you use, reassure that their situation is normal, and go one step at a time. Never condescend.';
+      return '\n\nTONE: This owner is new to business funding and may be anxious. Define any term you use, reassure that their situation is normal, and go one step at a time. Never condescend.';
     case 'rebuilder':
       return "\n\nTONE: This owner isn't fundable yet. Be honest and kind about that, focus on what to build rather than where to apply, and be encouraging about the path forward.";
     case 'strategist':

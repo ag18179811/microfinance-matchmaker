@@ -1,5 +1,5 @@
-// A no-account readiness estimate. Deterministic only — no LLM call, no
-// persistence, no lender list — so it has no cost or abuse surface beyond
+// A no-account readiness estimate. Deterministic only, no LLM call, no
+// persistence, no lender list, so it has no cost or abuse surface beyond
 // the rate limiter, and can't be mistaken for the real report. Its only
 // job is to give someone enough of a taste to be worth signing in.
 

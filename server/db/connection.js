@@ -18,7 +18,7 @@ const pool = new Pool({
 
 // A pg.Pool emits 'error' when an IDLE client in the pool hits a network-
 // level error (a dropped connection, a transient SSL hiccup with a pooler,
-// etc.) — this happens independently of any in-flight query and isn't
+// etc.), this happens independently of any in-flight query and isn't
 // something a try/catch around a query can ever catch. Node's EventEmitter
 // treats an unhandled 'error' event as fatal and crashes the process; this
 // is the one required listener that turns "the whole server dies on a
@@ -30,7 +30,7 @@ pool.on('error', (err) => {
 });
 
 // The base schema (including the auth.users trigger) is run once by hand via
-// Supabase's SQL editor rather than auto-executed here — see
+// Supabase's SQL editor rather than auto-executed here, see
 // server/db/schema.sql. runMigrations() applies only the idempotent
 // CREATE TABLE IF NOT EXISTS statements for app tables added after launch,
 // so a deploy doesn't need a manual SQL-editor step for those.
