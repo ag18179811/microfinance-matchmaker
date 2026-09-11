@@ -20,7 +20,7 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
-      # Optional — email reminders. Without RESEND_API_KEY + FROM_EMAIL the
+      # Optional: email reminders. Without RESEND_API_KEY + FROM_EMAIL the
       # reminder job runs but sends nothing.
       - key: RESEND_API_KEY
         sync: false
@@ -31,7 +31,7 @@ services:
       - key: CRON_SECRET
         generateValue: true
 
-  # Daily reminder sweep — deadline nudges, stale applications, "revisit
+  # Daily reminder sweep: deadline nudges, stale applications, "revisit
   # your score". No-op if email isn't configured. The API host and the
   # shared cron secret are wired from the web service automatically.
   - type: cron

@@ -2,7 +2,7 @@
 -- after creating the project. Safe to re-run: every statement is idempotent.
 --
 -- IMPORTANT: `CREATE TABLE IF NOT EXISTS` only creates a table the FIRST time
--- it's run — if a table already exists from an earlier version of this file,
+-- it's run: if a table already exists from an earlier version of this file,
 -- re-running it does NOT retroactively add columns that were added later.
 -- Every column added after a table's original CREATE TABLE must ALSO get an
 -- explicit `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` below (see the
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS applications (
   prior_funding_history TEXT,
   use_of_funds_detail TEXT,
   ownership_demographics TEXT, -- self-reported, optional, never scored
-  additional_notes TEXT -- JSON array of {topic, detail} — open-ended, business-specific facts the interview gathered beyond the fixed fields above
+  additional_notes TEXT -- JSON array of {topic, detail}: open-ended, business-specific facts the interview gathered beyond the fixed fields above
 );
 
 CREATE TABLE IF NOT EXISTS conversations (
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   application_id INTEGER REFERENCES applications(id) ON DELETE SET NULL, -- set once the interview completes
   status TEXT DEFAULT 'in_progress', -- 'in_progress' | 'complete'
   fields TEXT, -- JSON snapshot of everything gathered so far
-  notes TEXT, -- JSON array of {topic, detail} — mirrors applications.additional_notes, accumulated live during the interview
+  notes TEXT, -- JSON array of {topic, detail}: mirrors applications.additional_notes, accumulated live during the interview
   turn_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Files are parsed in memory and discarded — only the extracted text is kept,
+-- Files are parsed in memory and discarded: only the extracted text is kept,
 -- not the raw bytes.
 CREATE TABLE IF NOT EXISTS conversation_attachments (
   id SERIAL PRIMARY KEY,
@@ -267,12 +267,12 @@ CREATE POLICY "own documents" ON documents FOR ALL USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "own profile" ON profiles;
 CREATE POLICY "own profile" ON profiles FOR ALL USING (auth.uid() = id);
 
--- discovered_lenders has no RLS — a program record is not user data, and it
+-- discovered_lenders has no RLS: a program record is not user data, and it
 -- is always read joined to a match_result the caller already owns.
 
 -- ---------- Migrations for pre-existing tables ----------
 -- Explicit, idempotent ALTERs for every column added after this file's
--- tables were first created — see the note at the top of this file. Each of
+-- tables were first created (see the note at the top of this file). Each of
 -- these is a no-op if already applied.
 
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS additional_notes TEXT;
@@ -283,7 +283,7 @@ ALTER TABLE match_results ADD COLUMN IF NOT EXISTS lender_source TEXT NOT NULL D
 -- non-debt capital are matched, scored, and prepared for differently.
 ALTER TABLE discovered_lenders ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'loan';
 
--- The `lenders` table (a preset catalog) is retired — every program now
+-- The `lenders` table (a preset catalog) is retired: every program now
 -- comes from the per-application live search. Safe to run on an existing DB.
 DROP TABLE IF EXISTS lenders CASCADE;
 
@@ -309,7 +309,7 @@ ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_fingerprint TEXT;
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS discovery_at TIMESTAMPTZ;
 
 -- match_results.lender_id points into discovered_lenders, whose rows are
--- replaced on each fresh search — so no hard FK. Drop the old one if a
+-- replaced on each fresh search, so no hard FK. Drop the old one if a
 -- pre-existing table still carries it.
 ALTER TABLE match_results DROP CONSTRAINT IF EXISTS match_results_lender_id_fkey;
 
