@@ -31,7 +31,6 @@ export default function Header({ stage, onLogoClick, user, onSignOut, onOpenHist
             </svg>
           </span>
           <span className="brand-name">Microfinance Matchmaker</span>
-          <span className="brand-badge">Beta</span>
         </button>
 
         <div className="topbar-right">

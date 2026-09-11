@@ -5,12 +5,6 @@ const PLACEHOLDER =
   "about 3 years, do roughly $180,000 a year in revenue, and I'm looking for $20,000 " +
   'to buy a new espresso machine and renovate the seating area.';
 
-const EXAMPLES = [
-  "I run a coffee shop in Austin, TX. Open 3 years, ~$180k revenue, need $20k for equipment.",
-  "Landscaping business in Denver, CO, 5 years in, want $50k to buy a second truck.",
-  "First-year bakery in Detroit, MI doing about $60k, need $15k for a new oven.",
-];
-
 export default function DescribeBusiness({ onStart }) {
   const [description, setDescription] = useState('');
   const textareaRef = useRef(null);
@@ -20,11 +14,6 @@ export default function DescribeBusiness({ onStart }) {
     const trimmed = description.trim();
     if (!trimmed) return;
     onStart(trimmed);
-  }
-
-  function useExample(text) {
-    setDescription(text);
-    textareaRef.current?.focus();
   }
 
   function handleKeyDown(e) {
@@ -62,14 +51,6 @@ export default function DescribeBusiness({ onStart }) {
           </button>
         </div>
       </form>
-
-      <div className="example-chips">
-        {EXAMPLES.map((text) => (
-          <button type="button" className="example-chip" key={text} onClick={() => useExample(text)}>
-            {text.length > 58 ? `${text.slice(0, 58)}…` : text}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
