@@ -21,27 +21,6 @@ function InterviewVisual() {
   );
 }
 
-function SearchVisual() {
-  const rows = [
-    ['Accion Opportunity Fund', 92],
-    ['Community storefront grant', 81],
-    ['City small-business loan fund', 68],
-  ];
-  return (
-    <div className="feat-matchlist">
-      {rows.map(([name, pct]) => (
-        <div className="feat-match-row" key={name}>
-          <div className="feat-match-top">
-            <span className="feat-match-name">{name}</span>
-            <span className="feat-match-pct">{pct}%</span>
-          </div>
-          <div className="feat-match-track"><div className="feat-match-fill" style={{ width: `${pct}%` }} /></div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function ScoreVisual() {
   const factors = [['Time in business', 90], ['Cash flow pattern', 65]];
   return (
@@ -115,87 +94,48 @@ function UnderwriterVisual() {
   );
 }
 
-function TrackerVisual() {
-  const rows = [
-    ['Accion Opportunity Fund', 'Submitted', 'feat-status-pill-submitted'],
-    ['Community storefront grant', 'Preparing', 'feat-status-pill-preparing'],
-    ['City small-business loan fund', 'Decided', 'feat-status-pill-decided'],
-  ];
-  return (
-    <div className="feat-tracker">
-      {rows.map(([name, status, cls]) => (
-        <div className="feat-tracker-row" key={name}>
-          <span className="feat-tracker-name">{name}</span>
-          <span className={`feat-status-pill ${cls}`}>{status}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 const FEATURES = [
   {
+    tabLabel: 'Interview',
     kicker: 'Before the match',
     title: 'One conversation, not a form',
     body: "Describe your business in plain English. The interview only asks about what you didn't already cover, and a half-finished conversation picks up right where you left off.",
     Visual: InterviewVisual,
   },
   {
-    kicker: 'Before the match',
-    title: 'Every match is found live, not looked up',
-    body: "There's no preset catalog. Each search runs against your specific city, industry, and situation, so a bakery in Cleveland and one in Tulsa see different programs, not the same fixed list.",
-    Visual: SearchVisual,
-  },
-  {
+    tabLabel: 'Readiness score',
     kicker: 'At the match',
     title: 'A score you can see the reasons for',
     body: 'Readiness is scored on five factors, revenue, time in business, credit, cash flow, and profile completeness, all on fixed rules, not a model. Every point gained or lost has a stated reason.',
     Visual: ScoreVisual,
   },
   {
+    tabLabel: 'Improvement plan',
     kicker: 'At the match',
     title: 'A real plan to raise the number',
     body: 'Every lever comes with its actual projected impact: the scoring engine re-run with that one change applied, not a guess at what might help.',
     Visual: ImprovementVisual,
   },
   {
+    tabLabel: 'Funding plan',
     kicker: 'At the match',
     title: "When one program isn't enough",
     body: 'If no single match covers what you need, the funding plan lays out a capital stack: which programs, how much from each, and the order to pursue them in.',
     Visual: FundingVisual,
   },
   {
+    tabLabel: 'Business case',
     kicker: 'After the match',
     title: 'Your story, in your own words',
     body: 'A first-person funding narrative built from your interview, refined by talking to it. Every extrapolation stays a correctable assumption; nothing is invented.',
     Visual: BusinessCaseVisual,
   },
   {
+    tabLabel: 'Underwriter practice',
     kicker: 'After the match',
     title: 'Practice with the actual reviewer',
     body: "A practice review held as that specific program's reviewer, a CDFI cash-flow analyst or an SBA-intermediary counselor, grounded in your file's real cautions. You leave with prepared answers.",
     Visual: UnderwriterVisual,
-  },
-  {
-    kicker: 'After the match',
-    title: 'Stay on top of every application',
-    body: "A status board per program, auto-tracked the moment its application pack is built, with a nudge if a submitted application has gone quiet.",
-    Visual: TrackerVisual,
-  },
-];
-
-const LANDING_TRUST = [
-  {
-    title: 'We never sell your data',
-    body: 'Your business details are used only to calculate your readiness score and find matches. Never sold or shared with third parties for marketing.',
-  },
-  {
-    title: 'Deterministic, transparent scoring',
-    body: 'Once programs are found for you, the eligibility and match scoring runs on fixed, rules-based logic, not a black-box model, so every match reason is explainable.',
-  },
-  {
-    title: 'AI is used for coaching only',
-    body: 'Generative AI helps turn your description into structured fields and writes plain-language coaching notes. It never makes eligibility or approval decisions.',
   },
 ];
 
@@ -219,6 +159,7 @@ export default function PreviewFlow({ onSignIn }) {
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [activeFeature, setActiveFeature] = useState(0);
 
   function set(k, v) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -311,43 +252,40 @@ export default function PreviewFlow({ onSignIn }) {
           </div>
         </div>
 
-        <section id="how-it-works" className="section-band">
+        <section id="features" className="section-band">
           <div className="section-inner">
             <div className="section-heading">
-              <div className="card-eyebrow" style={{ textAlign: 'center' }}>What it actually does</div>
-              <h2 className="section-band-title">Every step of getting funded, covered</h2>
+              <div className="card-eyebrow" style={{ textAlign: 'center' }}>The product</div>
+              <h2 className="section-band-title">See what each part actually does</h2>
             </div>
-            <div className="feature-list">
-              {FEATURES.map(({ kicker, title, body, Visual }, i) => (
-                <div className={`feature-row${i % 2 === 1 ? ' feature-row-reverse' : ''}`} key={title}>
-                  <div className="feature-text">
-                    <div className="feature-kicker">{kicker}</div>
-                    <h3 className="feature-title">{title}</h3>
-                    <p className="feature-body">{body}</p>
-                  </div>
-                  <div className="feature-visual" aria-hidden="true">
-                    <Visual />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
-        <section id="trust" className="section-band section-band-alt">
-          <div className="section-inner">
-            <div className="section-heading">
-              <div className="card-eyebrow" style={{ textAlign: 'center' }}>Security &amp; trust</div>
-              <h2 className="section-band-title">Built to be transparent, not another black box</h2>
-            </div>
-            <div className="steps-grid">
-              {LANDING_TRUST.map((point, i) => (
-                <div className="step-card" key={point.title}>
-                  <div className="step-number">{String(i + 1).padStart(2, '0')}</div>
-                  <h3 className="step-title">{point.title}</h3>
-                  <p className="step-body">{point.body}</p>
-                </div>
+            <div className="feature-tabs" role="tablist">
+              {FEATURES.map((f, i) => (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={i === activeFeature}
+                  className={`feature-tab${i === activeFeature ? ' feature-tab-active' : ''}`}
+                  onClick={() => setActiveFeature(i)}
+                  key={f.tabLabel}
+                >
+                  {f.tabLabel}
+                </button>
               ))}
+            </div>
+
+            <div className="feature-panel">
+              <div className="feature-text">
+                <div className="feature-kicker">{FEATURES[activeFeature].kicker}</div>
+                <h3 className="feature-title">{FEATURES[activeFeature].title}</h3>
+                <p className="feature-body">{FEATURES[activeFeature].body}</p>
+              </div>
+              <div className="feature-visual" aria-hidden="true">
+                {(() => {
+                  const Visual = FEATURES[activeFeature].Visual;
+                  return <Visual />;
+                })()}
+              </div>
             </div>
           </div>
         </section>

@@ -36,11 +36,8 @@ export default function Header({ stage, onLogoClick, user, onSignOut, onOpenHist
         <div className="topbar-right">
           {isLanding && (
             <nav className="nav-links">
-              <button type="button" className="nav-link" onClick={() => scrollToId('how-it-works')}>
-                How it works
-              </button>
-              <button type="button" className="nav-link" onClick={() => scrollToId('trust')}>
-                Security &amp; trust
+              <button type="button" className="nav-link" onClick={() => scrollToId('features')}>
+                Features
               </button>
               <a
                 className="nav-link nav-link-external"
